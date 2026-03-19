@@ -1,0 +1,9 @@
+import Foundation
+
+let previewRestaurants: [Restaurant] = [
+    Restaurant(id: UUID(), name: "Lokmam", cuisineType: .turkish, neighborhood: .ottensen, priceRange: .budget, address: "Ottenser Hauptstraße 52, 22765 Hamburg", latitude: 53.5520, longitude: 9.9290, openingHours: "Mon-Sun 10:00-22:00", isClosed: false, notes: "", imageUrl: nil, personalRating: 9.5, googleRating: 4.6, googleReviewCount: 820),
+    Restaurant(id: UUID(), name: "Pizzamacher Trattoria", cuisineType: .pizza, neighborhood: .ottensen, priceRange: .moderate, address: "Friedensallee 26, 22765 Hamburg", latitude: 53.5545, longitude: 9.9250, openingHours: "Tue-Sun 12:00-22:30", isClosed: false, notes: "", imageUrl: nil, personalRating: 9.5, googleRating: 4.7, googleReviewCount: 620),
+    Restaurant(id: UUID(), name: "Seoul 1988", cuisineType: .korean, neighborhood: .stPauli, priceRange: .moderate, address: "Marktstraße 120, 20357 Hamburg", latitude: 53.5580, longitude: 9.9620, openingHours: "Mon-Sun 12:00-22:30", isClosed: false, notes: "", imageUrl: nil, personalRating: 9.0, googleRating: 4.6, googleReviewCount: 750),
+    Restaurant(id: UUID(), name: "Otto's Burger", cuisineType: .burger, neighborhood: .sternschanze, priceRange: .moderate, address: "Schanzenstraße 87, 20357 Hamburg", latitude: 53.5630, longitude: 9.9670, openingHours: "Mon-Sun 11:30-22:00", isClosed: false, notes: "", imageUrl: nil, personalRating: 8.5, googleRating: 4.4, googleReviewCount: 1850),
+    Restaurant(id: UUID(), name: "Ai Yeu Ai", cuisineType: .vietnamese, neighborhood: .ottensen, priceRange: .budget, address: "Große Rainstraße 21, 22765 Hamburg", latitude: 53.5550, longitude: 9.9260, openingHours: "Closed", isClosed: true, notes: "", imageUrl: nil, personalRating: 8.5, googleRating: 4.4, googleReviewCount: 290),
+]
