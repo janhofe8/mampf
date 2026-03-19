@@ -12,10 +12,21 @@ struct FavoritesView: View {
                     description: Text("Tap the heart icon on a restaurant to add it to your favorites.")
                 )
             } else {
-                List(store.favorites) { restaurant in
-                    NavigationLink(value: restaurant) {
-                        RestaurantRowView(restaurant: restaurant)
+                ScrollView {
+                    LazyVStack(spacing: 16) {
+                        ForEach(store.favorites) { restaurant in
+                            NavigationLink(value: restaurant) {
+                                RestaurantCardView(
+                                    restaurant: restaurant,
+                                    isFavorite: true,
+                                    onFavoriteTap: { store.toggleFavorite(restaurant) }
+                                )
+                            }
+                            .buttonStyle(.plain)
+                        }
                     }
+                    .padding(.horizontal)
+                    .padding(.top, 8)
                 }
             }
         }

@@ -13,14 +13,25 @@ struct RestaurantListView: View {
     var body: some View {
         @Bindable var vm = filterVM
 
-        List(filtered) { restaurant in
-            NavigationLink(value: restaurant) {
-                RestaurantRowView(restaurant: restaurant)
+        ScrollView {
+            LazyVStack(spacing: 16) {
+                ForEach(filtered) { restaurant in
+                    NavigationLink(value: restaurant) {
+                        RestaurantCardView(
+                            restaurant: restaurant,
+                            isFavorite: store.isFavorite(restaurant),
+                            onFavoriteTap: { store.toggleFavorite(restaurant) }
+                        )
+                    }
+                    .buttonStyle(.plain)
+                }
             }
+            .padding(.horizontal)
+            .padding(.top, 8)
         }
         .searchable(text: $vm.searchText, prompt: "Search restaurants...")
         .refreshable { await store.refresh() }
-        .navigationTitle("Restaurants")
+        .navigationTitle("FinestFinder")
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
@@ -38,6 +49,7 @@ struct RestaurantListView: View {
                     }
                 } label: {
                     Image(systemName: "arrow.up.arrow.down")
+                        .foregroundStyle(.ffPrimary)
                 }
             }
 
@@ -46,6 +58,7 @@ struct RestaurantListView: View {
                     showingFilters = true
                 } label: {
                     Image(systemName: filterVM.hasActiveFilters ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
+                        .foregroundStyle(.ffPrimary)
                 }
             }
         }
@@ -60,6 +73,7 @@ struct RestaurantListView: View {
         .overlay {
             if store.isLoading && store.restaurants.isEmpty {
                 ProgressView("Loading restaurants...")
+                    .tint(.ffPrimary)
             }
         }
     }

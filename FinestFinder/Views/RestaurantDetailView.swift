@@ -7,83 +7,111 @@ struct RestaurantDetailView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                restaurantImage
-                header
-                RatingComparisonCard(ratings: restaurant.ratings)
-                infoCard
-                miniMap
+            VStack(spacing: 0) {
+                heroImage
+                content
             }
-            .padding()
         }
-        .navigationTitle(restaurant.name)
+        .ignoresSafeArea(edges: .top)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(.hidden, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
                     store.toggleFavorite(restaurant)
                 } label: {
                     Image(systemName: store.isFavorite(restaurant) ? "heart.fill" : "heart")
-                        .foregroundStyle(store.isFavorite(restaurant) ? .red : .secondary)
+                        .foregroundStyle(store.isFavorite(restaurant) ? .red : .white)
+                        .frame(width: 36, height: 36)
+                        .background(.ultraThinMaterial, in: Circle())
                 }
             }
         }
     }
 
     @ViewBuilder
-    private var restaurantImage: some View {
-        if let urlString = restaurant.imageUrl, let url = URL(string: urlString) {
-            AsyncImage(url: url) { phase in
-                switch phase {
-                case .success(let image):
-                    image
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                        .frame(height: 220)
-                        .clipShape(RoundedRectangle(cornerRadius: 16))
-                case .failure:
-                    imagePlaceholder
-                default:
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(.quaternary)
-                        .frame(height: 220)
-                        .overlay { ProgressView() }
+    private var heroImage: some View {
+        ZStack(alignment: .bottomLeading) {
+            if let urlString = restaurant.imageUrl, let url = URL(string: urlString) {
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(height: 350)
+                            .clipped()
+                    case .failure:
+                        heroPlaceholder
+                    default:
+                        heroPlaceholder
+                            .overlay { ProgressView().tint(.white) }
+                    }
+                }
+            } else {
+                heroPlaceholder
+            }
+
+            // Gradient overlay with name
+            VStack(alignment: .leading, spacing: 8) {
+                if restaurant.isClosed {
+                    Text("Permanently Closed")
+                        .font(.caption.bold())
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(.red.opacity(0.9), in: Capsule())
+                }
+
+                Text(restaurant.name)
+                    .font(.largeTitle.bold())
+                    .foregroundStyle(.white)
+
+                HStack(spacing: 10) {
+                    CuisineTag(cuisineType: restaurant.cuisineType)
+                    Text(restaurant.priceRange.label)
+                        .font(.subheadline)
+                        .foregroundStyle(.white.opacity(0.8))
                 }
             }
-        } else {
-            imagePlaceholder
+            .padding(20)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                LinearGradient(
+                    colors: [.clear, .black.opacity(0.75)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            )
         }
+        .frame(height: 350)
     }
 
-    private var imagePlaceholder: some View {
-        RoundedRectangle(cornerRadius: 16)
-            .fill(.quaternary)
-            .frame(height: 220)
+    private var heroPlaceholder: some View {
+        Rectangle()
+            .fill(
+                LinearGradient(
+                    colors: [.ffPrimary, .ffTertiary],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
+            .frame(height: 350)
             .overlay {
                 Text(restaurant.cuisineType.icon)
-                    .font(.system(size: 60))
+                    .font(.system(size: 80))
+                    .opacity(0.4)
             }
     }
 
-    private var header: some View {
-        HStack(spacing: 10) {
-            CuisineTag(cuisineType: restaurant.cuisineType)
-
-            if restaurant.isClosed {
-                Text("Permanently Closed")
-                    .font(.caption.bold())
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(.red, in: Capsule())
-            }
-
-            Spacer()
-
-            Text(restaurant.priceRange.label)
-                .font(.title3)
-                .foregroundStyle(.secondary)
+    private var content: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            RatingComparisonCard(ratings: restaurant.ratings)
+            infoCard
+            miniMap
         }
+        .padding(20)
+        .background(Color(.systemBackground))
     }
 
     private var infoCard: some View {
@@ -102,7 +130,7 @@ struct RestaurantDetailView: View {
     private func infoRow(icon: String, label: String) -> some View {
         HStack(spacing: 10) {
             Image(systemName: icon)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.ffPrimary)
                 .frame(width: 24)
             Text(label)
                 .font(.subheadline)
@@ -112,7 +140,7 @@ struct RestaurantDetailView: View {
     private var miniMap: some View {
         Map {
             Marker(restaurant.name, coordinate: restaurant.coordinate)
-                .tint(restaurant.personalRating.map { ratingColor(for: $0 / 10) } ?? .blue)
+                .tint(.ffPrimary)
         }
         .frame(height: 200)
         .clipShape(RoundedRectangle(cornerRadius: 16))

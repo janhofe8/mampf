@@ -17,6 +17,7 @@ actor RestaurantRepository {
         return restaurants
     }
 
+    /// Offline fallback only
     func loadCachedRestaurants() -> [Restaurant] {
         guard let data = try? Data(contentsOf: cacheURL),
               let restaurants = try? JSONDecoder().decode([Restaurant].self, from: data)

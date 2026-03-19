@@ -39,11 +39,13 @@ final class RestaurantStore {
     }
 
     func load() async {
+        // Show cached data immediately while fetching
         let cached = await repository.loadCachedRestaurants()
         if !cached.isEmpty {
             restaurants = cached
         }
 
+        // Always fetch fresh data from Supabase
         await refresh()
     }
 
@@ -54,6 +56,7 @@ final class RestaurantStore {
             restaurants = try await repository.fetchRestaurants()
         } catch {
             self.error = error
+            // Keep showing cached data on error (offline)
         }
         isLoading = false
     }

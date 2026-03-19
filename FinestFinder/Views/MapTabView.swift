@@ -22,9 +22,9 @@ struct MapTabView: View {
                 Annotation(restaurant.name, coordinate: restaurant.coordinate) {
                     Circle()
                         .fill(annotationColor(for: restaurant))
-                        .frame(width: 12, height: 12)
-                        .overlay(Circle().stroke(.white, lineWidth: 1.5))
-                        .shadow(radius: 2)
+                        .frame(width: 14, height: 14)
+                        .overlay(Circle().stroke(.white, lineWidth: 2))
+                        .shadow(color: .ffPrimary.opacity(0.3), radius: 4)
                         .onTapGesture {
                             selectedRestaurant = restaurant
                         }
@@ -38,6 +38,7 @@ struct MapTabView: View {
                     .toolbar {
                         ToolbarItem(placement: .topBarLeading) {
                             Button("Done") { selectedRestaurant = nil }
+                                .foregroundStyle(.ffPrimary)
                         }
                     }
             }
@@ -47,7 +48,12 @@ struct MapTabView: View {
 
     private func annotationColor(for restaurant: Restaurant) -> Color {
         guard let rating = restaurant.personalRating else { return .gray }
-        return ratingColor(for: rating / 10)
+        switch rating {
+        case 9...: return .ffSecondary          // 9, 9.5, 10 → neon green
+        case 8..<9: return .ffPrimary           // 8, 8.5 → purple
+        case 7..<8: return .orange              // 7, 7.5 → orange
+        default: return .red                    // 6.5 and below → red
+        }
     }
 }
 

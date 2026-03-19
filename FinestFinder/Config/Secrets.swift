@@ -1,7 +1,6 @@
 import Foundation
 
 enum SupabaseConfig {
-    // TODO: Replace with your Supabase project URL and anon key
-    static let url = URL(string: "https://YOUR_PROJECT_ID.supabase.co")!
-    static let anonKey = "YOUR_ANON_KEY"
+    static let url = URL(string: "https://nuriruulwjjpycdszdrn.supabase.co")!
+    static let anonKey = "sb_publishable_N-y1AAu_Ni-j6WLC3ygreg_TocDrIw2"
 }

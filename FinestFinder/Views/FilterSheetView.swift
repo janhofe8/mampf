@@ -52,6 +52,7 @@ struct FilterSheetView: View {
 
                 Section("Minimum Rating: \(vm.minimumRating, specifier: "%.1f")") {
                     Slider(value: $vm.minimumRating, in: 0...10, step: 0.5)
+                        .tint(.ffPrimary)
                 }
             }
             .navigationTitle("Filters")
@@ -61,10 +62,12 @@ struct FilterSheetView: View {
                     Button("Reset") {
                         filterVM.clearFilters()
                     }
+                    .foregroundStyle(.ffPrimary)
                     .disabled(!filterVM.hasActiveFilters)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") { dismiss() }
+                        .foregroundStyle(.ffPrimary)
                 }
             }
         }
@@ -83,7 +86,7 @@ private struct FilterChip: View {
                 .lineLimit(1)
                 .padding(.horizontal, 10)
                 .padding(.vertical, 6)
-                .background(isSelected ? Color.accentColor : Color(.tertiarySystemFill), in: Capsule())
+                .background(isSelected ? Color.ffPrimary : Color(.tertiarySystemFill), in: Capsule())
                 .foregroundStyle(isSelected ? .white : .primary)
         }
         .buttonStyle(.plain)

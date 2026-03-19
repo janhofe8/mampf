@@ -4,15 +4,15 @@ struct RatingBarView: View {
     let rating: Rating
     @State private var animatedWidth: CGFloat = 0
 
-    private var color: Color {
-        ratingColor(for: rating.normalized)
+    private var barColor: Color {
+        rating.source == .personal ? .ffSecondary : .ffPrimary
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
                 Image(systemName: rating.source.icon)
-                    .foregroundStyle(color)
+                    .foregroundStyle(barColor)
                 Text(rating.source.displayName)
                     .font(.subheadline.weight(.medium))
 
@@ -35,7 +35,7 @@ struct RatingBarView: View {
                         Capsule()
                             .fill(
                                 LinearGradient(
-                                    colors: [color.opacity(0.7), color],
+                                    colors: [barColor.opacity(0.6), barColor],
                                     startPoint: .leading,
                                     endPoint: .trailing
                                 )

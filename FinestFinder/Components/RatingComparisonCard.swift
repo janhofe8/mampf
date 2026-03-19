@@ -40,14 +40,14 @@ struct RatingComparisonCard: View {
                 Divider()
                 HStack {
                     Image(systemName: "chart.bar.fill")
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.ffPrimary)
                     Text(consensus.label)
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                     Spacer()
                     Text("\(Int(consensus.average * 100))%")
                         .font(.subheadline.monospacedDigit().bold())
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.ffPrimary)
                 }
             }
         }

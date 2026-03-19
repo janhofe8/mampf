@@ -27,6 +27,7 @@ struct ContentView: View {
                 }
             }
         }
+        .tint(.ffPrimary)
     }
 }
 
