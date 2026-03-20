@@ -1,122 +1,106 @@
-# FinestFinder
+# MAMPF — Kuratierte Foodspots
 
-Persönliche Restaurant-Rating-App für Hamburg (~95 Restaurants). Jan bewertet Restaurants auf einer Skala von 1-10, die App zeigt diese neben Google-Bewertungen.
+Restaurant-Rating-App für Hamburg (~92 Restaurants). MAMPF-Rating (Jans persönliche Bewertung 1-10) neben Google- und Community-Bewertungen.
 
-## Tech-Stack
+## Plattformen
 
 - **iOS App:** SwiftUI, iOS 26.2, Swift 6 (MainActor default isolation)
+- **Web App:** Next.js + Tailwind + TypeScript, gehostet auf Vercel
 - **Backend:** Supabase (PostgreSQL + Storage)
-- **Dependencies:** supabase-swift v2.x (SPM)
+
+## Infos
+
 - **Supabase Project ID:** nuriruulwjjpycdszdrn
-- **Build:** `xcodebuild -scheme FinestFinder -destination 'platform=iOS Simulator,name=iPhone 17 Pro'`
+- **GitHub:** github.com/janhofe8/mampf
+- **Web URL:** https://mampf-nine.vercel.app
+- **iOS Build:** `xcodebuild -project MAMPF.xcodeproj -scheme MAMPF -destination 'platform=iOS Simulator,name=iPhone 17 Pro'`
+- **Web Build:** `cd web && npm run build`
+- **Deploy Web:** `cd /Users/janhoferichter/test/FinestFinder && vercel --prod --yes` (Root Directory in Vercel auf `web` gesetzt)
+- **Interner Projektname** ist noch "FinestFinder" (Ordner), Display-Name ist "MAMPF"
 
 ## Architektur
 
 ```
-FinestFinder/
-├── Models/         Restaurant.swift (Codable struct + Enums), Rating.swift
-├── ViewModels/     RestaurantStore.swift (@Observable), FilterViewModel.swift
-├── Views/          List, Detail, Map, Favorites, Filter
-├── Components/     Cards, Rating-Bars, Badges, Tags
-├── Services/       SupabaseManager.swift, RestaurantRepository.swift
-├── Config/         Secrets.swift (Supabase URL + Anon Key), Theme.swift
-└── Data/           PreviewSampleData.swift, SeedData.swift (Legacy)
-```
+FinestFinder/              ← iOS App
+├── Models/                Restaurant.swift (Codable struct + Enums), Rating.swift
+├── ViewModels/            RestaurantStore.swift (@Observable), FilterViewModel.swift
+├── Views/                 List, Detail, Map, Favorites, Filter
+├── Components/            Cards, Rating-Bars, Badges, Tags
+├── Services/              SupabaseManager, RestaurantRepository, UserRatingRepository, LocationManager, DeviceID
+├── Config/                Secrets.swift (Supabase URL + Anon Key), Theme.swift
+└── Data/                  PreviewSampleData.swift
 
-- **Datenfluss:** App startet → RestaurantStore.load() → zeigt Cache sofort → fetcht frisch von Supabase → aktualisiert UI
-- **Offline:** JSON-Cache als Fallback, kein TTL — immer fresh fetch
-- **Favoriten:** Lokal in UserDefaults (Set<UUID>)
-- **Kein SwiftData** — alles über Supabase REST API
+web/                       ← Web App (Next.js)
+├── app/                   layout.tsx, page.tsx, globals.css
+├── components/            MapView, RestaurantList, RestaurantCard, RestaurantDetail, etc.
+└── lib/                   supabase.ts, types.ts, utils.ts, device-id.ts
+```
 
 ## Dev-Regeln
 
-- Nach Code-Änderungen immer Build testen
-- Neue Dateien werden automatisch von Xcode erkannt (PBXFileSystemSynchronizedRootGroup)
+- **Änderungen für beide Plattformen** wenn nicht anders gesagt (iOS + Web)
+- Nach Code-Änderungen immer Build testen (iOS + Web)
 - Secrets liegen in `~/.zshenv` (SUPABASE_SECRET_KEY, GOOGLE_PLACES_API_KEY), nie im Code oder Chat
 - Google Places API nur nach Absprache aufrufen (Kosten!)
-- Publishable Anon Key in Secrets.swift ist okay (read-only, RLS aktiv)
-- Design: Purple (.ffPrimary), Neon-Green (.ffSecondary), Charcoal (.ffTertiary)
+- **Neue Restaurants immer recherchieren** — Cuisine Type, Preis etc. nicht raten
+- Stadtteile basieren auf PLZ der Google-Adresse, nicht manuell vergeben
+- Publishable Anon Key in Secrets.swift / lib/supabase.ts ist okay (read-only, RLS aktiv)
+
+## Design
+
+- **Rating-Farben:** Purple (≥9 elite), Lime (8-8.5 sehr gut), Amber (7-7.5 solide), Grau (5-6.5), Rot (≤4.5)
+- **App-Farben:** Purple (.ffPrimary), Lime (.ffSecondary), Charcoal (.ffTertiary)
+- **Emoji-Icons** statt Flaggen-Emojis (🍝 statt 🇮🇹) — Flaggen rendern in iOS Simulator als ?
+- **Light Mode** auf beiden Plattformen
+- **Preiskategorien:** € (<15€), €€ (15-25€), €€€ (25-40€), €€€€ (40€+)
 
 ## Content — Supabase-Datenbank
 
 ### Zugang
 
-Alle Datenänderungen über Supabase REST API mit Secret Key aus `~/.zshenv`:
-
 ```bash
 source ~/.zshenv
 # Lesen
 curl -s "https://nuriruulwjjpycdszdrn.supabase.co/rest/v1/restaurants?select=name,personal_rating&order=personal_rating.desc" \
-  -H "apikey: $SUPABASE_SECRET_KEY" \
-  -H "Authorization: Bearer $SUPABASE_SECRET_KEY"
+  -H "apikey: $SUPABASE_SECRET_KEY" -H "Authorization: Bearer $SUPABASE_SECRET_KEY"
 
 # Updaten
 curl -s -X PATCH "https://nuriruulwjjpycdszdrn.supabase.co/rest/v1/restaurants?name=eq.Lokmam" \
-  -H "apikey: $SUPABASE_SECRET_KEY" \
-  -H "Authorization: Bearer $SUPABASE_SECRET_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{"personal_rating": 9.0}'
+  -H "apikey: $SUPABASE_SECRET_KEY" -H "Authorization: Bearer $SUPABASE_SECRET_KEY" \
+  -H "Content-Type: application/json" -d '{"personal_rating": 9.0}'
 ```
 
-Schema-Änderungen (ALTER TABLE) müssen im Supabase SQL Editor ausgeführt werden — die REST API kann das nicht.
+Schema-Änderungen (ALTER TABLE) müssen im Supabase SQL Editor ausgeführt werden.
 
-### Felder
+### Tabellen
 
-| Spalte | Typ | Quelle | Beschreibung |
-|--------|-----|--------|-------------|
-| id | UUID | Auto | Eindeutige ID |
-| name | TEXT | Jan | Restaurantname |
-| cuisine_type | TEXT | Jan/LLM | Küchenkategorie (siehe Enums) |
-| neighborhood | TEXT | Jan | Hamburger Stadtteil |
-| price_range | TEXT | Jan/LLM | €, €€, €€€, €€€€ |
-| address | TEXT | Google | Straßenadresse |
-| latitude | DOUBLE | Google | Breitengrad (Karte) |
-| longitude | DOUBLE | Google | Längengrad (Karte) |
-| opening_hours | TEXT | Google | Öffnungszeiten |
-| is_closed | BOOLEAN | Jan | Dauerhaft geschlossen? |
-| notes | TEXT | Jan | Persönliche Notizen (optional) |
-| image_url | TEXT | Storage | Link zum Foto in Supabase Storage |
-| personal_rating | DOUBLE | Jan | Jans Bewertung 1-10 |
-| google_rating | DOUBLE | Google | Google-Durchschnitt 1-5 |
-| google_review_count | INT | Google | Anzahl Google-Reviews |
-| google_place_id | TEXT | Google | Googles ID für Re-Fetch |
-| google_maps_url | TEXT | Google | Link zur Google Maps Seite |
+**restaurants** (92 Einträge): id, name, cuisine_type, neighborhood, price_range, address, latitude, longitude, opening_hours, is_closed, notes, image_url, personal_rating, google_rating, google_review_count, google_place_id, google_maps_url, created_at, updated_at
 
-### Typische Content-Aufgaben
+**user_ratings**: id, restaurant_id, device_id, rating (1-10), created_at, updated_at — UNIQUE(restaurant_id, device_id)
 
-**Restaurant hinzufügen:**
+**restaurant_community_ratings** (View): restaurant_id, community_rating, community_rating_count
+
+### Restaurant hinzufügen
+
 1. Name und Jans Rating bekommen
-2. Google Places API: Adresse, Koordinaten, Rating, Öffnungszeiten, Place ID, Maps URL holen
-3. Foto aus Google Places holen → Supabase Storage hochladen
-4. INSERT in restaurants-Tabelle
+2. **Immer recherchieren:** Cuisine Type, Price Range über Google/Web
+3. Google Places API: Adresse, Koordinaten, Rating, Öffnungszeiten, Place ID, Maps URL
+4. Foto aus Google Places holen (Landscape, Essen bevorzugt) → Supabase Storage
+5. Stadtteil aus PLZ der Adresse ableiten
+6. INSERT in restaurants-Tabelle
 
-**Rating ändern:**
-```bash
-PATCH /rest/v1/restaurants?name=eq.{Name} → {"personal_rating": 8.5}
-```
+### Cuisine Types
 
-**Restaurant löschen:**
-```bash
-DELETE /rest/v1/restaurants?name=eq.{Name}
-```
+burger, pizza, italian, korean, vietnamese, japanese, chinese, thai, turkish, greek, mexican, german, middleEastern, portuguese, oriental, seafood, poke, brunch, steak
 
-**Foto tauschen:**
-1. Neues Foto in Supabase Storage hochladen (Bucket: restaurant-images)
-2. image_url updaten
+### Neighborhoods (basierend auf PLZ)
 
-### Cuisine Types (Swift-Enum ↔ DB-Wert)
-
-burger, pizza, italian, korean, vietnamese, japanese, chinese, thai, turkish, greek, mexican, german, middleEastern, portuguese, oriental, seafood, poke, brunch, steak, other
-
-### Neighborhoods
-
-altona, ottensen, stPauli, sternschanze, eimsbüttel, neustadt, altstadt, winterhude, eppendorf, barmbek, stGeorg, hafenCity, other
+altona, ottensen, stPauli, sternschanze, eimsbüttel, neustadt, altstadt, winterhude, eppendorf, barmbek, stGeorg
 
 ### Price Ranges
 
-budget (€), moderate (€€), upscale (€€€), fine (€€€€)
+budget (€ <15€), moderate (€€ 15-25€), upscale (€€€ 25-40€), fine (€€€€ 40€+)
 
 ## Bekannte Themen
 
 - Google-Fotos in Supabase Storage verstoßen gegen Google ToS (Caching). Okay für privaten Gebrauch, vor Public Release durch eigene Fotos ersetzen.
-- Flaggen-Emojis (🇬🇷 etc.) werden in kleinen Font-Größen als ? angezeigt — iOS-Bug

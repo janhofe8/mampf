@@ -29,7 +29,8 @@ struct RestaurantListView: View {
                                 restaurant: restaurant,
                                 isFavorite: store.isFavorite(restaurant),
                                 onFavoriteTap: { store.toggleFavorite(restaurant) },
-                                compact: true
+                                compact: true,
+                                communityRating: store.communityRating(for: restaurant)
                             )
                         }
                         .buttonStyle(.plain)
