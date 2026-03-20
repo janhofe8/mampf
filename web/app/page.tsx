@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { getDeviceId } from "@/lib/device-id";
 import { getFavorites, saveFavorites } from "@/lib/utils";
-import { RestaurantWithCommunity, CommunityRating } from "@/lib/types";
+import { RestaurantWithCommunity, CommunityRating, CUISINE_TYPES, PRICE_LABELS } from "@/lib/types";
 import BottomTabs, { TabId } from "@/components/BottomTabs";
 import MapView from "@/components/MapView";
 import RestaurantList from "@/components/RestaurantList";
@@ -22,6 +22,18 @@ export default function Home() {
     lat: number;
     lng: number;
   } | null>(null);
+  const [mapMinRating, setMapMinRating] = useState(0);
+  const [mapCuisines, setMapCuisines] = useState<Set<string>>(new Set());
+  const [mapPrices, setMapPrices] = useState<Set<string>>(new Set());
+
+  const mapFilteredRestaurants = restaurants.filter((r) => {
+    if (mapMinRating > 0 && (r.personal_rating ?? 0) < mapMinRating) return false;
+    if (mapCuisines.size > 0 && !mapCuisines.has(r.cuisine_type)) return false;
+    if (mapPrices.size > 0 && !mapPrices.has(r.price_range)) return false;
+    return true;
+  });
+
+  const mapHasFilters = mapMinRating > 0 || mapCuisines.size > 0 || mapPrices.size > 0;
 
   // Load favorites from localStorage
   useEffect(() => {
@@ -174,13 +186,54 @@ export default function Home() {
               }`}
             >
               <MapView
-                restaurants={restaurants}
+                restaurants={mapFilteredRestaurants}
                 favorites={favorites}
                 onToggleFavorite={handleToggleFavorite}
                 onSelectRestaurant={handleSelectRestaurant}
                 userLocation={userLocation}
                 onRequestLocation={handleRequestLocation}
               />
+              {/* Map filter chips */}
+              <div className="absolute top-2 left-0 right-12 z-20 overflow-x-auto">
+                <div className="flex gap-1.5 px-3 pb-1">
+                  {(["9+", "8+", "7+"] as const).map((label) => {
+                    const min = label === "9+" ? 9 : label === "8+" ? 8 : 7;
+                    const active = mapMinRating === min;
+                    return (
+                      <button key={label} onClick={() => setMapMinRating(active ? 0 : min)}
+                        className={`shrink-0 px-2.5 py-1 rounded-full text-xs font-bold shadow-sm transition-colors ${active ? "bg-[rgb(115,51,217)] text-white" : "bg-white/90 text-gray-700 backdrop-blur-sm"}`}>
+                        ★ {label}
+                      </button>
+                    );
+                  })}
+                  <div className="w-px bg-black/10 shrink-0 my-1" />
+                  {Object.entries(CUISINE_TYPES).slice(0, 8).map(([key, emoji]) => {
+                    const active = mapCuisines.has(key);
+                    return (
+                      <button key={key} onClick={() => { const n = new Set(mapCuisines); active ? n.delete(key) : n.add(key); setMapCuisines(n); }}
+                        className={`shrink-0 px-2.5 py-1 rounded-full text-xs font-bold shadow-sm transition-colors ${active ? "bg-[rgb(115,51,217)] text-white" : "bg-white/90 text-gray-700 backdrop-blur-sm"}`}>
+                        {emoji} {key.charAt(0).toUpperCase() + key.slice(1)}
+                      </button>
+                    );
+                  })}
+                  <div className="w-px bg-black/10 shrink-0 my-1" />
+                  {Object.entries(PRICE_LABELS).map(([key, label]) => {
+                    const active = mapPrices.has(key);
+                    return (
+                      <button key={key} onClick={() => { const n = new Set(mapPrices); active ? n.delete(key) : n.add(key); setMapPrices(n); }}
+                        className={`shrink-0 px-2.5 py-1 rounded-full text-xs font-bold shadow-sm transition-colors ${active ? "bg-[rgb(115,51,217)] text-white" : "bg-white/90 text-gray-700 backdrop-blur-sm"}`}>
+                        {label}
+                      </button>
+                    );
+                  })}
+                  {mapHasFilters && (
+                    <button onClick={() => { setMapMinRating(0); setMapCuisines(new Set()); setMapPrices(new Set()); }}
+                      className="shrink-0 px-2 py-1 text-gray-400 text-xs">
+                      ✕
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
 
             <div
