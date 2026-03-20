@@ -12,37 +12,44 @@ struct RestaurantCardView: View {
             cardImage
 
             // Ratings top-left
-            VStack(alignment: .leading, spacing: compact ? 3 : 6) {
-                if let personal = restaurant.personalRating {
-                    let pillColor = Color.ratingColor(for: personal)
-                    let textColor: Color = (personal >= 7 && personal < 9) ? .black : .white
-                    HStack(spacing: compact ? 3 : 5) {
-                        Image(systemName: "star.fill")
-                            .font(.system(size: compact ? 10 : 14, weight: .bold))
-                        Text(String(format: personal.truncatingRemainder(dividingBy: 1) == 0 ? "%.0f" : "%.1f", personal))
-                            .font(.system(size: compact ? 18 : 26, weight: .black).monospacedDigit())
+            if compact {
+                HStack(spacing: 4) {
+                    if let personal = restaurant.personalRating {
+                        compactPill(icon: "star.fill", value: String(format: personal.truncatingRemainder(dividingBy: 1) == 0 ? "%.0f" : "%.1f", personal), color: Color.ratingColor(for: personal), textColor: (personal >= 7 && personal < 9) ? .black : .white)
                     }
-                    .foregroundStyle(textColor)
-                    .padding(.horizontal, compact ? 8 : 12)
-                    .padding(.vertical, compact ? 4 : 6)
-                    .background(pillColor, in: Capsule())
+                    if let google = restaurant.googleRating {
+                        compactPill(icon: "globe", value: String(format: "%.1f", google), color: .black.opacity(0.5), textColor: .white)
+                    }
+                    if let cr = communityRating {
+                        compactPill(icon: "person.2.fill", value: String(format: "%.1f", cr.average), color: .black.opacity(0.5), textColor: .white)
+                    }
                 }
-                if let google = restaurant.googleRating {
-                    if compact {
-                        compactPill(icon: "globe", value: String(format: "%.1f", google))
-                    } else {
+                .padding(6)
+            } else {
+                VStack(alignment: .leading, spacing: 6) {
+                    if let personal = restaurant.personalRating {
+                        let pillColor = Color.ratingColor(for: personal)
+                        let textColor: Color = (personal >= 7 && personal < 9) ? .black : .white
+                        HStack(spacing: 5) {
+                            Image(systemName: "star.fill")
+                                .font(.system(size: 14, weight: .bold))
+                            Text(String(format: personal.truncatingRemainder(dividingBy: 1) == 0 ? "%.0f" : "%.1f", personal))
+                                .font(.system(size: 26, weight: .black).monospacedDigit())
+                        }
+                        .foregroundStyle(textColor)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(pillColor, in: Capsule())
+                    }
+                    if let google = restaurant.googleRating {
                         smallPill(icon: "globe", value: String(format: "%.1f", google))
                     }
-                }
-                if let cr = communityRating {
-                    if compact {
-                        compactPill(icon: "person.2.fill", value: String(format: "%.1f", cr.average))
-                    } else {
+                    if let cr = communityRating {
                         smallPill(icon: "person.2.fill", value: String(format: "%.1f", cr.average))
                     }
                 }
+                .padding(12)
             }
-            .padding(compact ? 8 : 12)
 
             // Favorite button top-right (hidden in compact)
             if !compact {
@@ -150,18 +157,18 @@ struct RestaurantCardView: View {
             }
     }
 
-    private func compactPill(icon: String, value: String) -> some View {
-        HStack(spacing: 3) {
+    private func compactPill(icon: String, value: String, color: Color, textColor: Color) -> some View {
+        HStack(spacing: 2) {
             Image(systemName: icon)
-                .font(.system(size: 10, weight: .bold))
-                .frame(width: 14)
+                .font(.system(size: 8, weight: .bold))
+                .frame(width: 10)
             Text(value)
-                .font(.system(size: 18, weight: .black).monospacedDigit())
+                .font(.system(size: 12, weight: .black).monospacedDigit())
         }
-        .foregroundStyle(.white)
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .background(.black.opacity(0.5), in: Capsule())
+        .foregroundStyle(textColor)
+        .padding(.horizontal, 6)
+        .padding(.vertical, 3)
+        .background(color, in: Capsule())
     }
 
     private func smallPill(icon: String, value: String) -> some View {
