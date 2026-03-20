@@ -53,17 +53,17 @@ export default function RestaurantCard({
           {/* Rating pills */}
           <div className="absolute top-2 left-2 flex flex-row gap-1">
             <div
-              className={`${ratingBg} ${ratingText} px-1.5 py-0.5 rounded-lg text-[10px] font-bold`}
+              className={`${ratingBg} ${ratingText} min-w-[44px] text-center px-1.5 py-0.5 rounded-lg text-[10px] font-bold`}
             >
               ★ {restaurant.personal_rating?.toFixed(1) ?? "N/A"}
             </div>
             {restaurant.google_rating != null && (
-              <div className="bg-black/40 text-white px-1.5 py-0.5 rounded-lg text-[10px] font-bold">
+              <div className="bg-black/40 text-white min-w-[44px] text-center px-1.5 py-0.5 rounded-lg text-[10px] font-bold">
                 🌐 {restaurant.google_rating.toFixed(1)}
               </div>
             )}
             {restaurant.community_rating != null && (
-              <div className="bg-black/40 text-white px-1.5 py-0.5 rounded-lg text-[10px] font-bold">
+              <div className="bg-black/40 text-white min-w-[44px] text-center px-1.5 py-0.5 rounded-lg text-[10px] font-bold">
                 👥 {restaurant.community_rating.toFixed(1)}
               </div>
             )}

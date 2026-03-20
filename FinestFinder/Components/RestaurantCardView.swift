@@ -166,6 +166,7 @@ struct RestaurantCardView: View {
                 .font(.system(size: 12, weight: .black).monospacedDigit())
         }
         .foregroundStyle(textColor)
+        .frame(minWidth: 44)
         .padding(.horizontal, 6)
         .padding(.vertical, 3)
         .background(color, in: Capsule())
