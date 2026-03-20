@@ -192,7 +192,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 62CC4AF92F6C6490008FE0B8 /* Build configuration list for PBXProject "MAMPF" */;
+			buildConfigurationList = 62CC4AF92F6C6490008FE0B8 /* Build configuration list for PBXProject "FinestFinder" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -554,7 +554,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		62CC4AF92F6C6490008FE0B8 /* Build configuration list for PBXProject "MAMPF" */ = {
+		62CC4AF92F6C6490008FE0B8 /* Build configuration list for PBXProject "FinestFinder" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				62CC4B1F2F6C6491008FE0B8 /* Debug */,
