@@ -4,67 +4,94 @@ struct RestaurantCardView: View {
     let restaurant: Restaurant
     let isFavorite: Bool
     let onFavoriteTap: () -> Void
+    var compact: Bool = false
+    var communityRating: (average: Double, count: Int)? = nil
 
     var body: some View {
         ZStack(alignment: .topLeading) {
             cardImage
 
-            // Rating badges top-left
-            VStack(alignment: .leading, spacing: 6) {
+            // Ratings top-left
+            VStack(alignment: .leading, spacing: compact ? 4 : 6) {
                 if let personal = restaurant.personalRating {
-                    ratingPill(icon: "star.fill", value: String(format: personal.truncatingRemainder(dividingBy: 1) == 0 ? "%.0f" : "%.1f", personal), color: .ffSecondary)
+                    let pillColor = Color.ratingColor(for: personal)
+                    let textColor: Color = (personal >= 7 && personal < 9) ? .black : .white
+                    HStack(spacing: compact ? 3 : 5) {
+                        Image(systemName: "star.fill")
+                            .font(.system(size: compact ? 10 : 14, weight: .bold))
+                        Text(String(format: personal.truncatingRemainder(dividingBy: 1) == 0 ? "%.0f" : "%.1f", personal))
+                            .font(.system(size: compact ? 18 : 26, weight: .black).monospacedDigit())
+                    }
+                    .foregroundStyle(textColor)
+                    .padding(.horizontal, compact ? 8 : 12)
+                    .padding(.vertical, compact ? 4 : 6)
+                    .background(pillColor, in: Capsule())
                 }
-                if let google = restaurant.googleRating {
-                    ratingPill(icon: "globe", value: String(format: "%.1f", google), color: .white.opacity(0.9))
+                if !compact {
+                    HStack(spacing: 8) {
+                        if let google = restaurant.googleRating {
+                            smallPill(icon: "globe", value: String(format: "%.1f", google))
+                        }
+                        if let cr = communityRating {
+                            smallPill(icon: "person.2.fill", value: String(format: "%.1f", cr.average))
+                        }
+                    }
                 }
             }
-            .padding(12)
+            .padding(compact ? 8 : 12)
 
-            // Favorite button top-right
-            VStack {
-                HStack {
-                    Spacer()
-                    Button(action: onFavoriteTap) {
-                        Image(systemName: isFavorite ? "heart.fill" : "heart")
-                            .font(.body.weight(.semibold))
-                            .foregroundStyle(isFavorite ? .red : .white)
-                            .frame(width: 36, height: 36)
-                            .background(.ultraThinMaterial, in: Circle())
+            // Favorite button top-right (hidden in compact)
+            if !compact {
+                VStack {
+                    HStack {
+                        Spacer()
+                        Button(action: onFavoriteTap) {
+                            Image(systemName: isFavorite ? "heart.fill" : "heart")
+                                .font(.body.weight(.semibold))
+                                .foregroundStyle(isFavorite ? .red : .white)
+                                .frame(width: 36, height: 36)
+                                .background(.ultraThinMaterial, in: Circle())
+                        }
+                        .padding(12)
                     }
-                    .padding(12)
+                    Spacer()
                 }
-                Spacer()
             }
 
             // Bottom gradient with name + info
             VStack {
                 Spacer()
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: compact ? 2 : 6) {
                     Text(restaurant.name)
-                        .font(.title2.bold())
+                        .font(compact ? .caption.bold() : .title2.bold())
                         .foregroundStyle(.white)
-                        .lineLimit(2)
+                        .lineLimit(compact ? 1 : 2)
 
-                    HStack(spacing: 8) {
-                        Label(restaurant.neighborhood.displayName, systemImage: "mappin")
-                        Text("·")
-                        Text("\(restaurant.cuisineType.icon) \(restaurant.cuisineType.displayName)")
-                        Spacer()
-                        Text(restaurant.priceRange.label)
+                    if !compact {
+                        HStack(spacing: 8) {
+                            Label(restaurant.neighborhood.displayName, systemImage: "mappin")
+                            Text("·")
+                            HStack(spacing: 2) {
+                                Text(restaurant.cuisineType.icon).font(.system(size: 12))
+                                Text(restaurant.cuisineType.displayName)
+                            }
+                            Spacer()
+                            Text(restaurant.priceRange.label)
+                        }
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(.white.opacity(0.85))
                     }
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(.white.opacity(0.85))
 
                     if restaurant.isClosed {
-                        Text("Permanently Closed")
-                            .font(.caption.bold())
+                        Text("Closed")
+                            .font(.caption2.bold())
                             .foregroundStyle(.white)
-                            .padding(.horizontal, 8)
+                            .padding(.horizontal, compact ? 6 : 8)
                             .padding(.vertical, 3)
                             .background(.red.opacity(0.9), in: Capsule())
                     }
                 }
-                .padding(16)
+                .padding(compact ? 8 : 16)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(
                     LinearGradient(
@@ -75,9 +102,9 @@ struct RestaurantCardView: View {
                 )
             }
         }
-        .frame(height: 280)
-        .clipShape(RoundedRectangle(cornerRadius: 20))
-        .shadow(color: .black.opacity(0.15), radius: 10, y: 5)
+        .frame(height: compact ? 140 : 280)
+        .clipShape(RoundedRectangle(cornerRadius: compact ? 12 : 20))
+        .shadow(color: .black.opacity(0.15), radius: compact ? 5 : 10, y: compact ? 2 : 5)
     }
 
     @ViewBuilder
@@ -89,7 +116,7 @@ struct RestaurantCardView: View {
                     image
                         .resizable()
                         .aspectRatio(contentMode: .fill)
-                        .frame(height: 280)
+                        .frame(maxWidth: .infinity, maxHeight: compact ? 140 : 280)
                 case .failure:
                     placeholderImage
                 default:
@@ -111,12 +138,25 @@ struct RestaurantCardView: View {
                     endPoint: .bottomTrailing
                 )
             )
-            .frame(height: 280)
+            .frame(height: compact ? 140 : 280)
             .overlay {
                 Text(restaurant.cuisineType.icon)
-                    .font(.system(size: 60))
+                    .font(.system(size: compact ? 36 : 60))
                     .opacity(0.5)
             }
+    }
+
+    private func smallPill(icon: String, value: String) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: icon)
+                .font(.system(size: 10, weight: .semibold))
+            Text(value)
+                .font(.system(size: 14, weight: .bold).monospacedDigit())
+        }
+        .foregroundStyle(.ffTertiary)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 5)
+        .background(.white.opacity(0.85), in: Capsule())
     }
 
     private func ratingPill(icon: String, value: String, color: Color) -> some View {
@@ -150,7 +190,9 @@ struct RestaurantCardView: View {
             imageUrl: nil,
             personalRating: 9.5,
             googleRating: 4.7,
-            googleReviewCount: 620
+            googleReviewCount: 620,
+            googlePlaceId: nil,
+            googleMapsUrl: nil
         ),
         isFavorite: false,
         onFavoriteTap: {}

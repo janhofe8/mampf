@@ -11,6 +11,8 @@ struct MapTabView: View {
             span: MKCoordinateSpan(latitudeDelta: 0.06, longitudeDelta: 0.06)
         )
     )
+    @State private var isZoomedIn = false
+    @State private var locationManager = LocationManager()
 
     private var filtered: [Restaurant] {
         filterVM.apply(to: store.restaurants)
@@ -18,20 +20,48 @@ struct MapTabView: View {
 
     var body: some View {
         Map(position: $position) {
+            UserAnnotation()
+
             ForEach(filtered) { restaurant in
                 Annotation(restaurant.name, coordinate: restaurant.coordinate) {
-                    Circle()
-                        .fill(annotationColor(for: restaurant))
-                        .frame(width: 14, height: 14)
-                        .overlay(Circle().stroke(.white, lineWidth: 2))
-                        .shadow(color: .ffPrimary.opacity(0.3), radius: 4)
+                    mapPin(for: restaurant)
                         .onTapGesture {
                             selectedRestaurant = restaurant
                         }
                 }
             }
         }
-        .navigationTitle("Map")
+        .onMapCameraChange { context in
+            let zoomed = context.region.span.latitudeDelta < 0.03
+            if zoomed != isZoomedIn {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    isZoomedIn = zoomed
+                }
+            }
+        }
+        .overlay(alignment: .topTrailing) {
+            Button {
+                if let location = locationManager.lastLocation {
+                    withAnimation {
+                        position = .region(MKCoordinateRegion(
+                            center: location,
+                            span: MKCoordinateSpan(latitudeDelta: 0.02, longitudeDelta: 0.02)
+                        ))
+                    }
+                }
+            } label: {
+                Image(systemName: "location.fill")
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(.ffPrimary)
+                    .frame(width: 44, height: 44)
+                    .background(.regularMaterial, in: Circle())
+                    .shadow(color: .black.opacity(0.15), radius: 4, y: 2)
+            }
+            .padding(.top, 60)
+            .padding(.trailing, 12)
+        }
+        .onAppear { locationManager.requestPermission() }
+        .navigationBarHidden(true)
         .sheet(item: $selectedRestaurant) { restaurant in
             NavigationStack {
                 RestaurantDetailView(restaurant: restaurant)
@@ -46,14 +76,27 @@ struct MapTabView: View {
         }
     }
 
-    private func annotationColor(for restaurant: Restaurant) -> Color {
-        guard let rating = restaurant.personalRating else { return .gray }
-        switch rating {
-        case 9...: return .ffSecondary          // 9, 9.5, 10 → neon green
-        case 8..<9: return .ffPrimary           // 8, 8.5 → purple
-        case 7..<8: return .orange              // 7, 7.5 → orange
-        default: return .red                    // 6.5 and below → red
+    @ViewBuilder
+    private func mapPin(for restaurant: Restaurant) -> some View {
+        let color = annotationColor(for: restaurant)
+        if isZoomedIn, let rating = restaurant.personalRating {
+            Text(String(format: rating.truncatingRemainder(dividingBy: 1) == 0 ? "%.0f" : "%.1f", rating))
+                .font(.system(size: 11, weight: .black).monospacedDigit())
+                .foregroundStyle(rating >= 7 && rating < 9 ? .black : .white)
+                .frame(minWidth: 28, minHeight: 28)
+                .background(color, in: Circle())
+                .shadow(color: color.opacity(0.5), radius: 4)
+        } else {
+            Circle()
+                .fill(color)
+                .frame(width: 14, height: 14)
+                .shadow(color: color.opacity(0.4), radius: 4)
         }
+    }
+
+    private func annotationColor(for restaurant: Restaurant) -> Color {
+        guard let rating = restaurant.personalRating else { return .ffMuted }
+        return .ratingColor(for: rating)
     }
 }
 

@@ -4,11 +4,15 @@ struct CuisineTag: View {
     let cuisineType: CuisineType
 
     var body: some View {
-        Text("\(cuisineType.icon) \(cuisineType.displayName)")
-            .font(.caption)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(.quaternary, in: Capsule())
+        HStack(spacing: 4) {
+            Text(cuisineType.icon)
+                .font(.system(size: 14))
+            Text(cuisineType.displayName)
+                .font(.caption)
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(.quaternary, in: Capsule())
     }
 }
 

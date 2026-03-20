@@ -52,6 +52,7 @@ struct RatingComparisonCard: View {
             }
         }
         .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
     }
 }

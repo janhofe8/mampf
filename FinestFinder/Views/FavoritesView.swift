@@ -19,7 +19,8 @@ struct FavoritesView: View {
                                 RestaurantCardView(
                                     restaurant: restaurant,
                                     isFavorite: true,
-                                    onFavoriteTap: { store.toggleFavorite(restaurant) }
+                                    onFavoriteTap: { store.toggleFavorite(restaurant) },
+                                    communityRating: store.communityRating(for: restaurant)
                                 )
                             }
                             .buttonStyle(.plain)

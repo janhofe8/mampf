@@ -192,7 +192,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 62CC4AF92F6C6490008FE0B8 /* Build configuration list for PBXProject "FinestFinder" */;
+			buildConfigurationList = 62CC4AF92F6C6490008FE0B8 /* Build configuration list for PBXProject "MAMPF" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -409,6 +409,8 @@
 				DEVELOPMENT_TEAM = R88H3NP94S;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = MAMPF;
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "MAMPF zeigt deinen Standort auf der Karte, um Restaurants in deiner Nähe zu finden.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -441,6 +443,8 @@
 				DEVELOPMENT_TEAM = R88H3NP94S;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = MAMPF;
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "MAMPF zeigt deinen Standort auf der Karte, um Restaurants in deiner Nähe zu finden.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -550,7 +554,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		62CC4AF92F6C6490008FE0B8 /* Build configuration list for PBXProject "FinestFinder" */ = {
+		62CC4AF92F6C6490008FE0B8 /* Build configuration list for PBXProject "MAMPF" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				62CC4B1F2F6C6491008FE0B8 /* Debug */,

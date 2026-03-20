@@ -3,6 +3,7 @@ import Foundation
 enum RatingSource: String, Codable, CaseIterable, Identifiable {
     case personal
     case google
+    case community
 
     var id: String { rawValue }
 
@@ -10,6 +11,7 @@ enum RatingSource: String, Codable, CaseIterable, Identifiable {
         switch self {
         case .personal: "Jan"
         case .google: "Google"
+        case .community: "Community"
         }
     }
 
@@ -17,6 +19,7 @@ enum RatingSource: String, Codable, CaseIterable, Identifiable {
         switch self {
         case .personal: "star.fill"
         case .google: "globe"
+        case .community: "person.2.fill"
         }
     }
 
@@ -24,6 +27,7 @@ enum RatingSource: String, Codable, CaseIterable, Identifiable {
         switch self {
         case .personal: 10
         case .google: 5
+        case .community: 10
         }
     }
 }

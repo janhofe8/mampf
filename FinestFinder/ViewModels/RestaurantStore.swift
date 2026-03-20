@@ -6,8 +6,11 @@ final class RestaurantStore {
     private(set) var restaurants: [Restaurant] = []
     private(set) var isLoading = false
     private(set) var error: Error?
+    private(set) var communityRatings: [UUID: (average: Double, count: Int)] = [:]
+    private(set) var myRatings: [UUID: Double] = [:]
 
     private let repository = RestaurantRepository()
+    private let userRatingRepo = UserRatingRepository()
     private let favoritesKey = "favoriteRestaurantIDs"
 
     private var favoriteIDs: Set<UUID> {
@@ -38,6 +41,41 @@ final class RestaurantStore {
         }
     }
 
+    func communityRating(for restaurant: Restaurant) -> (average: Double, count: Int)? {
+        communityRatings[restaurant.id]
+    }
+
+    func myRating(for restaurant: Restaurant) -> Double? {
+        myRatings[restaurant.id]
+    }
+
+    func ratingsIncludingCommunity(for restaurant: Restaurant) -> [Rating] {
+        var result = restaurant.ratings
+        if let cr = communityRatings[restaurant.id] {
+            result.append(Rating(source: .community, value: cr.average, reviewCount: cr.count))
+        }
+        return result
+    }
+
+    func submitRating(for restaurant: Restaurant, rating: Double) async {
+        do {
+            try await userRatingRepo.submitRating(restaurantId: restaurant.id, rating: rating)
+            myRatings[restaurant.id] = rating
+            // Refresh community ratings
+            if let updated = try? await userRatingRepo.fetchCommunityRatings() {
+                communityRatings = updated
+            }
+        } catch {
+            self.error = error
+        }
+    }
+
+    func loadMyRating(for restaurant: Restaurant) async {
+        if let rating = try? await userRatingRepo.fetchMyRating(restaurantId: restaurant.id) {
+            myRatings[restaurant.id] = rating
+        }
+    }
+
     func load() async {
         // Show cached data immediately while fetching
         let cached = await repository.loadCachedRestaurants()
@@ -53,10 +91,13 @@ final class RestaurantStore {
         isLoading = true
         error = nil
         do {
-            restaurants = try await repository.fetchRestaurants()
+            async let fetchedRestaurants = repository.fetchRestaurants()
+            async let fetchedCommunity = userRatingRepo.fetchCommunityRatings()
+
+            restaurants = try await fetchedRestaurants
+            communityRatings = (try? await fetchedCommunity) ?? [:]
         } catch {
             self.error = error
-            // Keep showing cached data on error (offline)
         }
         isLoading = false
     }

@@ -9,30 +9,66 @@ struct RestaurantListView: View {
     }
 
     @State private var showingFilters = false
+    @State private var compactView = false
+
+    private let compactColumns = [
+        GridItem(.flexible(), spacing: 12),
+        GridItem(.flexible(), spacing: 12)
+    ]
 
     var body: some View {
         @Bindable var vm = filterVM
 
         ScrollView {
-            LazyVStack(spacing: 16) {
-                ForEach(filtered) { restaurant in
-                    NavigationLink(value: restaurant) {
-                        RestaurantCardView(
-                            restaurant: restaurant,
-                            isFavorite: store.isFavorite(restaurant),
-                            onFavoriteTap: { store.toggleFavorite(restaurant) }
-                        )
+            if compactView {
+                LazyVGrid(columns: compactColumns, spacing: 12) {
+                    ForEach(filtered) { restaurant in
+                        NavigationLink(value: restaurant) {
+                            RestaurantCardView(
+                                restaurant: restaurant,
+                                isFavorite: store.isFavorite(restaurant),
+                                onFavoriteTap: { store.toggleFavorite(restaurant) },
+                                compact: true
+                            )
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
                 }
+                .padding(.horizontal)
+                .padding(.top, 8)
+            } else {
+                LazyVStack(spacing: 16) {
+                    ForEach(filtered) { restaurant in
+                        NavigationLink(value: restaurant) {
+                            RestaurantCardView(
+                                restaurant: restaurant,
+                                isFavorite: store.isFavorite(restaurant),
+                                onFavoriteTap: { store.toggleFavorite(restaurant) },
+                                communityRating: store.communityRating(for: restaurant)
+                            )
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.horizontal)
+                .padding(.top, 8)
             }
-            .padding(.horizontal)
-            .padding(.top, 8)
         }
         .searchable(text: $vm.searchText, prompt: "Search restaurants...")
         .refreshable { await store.refresh() }
-        .navigationTitle("FinestFinder")
+        .navigationTitle("MAMPF")
         .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        compactView.toggle()
+                    }
+                } label: {
+                    Image(systemName: compactView ? "square.grid.2x2" : "rectangle.grid.1x2")
+                        .foregroundStyle(.ffPrimary)
+                }
+            }
+
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
                     ForEach(SortOption.allCases) { option in

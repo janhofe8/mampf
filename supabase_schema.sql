@@ -18,6 +18,8 @@ CREATE TABLE restaurants (
     personal_rating DOUBLE PRECISION,
     google_rating DOUBLE PRECISION,
     google_review_count INTEGER,
+    google_place_id TEXT,
+    google_maps_url TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );

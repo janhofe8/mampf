@@ -16,10 +16,10 @@ struct RatingBadge: View {
             Text(formatted)
                 .font(.caption.monospacedDigit().bold())
         }
-        .foregroundStyle(.black)
+        .foregroundStyle((value >= 7 && value < 9) ? Color.black : Color.white)
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
-        .background(.ffSecondary, in: Capsule())
+        .background(Color.ratingColor(for: value), in: Capsule())
     }
 
     private var formatted: String {
@@ -29,14 +29,6 @@ struct RatingBadge: View {
     }
 }
 
-func ratingColor(for normalized: Double) -> Color {
-    switch normalized {
-    case 0.85...: .ffSecondary
-    case 0.7..<0.85: .ffPrimary
-    case 0.5..<0.7: .orange
-    default: .red
-    }
-}
 
 #Preview {
     HStack {

@@ -2,8 +2,9 @@ import Foundation
 import CoreLocation
 
 enum CuisineType: String, Codable, CaseIterable, Identifiable {
-    case burger, pizza, italian, korean, vietnamese, japanese, turkish, greek, mexican
-    case cafe, german, middleEastern, asian, seafood, streetfood, poke, other
+    case burger, pizza, italian, korean, vietnamese, japanese, chinese, thai
+    case turkish, greek, mexican, german, middleEastern, portuguese, oriental
+    case seafood, poke, brunch, steak
 
     var id: String { rawValue }
 
@@ -11,28 +12,29 @@ enum CuisineType: String, Codable, CaseIterable, Identifiable {
         switch self {
         case .burger: "🍔"
         case .pizza: "🍕"
-        case .italian: "🇮🇹"
-        case .korean: "🇰🇷"
-        case .vietnamese: "🇻🇳"
-        case .japanese: "🇯🇵"
-        case .turkish: "🇹🇷"
-        case .greek: "🇬🇷"
-        case .mexican: "🇲🇽"
-        case .cafe: "☕️"
-        case .german: "🇩🇪"
+        case .italian: "🍝"
+        case .korean: "🥘"
+        case .vietnamese: "🍜"
+        case .japanese: "🍣"
+        case .chinese: "🥡"
+        case .thai: "🍛"
+        case .turkish: "🥙"
+        case .greek: "🫒"
+        case .mexican: "🌮"
+        case .german: "🥨"
         case .middleEastern: "🧆"
-        case .asian: "🥢"
+        case .portuguese: "🐙"
+        case .oriental: "🧆"
         case .seafood: "🐟"
-        case .streetfood: "🍜"
         case .poke: "🥗"
-        case .other: "🍽️"
+        case .brunch: "🥞"
+        case .steak: "🥩"
         }
     }
 
     var displayName: String {
         switch self {
         case .middleEastern: "Middle Eastern"
-        case .streetfood: "Street Food"
         default: rawValue.capitalized
         }
     }
@@ -90,6 +92,8 @@ struct Restaurant: Identifiable, Hashable, Codable {
     let personalRating: Double?
     let googleRating: Double?
     let googleReviewCount: Int?
+    let googlePlaceId: String?
+    let googleMapsUrl: String?
 
     var coordinate: CLLocationCoordinate2D {
         CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
@@ -121,5 +125,7 @@ struct Restaurant: Identifiable, Hashable, Codable {
         case personalRating = "personal_rating"
         case googleRating = "google_rating"
         case googleReviewCount = "google_review_count"
+        case googlePlaceId = "google_place_id"
+        case googleMapsUrl = "google_maps_url"
     }
 }

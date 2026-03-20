@@ -5,7 +5,11 @@ struct RatingBarView: View {
     @State private var animatedWidth: CGFloat = 0
 
     private var barColor: Color {
-        rating.source == .personal ? .ffSecondary : .ffPrimary
+        switch rating.source {
+        case .personal: .ratingColor(for: rating.value)
+        case .google: .ffPrimary
+        case .community: .orange
+        }
     }
 
     var body: some View {
