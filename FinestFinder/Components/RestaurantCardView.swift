@@ -12,7 +12,7 @@ struct RestaurantCardView: View {
             cardImage
 
             // Ratings top-left
-            VStack(alignment: .leading, spacing: compact ? 4 : 6) {
+            VStack(alignment: .leading, spacing: compact ? 3 : 6) {
                 if let personal = restaurant.personalRating {
                     let pillColor = Color.ratingColor(for: personal)
                     let textColor: Color = (personal >= 7 && personal < 9) ? .black : .white
@@ -27,14 +27,18 @@ struct RestaurantCardView: View {
                     .padding(.vertical, compact ? 4 : 6)
                     .background(pillColor, in: Capsule())
                 }
-                if !compact {
-                    HStack(spacing: 8) {
-                        if let google = restaurant.googleRating {
-                            smallPill(icon: "globe", value: String(format: "%.1f", google))
-                        }
-                        if let cr = communityRating {
-                            smallPill(icon: "person.2.fill", value: String(format: "%.1f", cr.average))
-                        }
+                if let google = restaurant.googleRating {
+                    if compact {
+                        compactPill(icon: "globe", value: String(format: "%.1f", google))
+                    } else {
+                        smallPill(icon: "globe", value: String(format: "%.1f", google))
+                    }
+                }
+                if let cr = communityRating {
+                    if compact {
+                        compactPill(icon: "person.2.fill", value: String(format: "%.1f", cr.average))
+                    } else {
+                        smallPill(icon: "person.2.fill", value: String(format: "%.1f", cr.average))
                     }
                 }
             }
@@ -146,10 +150,25 @@ struct RestaurantCardView: View {
             }
     }
 
+    private func compactPill(icon: String, value: String) -> some View {
+        HStack(spacing: 3) {
+            Image(systemName: icon)
+                .font(.system(size: 10, weight: .bold))
+                .frame(width: 14)
+            Text(value)
+                .font(.system(size: 18, weight: .black).monospacedDigit())
+        }
+        .foregroundStyle(.white)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(.black.opacity(0.5), in: Capsule())
+    }
+
     private func smallPill(icon: String, value: String) -> some View {
         HStack(spacing: 4) {
             Image(systemName: icon)
                 .font(.system(size: 10, weight: .semibold))
+                .frame(width: 14)
             Text(value)
                 .font(.system(size: 14, weight: .bold).monospacedDigit())
         }

@@ -50,11 +50,23 @@ export default function RestaurantCard({
               </span>
             </div>
           )}
-          {/* Rating pill */}
-          <div
-            className={`absolute top-2 left-2 ${ratingBg} ${ratingText} px-2 py-0.5 rounded-lg text-xs font-bold`}
-          >
-            {restaurant.personal_rating?.toFixed(1) ?? "N/A"}
+          {/* Rating pills */}
+          <div className="absolute top-2 left-2 flex flex-col gap-1">
+            <div
+              className={`${ratingBg} ${ratingText} px-2 py-0.5 rounded-lg text-xs font-bold`}
+            >
+              ★ {restaurant.personal_rating?.toFixed(1) ?? "N/A"}
+            </div>
+            {restaurant.google_rating != null && (
+              <div className="bg-black/50 text-white px-2 py-0.5 rounded-lg text-xs font-bold">
+                🌐 {restaurant.google_rating.toFixed(1)}
+              </div>
+            )}
+            {restaurant.community_rating != null && (
+              <div className="bg-black/50 text-white px-2 py-0.5 rounded-lg text-xs font-bold">
+                👥 {restaurant.community_rating.toFixed(1)}
+              </div>
+            )}
           </div>
           {/* Favorite button */}
           <button
