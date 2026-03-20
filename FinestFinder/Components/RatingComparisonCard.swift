@@ -4,11 +4,7 @@ struct RatingComparisonCard: View {
     let ratings: [Rating]
 
     private var sortedRatings: [Rating] {
-        ratings.sorted { a, b in
-            if a.source == .personal { return true }
-            if b.source == .personal { return false }
-            return a.source.displayName < b.source.displayName
-        }
+        ratings.sorted { $0.source.sortOrder < $1.source.sortOrder }
     }
 
     private var consensus: (average: Double, label: String)? {

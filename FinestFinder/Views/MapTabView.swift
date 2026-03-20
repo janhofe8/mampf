@@ -13,6 +13,7 @@ struct MapTabView: View {
     )
     @State private var isZoomedIn = false
     @State private var showingFilters = false
+    @State private var pulseAnimation = false
     @Environment(LocationManager.self) private var locationManager
 
     private var filtered: [Restaurant] {
@@ -21,7 +22,24 @@ struct MapTabView: View {
 
     var body: some View {
         Map(position: $position) {
-            UserAnnotation()
+            if let location = locationManager.lastLocation {
+                Annotation("My Location", coordinate: location) {
+                    ZStack {
+                        Circle()
+                            .fill(.blue.opacity(0.15))
+                            .frame(width: 36, height: 36)
+                            .scaleEffect(pulseAnimation ? 1.4 : 1.0)
+                            .opacity(pulseAnimation ? 0.0 : 0.15)
+                            .animation(.easeInOut(duration: 2.5).repeatForever(autoreverses: false), value: pulseAnimation)
+                        Circle()
+                            .fill(.blue)
+                            .frame(width: 14, height: 14)
+                            .overlay(Circle().stroke(.white, lineWidth: 2.5))
+                            .shadow(color: .blue.opacity(0.4), radius: 4)
+                    }
+                    .onAppear { pulseAnimation = true }
+                }
+            }
 
             ForEach(filtered) { restaurant in
                 Annotation(restaurant.name, coordinate: restaurant.coordinate) {
@@ -69,8 +87,21 @@ struct MapTabView: View {
                         .background(.regularMaterial, in: Circle())
                         .shadow(color: .black.opacity(0.15), radius: 4, y: 2)
                 }
+                if filterVM.hasActiveFilters {
+                    Button {
+                        withAnimation { filterVM.clearFilters() }
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(Color.ffWeak)
+                            .frame(width: 44, height: 44)
+                            .background(.regularMaterial, in: Circle())
+                            .shadow(color: .black.opacity(0.15), radius: 4, y: 2)
+                    }
+                    .transition(.scale.combined(with: .opacity))
+                }
             }
-            .padding(.top, 60)
+            .padding(.top, 16)
             .padding(.trailing, 12)
         }
         .sheet(isPresented: $showingFilters) {
@@ -97,7 +128,7 @@ struct MapTabView: View {
         if isZoomedIn, let rating = restaurant.personalRating {
             Text(String(format: rating.truncatingRemainder(dividingBy: 1) == 0 ? "%.0f" : "%.1f", rating))
                 .font(.system(size: 11, weight: .black).monospacedDigit())
-                .foregroundStyle(rating >= 7 && rating < 9 ? .black : .white)
+                .foregroundStyle(.white)
                 .frame(minWidth: 28, minHeight: 28)
                 .background(color, in: Circle())
                 .shadow(color: color.opacity(0.5), radius: 4)

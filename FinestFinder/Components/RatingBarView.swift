@@ -2,33 +2,40 @@ import SwiftUI
 
 struct RatingBarView: View {
     let rating: Rating
-    @State private var animatedWidth: CGFloat = 0
+    @State private var animatedProgress: CGFloat = 0
 
-    private var barColor: Color {
-        switch rating.source {
-        case .personal: .ratingColor(for: rating.value)
-        case .google: .ffPrimary
-        case .community: .orange
-        }
-    }
+    private var barColor: Color { rating.source.color }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            HStack {
+            HStack(spacing: 8) {
                 Image(systemName: rating.source.icon)
                     .foregroundStyle(barColor)
+                    .frame(width: 20)
                 Text(rating.source.displayName)
                     .font(.subheadline.weight(.medium))
+                    .frame(width: 90, alignment: .leading)
 
                 Spacer()
 
-                Text("\(rating.value, specifier: rating.value.truncatingRemainder(dividingBy: 1) == 0 ? "%.0f" : "%.1f") / \(Int(rating.source.maxValue))")
-                    .font(.subheadline.monospacedDigit().bold())
+                if let value = rating.value {
+                    Text("\(value, specifier: value.truncatingRemainder(dividingBy: 1) == 0 ? "%.0f" : "%.1f") / \(Int(rating.source.maxValue))")
+                        .font(.subheadline.monospacedDigit().bold())
+                        .frame(width: 55, alignment: .trailing)
+                } else {
+                    Text("–")
+                        .font(.subheadline.bold())
+                        .foregroundStyle(.quaternary)
+                        .frame(width: 55, alignment: .trailing)
+                }
 
                 if let count = rating.reviewCount {
                     Text("(\(count))")
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                        .frame(width: 50, alignment: .trailing)
+                } else {
+                    Spacer().frame(width: 50)
                 }
             }
 
@@ -44,18 +51,18 @@ struct RatingBarView: View {
                                     endPoint: .trailing
                                 )
                             )
-                            .frame(width: animatedWidth)
+                            .frame(width: geo.size.width * animatedProgress)
                     }
                     .clipShape(Capsule())
-                    .onAppear {
-                        withAnimation(.spring(duration: 0.6, bounce: 0.2)) {
-                            animatedWidth = geo.size.width * rating.normalized
-                        }
-                    }
             }
             .frame(height: 10)
+            .onAppear {
+                withAnimation(.spring(duration: 0.6, bounce: 0.2)) {
+                    animatedProgress = rating.normalized
+                }
+            }
         }
-        .accessibilityLabel("\(rating.source.displayName) Rating: \(rating.value, specifier: "%.1f") von \(Int(rating.source.maxValue))")
+        .accessibilityLabel("\(rating.source.displayName) Rating: \(rating.value ?? 0, specifier: "%.1f") von \(Int(rating.source.maxValue))")
     }
 }
 

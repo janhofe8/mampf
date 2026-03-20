@@ -31,7 +31,9 @@ struct FavoritesView: View {
                 }
             }
         }
-        .navigationTitle("Favorites")
+        .navigationTitle("MAMPF")
+        .toolbarTitleDisplayMode(.large)
+        .onAppear { applyBrandedNavBarAppearance() }
     }
 }
 

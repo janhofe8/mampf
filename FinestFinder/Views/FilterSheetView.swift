@@ -9,9 +9,35 @@ struct FilterSheetView: View {
 
         NavigationStack {
             Form {
-                Section("Minimum Rating: \(vm.minimumRating, specifier: "%.1f")") {
-                    Slider(value: $vm.minimumRating, in: 0...10, step: 0.5)
-                        .tint(.ffPrimary)
+                Section("Rating: \(vm.minimumRating, specifier: "%.1f") – \(vm.maximumRating, specifier: "%.1f")") {
+                    VStack(spacing: 12) {
+                        HStack {
+                            Text("Min")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .frame(width: 30)
+                            Slider(value: $vm.minimumRating, in: 0...10, step: 0.5)
+                                .tint(.ffPrimary)
+                                .onChange(of: vm.minimumRating) {
+                                    if vm.minimumRating > vm.maximumRating {
+                                        vm.maximumRating = vm.minimumRating
+                                    }
+                                }
+                        }
+                        HStack {
+                            Text("Max")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .frame(width: 30)
+                            Slider(value: $vm.maximumRating, in: 0...10, step: 0.5)
+                                .tint(.ffPrimary)
+                                .onChange(of: vm.maximumRating) {
+                                    if vm.maximumRating < vm.minimumRating {
+                                        vm.minimumRating = vm.maximumRating
+                                    }
+                                }
+                        }
+                    }
                 }
 
                 Section("Cuisine") {

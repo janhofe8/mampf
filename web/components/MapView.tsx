@@ -183,24 +183,42 @@ export default function MapView({
     const LLeaflet = leafletModuleRef.current;
 
     if (userMarkerRef.current) {
+      const pulse = (userMarkerRef.current as unknown as Record<string, L.CircleMarker>)._pulseMarker;
+      if (pulse) pulse.remove();
       userMarkerRef.current.remove();
       userMarkerRef.current = null;
     }
 
     if (userLocation) {
+      // Pulsing outer ring
+      const pulse = LLeaflet.circleMarker(
+        [userLocation.lat, userLocation.lng],
+        {
+          radius: 16,
+          fillColor: "#007AFF",
+          color: "transparent",
+          weight: 0,
+          fillOpacity: 0.15,
+          className: "user-location-pulse",
+        }
+      ).addTo(mapRef.current);
+
+      // Solid inner dot
       const marker = LLeaflet.circleMarker(
         [userLocation.lat, userLocation.lng],
         {
-          radius: 8,
-          fillColor: "#4A90D9",
+          radius: 6,
+          fillColor: "#007AFF",
           color: "white",
-          weight: 3,
+          weight: 2.5,
           opacity: 1,
           fillOpacity: 1,
         }
       ).addTo(mapRef.current);
 
       userMarkerRef.current = marker;
+      // Store pulse ref on marker for cleanup
+      (marker as unknown as Record<string, L.CircleMarker>)._pulseMarker = pulse;
     }
   }, [leafletLoaded, userLocation]);
 

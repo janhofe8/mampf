@@ -16,7 +16,7 @@ struct RatingBadge: View {
             Text(formatted)
                 .font(.caption.monospacedDigit().bold())
         }
-        .foregroundStyle((value >= 7 && value < 9) ? Color.black : Color.white)
+        .foregroundStyle(.white)
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
         .background(Color.ratingColor(for: value), in: Capsule())

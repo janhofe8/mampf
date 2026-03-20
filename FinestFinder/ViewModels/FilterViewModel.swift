@@ -32,6 +32,7 @@ final class FilterViewModel {
     var selectedNeighborhoods: Set<Neighborhood> = []
     var selectedPriceRanges: Set<PriceRange> = []
     var minimumRating: Double = 0
+    var maximumRating: Double = 10
     var sortOption: SortOption = .ratingDescending
 
     var hasActiveFilters: Bool {
@@ -39,6 +40,7 @@ final class FilterViewModel {
             || !selectedNeighborhoods.isEmpty
             || !selectedPriceRanges.isEmpty
             || minimumRating > 0
+            || maximumRating < 10
     }
 
     func apply(
@@ -71,8 +73,11 @@ final class FilterViewModel {
             result = result.filter { selectedPriceRanges.contains($0.priceRange) }
         }
 
-        if minimumRating > 0 {
-            result = result.filter { ($0.personalRating ?? 0) >= minimumRating }
+        if minimumRating > 0 || maximumRating < 10 {
+            result = result.filter {
+                let rating = $0.personalRating ?? 0
+                return rating >= minimumRating && rating <= maximumRating
+            }
         }
 
         switch sortOption {
@@ -109,5 +114,6 @@ final class FilterViewModel {
         selectedNeighborhoods = []
         selectedPriceRanges = []
         minimumRating = 0
+        maximumRating = 10
     }
 }

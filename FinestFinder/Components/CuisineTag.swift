@@ -20,7 +20,7 @@ struct CuisineTag: View {
     HStack {
         CuisineTag(cuisineType: .burger)
         CuisineTag(cuisineType: .korean)
-        CuisineTag(cuisineType: .middleEastern)
+        CuisineTag(cuisineType: .oriental)
     }
     .padding()
 }

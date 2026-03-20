@@ -71,7 +71,16 @@ struct RestaurantDetailView: View {
                         .foregroundStyle(.white)
 
                     HStack(spacing: 10) {
-                        CuisineTag(cuisineType: restaurant.cuisineType)
+                        HStack(spacing: 4) {
+                            Text(restaurant.cuisineType.icon)
+                                .font(.system(size: 14))
+                            Text(restaurant.cuisineType.displayName)
+                                .font(.caption)
+                        }
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(.white.opacity(0.2), in: Capsule())
                         Text(restaurant.priceRange.label)
                             .font(.subheadline)
                             .foregroundStyle(.white.opacity(0.8))
@@ -134,33 +143,52 @@ struct RestaurantDetailView: View {
             HStack {
                 Text(userRating > 0 ? String(format: userRating.truncatingRemainder(dividingBy: 1) == 0 ? "%.0f" : "%.1f", userRating) : "–")
                     .font(.system(size: 28, weight: .black).monospacedDigit())
-                    .foregroundStyle(userRating > 0 ? Color.ratingColor(for: userRating) : .secondary)
+                    .foregroundStyle(userRating > 0 ? .primary : .secondary)
                     .lineLimit(1)
                     .fixedSize()
                     .frame(minWidth: 40)
 
                 Slider(value: $userRating, in: 1...10, step: 0.5)
-                    .tint(.ffPrimary)
+                    .tint(RatingSource.community.color)
 
                 Text("/ 10")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
 
-            Button {
-                Task {
-                    await store.submitRating(for: restaurant, rating: userRating)
-                    hasSubmitted = true
+            HStack(spacing: 10) {
+                Button {
+                    Task {
+                        await store.submitRating(for: restaurant, rating: userRating)
+                        hasSubmitted = true
+                    }
+                } label: {
+                    Text(hasSubmitted ? "Aktualisieren" : "Bewerten")
+                        .font(.subheadline.weight(.semibold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .background(userRating > 0 ? Color.ffPrimary : Color.gray.opacity(0.3), in: RoundedRectangle(cornerRadius: 10))
+                        .foregroundStyle(.white)
                 }
-            } label: {
-                Text(hasSubmitted ? "Bewertung aktualisieren" : "Bewertung abgeben")
-                    .font(.subheadline.weight(.semibold))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 10)
-                    .background(userRating > 0 ? Color.ffPrimary : Color.gray.opacity(0.3), in: RoundedRectangle(cornerRadius: 10))
-                    .foregroundStyle(.white)
+                .disabled(userRating == 0)
+
+                if hasSubmitted {
+                    Button {
+                        Task {
+                            await store.deleteRating(for: restaurant)
+                            userRating = 0
+                            hasSubmitted = false
+                        }
+                    } label: {
+                        Image(systemName: "trash")
+                            .font(.subheadline.weight(.semibold))
+                            .padding(.vertical, 10)
+                            .padding(.horizontal, 14)
+                            .background(Color.gray.opacity(0.15), in: RoundedRectangle(cornerRadius: 10))
+                            .foregroundStyle(.red)
+                    }
+                }
             }
-            .disabled(userRating == 0)
         }
         .padding()
         .frame(maxWidth: .infinity, alignment: .leading)

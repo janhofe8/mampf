@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 
 enum RatingSource: String, Codable, CaseIterable, Identifiable {
     case personal
@@ -30,19 +31,37 @@ enum RatingSource: String, Codable, CaseIterable, Identifiable {
         case .community: 10
         }
     }
+
+    var color: Color {
+        switch self {
+        case .personal: .ffPrimary
+        case .community: .ffSecondary
+        case .google: .gray
+        }
+    }
+
+    /// Sort order: MAMPF → Community → Google
+    var sortOrder: Int {
+        switch self {
+        case .personal: 0
+        case .community: 1
+        case .google: 2
+        }
+    }
 }
 
 struct Rating: Identifiable, Hashable {
     var id: String { source.rawValue }
     let source: RatingSource
-    let value: Double
+    let value: Double?
     let reviewCount: Int?
 
     var normalized: Double {
-        value / source.maxValue
+        guard let value else { return 0 }
+        return value / source.maxValue
     }
 
-    init(source: RatingSource, value: Double, reviewCount: Int? = nil) {
+    init(source: RatingSource, value: Double?, reviewCount: Int? = nil) {
         self.source = source
         self.value = value
         self.reviewCount = reviewCount

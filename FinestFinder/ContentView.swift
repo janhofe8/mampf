@@ -18,14 +18,6 @@ struct ContentView: View {
                 }
             }
 
-            Tab("Favorites", systemImage: "heart.fill") {
-                NavigationStack {
-                    FavoritesView()
-                        .navigationDestination(for: Restaurant.self) { restaurant in
-                            RestaurantDetailView(restaurant: restaurant)
-                        }
-                }
-            }
         }
         .tint(.ffPrimary)
     }

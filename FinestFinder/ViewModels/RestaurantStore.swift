@@ -53,8 +53,22 @@ final class RestaurantStore {
         var result = restaurant.ratings
         if let cr = communityRatings[restaurant.id] {
             result.append(Rating(source: .community, value: cr.average, reviewCount: cr.count))
+        } else {
+            result.append(Rating(source: .community, value: nil))
         }
         return result
+    }
+
+    func deleteRating(for restaurant: Restaurant) async {
+        do {
+            try await userRatingRepo.deleteRating(restaurantId: restaurant.id)
+            myRatings.removeValue(forKey: restaurant.id)
+            if let updated = try? await userRatingRepo.fetchCommunityRatings() {
+                communityRatings = updated
+            }
+        } catch {
+            self.error = error
+        }
     }
 
     func submitRating(for restaurant: Restaurant, rating: Double) async {

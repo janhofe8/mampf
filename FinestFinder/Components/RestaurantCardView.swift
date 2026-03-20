@@ -13,39 +13,29 @@ struct RestaurantCardView: View {
 
             // Ratings top-left
             if compact {
-                HStack(spacing: 4) {
-                    if let personal = restaurant.personalRating {
-                        compactPill(icon: "star.fill", value: String(format: personal.truncatingRemainder(dividingBy: 1) == 0 ? "%.0f" : "%.1f", personal), color: Color.ratingColor(for: personal), textColor: (personal >= 7 && personal < 9) ? .black : .white)
-                    }
-                    if let google = restaurant.googleRating {
-                        compactPill(icon: "globe", value: String(format: "%.1f", google), color: .black.opacity(0.5), textColor: .white)
-                    }
-                    if let cr = communityRating {
-                        compactPill(icon: "person.2.fill", value: String(format: "%.1f", cr.average), color: .black.opacity(0.5), textColor: .white)
-                    }
+                if let personal = restaurant.personalRating {
+                    compactPill(icon: "star.fill", value: String(format: personal.truncatingRemainder(dividingBy: 1) == 0 ? "%.0f" : "%.1f", personal), color: RatingSource.personal.color, textColor: .white)
+                        .padding(6)
                 }
-                .padding(6)
             } else {
                 VStack(alignment: .leading, spacing: 6) {
                     if let personal = restaurant.personalRating {
-                        let pillColor = Color.ratingColor(for: personal)
-                        let textColor: Color = (personal >= 7 && personal < 9) ? .black : .white
                         HStack(spacing: 5) {
                             Image(systemName: "star.fill")
                                 .font(.system(size: 14, weight: .bold))
                             Text(String(format: personal.truncatingRemainder(dividingBy: 1) == 0 ? "%.0f" : "%.1f", personal))
                                 .font(.system(size: 26, weight: .black).monospacedDigit())
                         }
-                        .foregroundStyle(textColor)
+                        .foregroundStyle(.white)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 6)
-                        .background(pillColor, in: Capsule())
-                    }
-                    if let google = restaurant.googleRating {
-                        smallPill(icon: "globe", value: String(format: "%.1f", google))
+                        .background(RatingSource.personal.color, in: Capsule())
                     }
                     if let cr = communityRating {
-                        smallPill(icon: "person.2.fill", value: String(format: "%.1f", cr.average))
+                        smallPill(icon: "person.2.fill", value: String(format: "%.1f", cr.average), color: RatingSource.community.color, textColor: .black)
+                    }
+                    if let google = restaurant.googleRating {
+                        smallPill(icon: "globe", value: String(format: "%.1f", google), color: RatingSource.google.color, textColor: .white)
                     }
                 }
                 .padding(12)
@@ -113,7 +103,7 @@ struct RestaurantCardView: View {
                 )
             }
         }
-        .frame(height: compact ? 140 : 280)
+        .frame(height: compact ? 120 : 280)
         .clipShape(RoundedRectangle(cornerRadius: compact ? 12 : 20))
         .shadow(color: .black.opacity(0.15), radius: compact ? 5 : 10, y: compact ? 2 : 5)
     }
@@ -127,7 +117,7 @@ struct RestaurantCardView: View {
                     image
                         .resizable()
                         .aspectRatio(contentMode: .fill)
-                        .frame(maxWidth: .infinity, maxHeight: compact ? 140 : 280)
+                        .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
                 case .failure:
                     placeholderImage
                 default:
@@ -149,7 +139,7 @@ struct RestaurantCardView: View {
                     endPoint: .bottomTrailing
                 )
             )
-            .frame(height: compact ? 140 : 280)
+            .frame(height: compact ? 120 : 280)
             .overlay {
                 Text(restaurant.cuisineType.icon)
                     .font(.system(size: compact ? 36 : 60))
@@ -172,7 +162,7 @@ struct RestaurantCardView: View {
         .background(color, in: Capsule())
     }
 
-    private func smallPill(icon: String, value: String) -> some View {
+    private func smallPill(icon: String, value: String, color: Color, textColor: Color) -> some View {
         HStack(spacing: 4) {
             Image(systemName: icon)
                 .font(.system(size: 10, weight: .semibold))
@@ -180,10 +170,10 @@ struct RestaurantCardView: View {
             Text(value)
                 .font(.system(size: 14, weight: .bold).monospacedDigit())
         }
-        .foregroundStyle(.ffTertiary)
+        .foregroundStyle(textColor)
         .padding(.horizontal, 10)
         .padding(.vertical, 5)
-        .background(.white.opacity(0.85), in: Capsule())
+        .background(color, in: Capsule())
     }
 
     private func ratingPill(icon: String, value: String, color: Color) -> some View {

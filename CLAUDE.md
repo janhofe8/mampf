@@ -38,7 +38,7 @@ web/                       ← Web App (Next.js)
 
 ## Dev-Regeln
 
-- **Änderungen für beide Plattformen** wenn nicht anders gesagt (iOS + Web)
+- **Änderungen nur für iOS** wenn nicht anders gesagt. Web nur wenn explizit gewünscht.
 - Nach Code-Änderungen immer Build testen (iOS + Web)
 - Secrets liegen in `~/.zshenv` (SUPABASE_SECRET_KEY, GOOGLE_PLACES_API_KEY), nie im Code oder Chat
 - Google Places API nur nach Absprache aufrufen (Kosten!)
@@ -48,7 +48,8 @@ web/                       ← Web App (Next.js)
 
 ## Design
 
-- **Rating-Farben:** Purple (≥9 elite), Lime (8-8.5 sehr gut), Amber (7-7.5 solide), Grau (5-6.5), Rot (≤4.5)
+- **Rating-Farben (Purple-Familie):** Sattes Purple (≥9 elite), Helles Purple (8-8.5 sehr gut), Purple-Grau (7-7.5 solide), Grau (5-6.5), Rot (≤4.5)
+- **Source-Farben:** Lila=MAMPF, Lime=Community, Grau=Google (immer in dieser Reihenfolge)
 - **App-Farben:** Purple (.ffPrimary), Lime (.ffSecondary), Charcoal (.ffTertiary)
 - **Emoji-Icons** statt Flaggen-Emojis (🍝 statt 🇮🇹) — Flaggen rendern in iOS Simulator als ?
 - **Light Mode** auf beiden Plattformen
@@ -91,7 +92,7 @@ Schema-Änderungen (ALTER TABLE) müssen im Supabase SQL Editor ausgeführt werd
 
 ### Cuisine Types
 
-burger, pizza, italian, korean, vietnamese, japanese, chinese, thai, turkish, greek, mexican, german, middleEastern, portuguese, oriental, seafood, poke, brunch, steak
+burger, pizza, italian, korean, vietnamese, japanese, chinese, thai, turkish, greek, mexican, german, indian, portuguese, oriental, seafood, poke, brunch, steak
 
 ### Neighborhoods (basierend auf PLZ)
 
