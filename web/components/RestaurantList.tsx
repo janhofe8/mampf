@@ -84,6 +84,8 @@ export default function RestaurantList({
           return (b.google_rating ?? 0) - (a.google_rating ?? 0);
         case "community_desc":
           return (b.community_rating ?? 0) - (a.community_rating ?? 0);
+        case "recently_added":
+          return (b.created_at ?? "").localeCompare(a.created_at ?? "");
         case "distance":
           if (!userLocation) return 0;
           const distA = calculateDistance(
@@ -116,6 +118,7 @@ export default function RestaurantList({
     mampf_asc: "MAMPF Rating \u2191",
     google_desc: "Google Rating \u2193",
     community_desc: "Community \u2193",
+    recently_added: "Zuletzt hinzugefügt",
     distance: "Distance",
     name_asc: "Name A-Z",
     name_za: "Name Z-A",

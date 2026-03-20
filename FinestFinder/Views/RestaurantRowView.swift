@@ -98,7 +98,8 @@ struct RestaurantRowView: View {
             googleRating: 4.6,
             googleReviewCount: 820,
             googlePlaceId: nil,
-            googleMapsUrl: nil
+            googleMapsUrl: nil,
+            createdAt: nil
         ))
     }
 }

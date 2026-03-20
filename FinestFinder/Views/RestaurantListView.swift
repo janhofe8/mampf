@@ -3,9 +3,10 @@ import SwiftUI
 struct RestaurantListView: View {
     @Environment(FilterViewModel.self) private var filterVM
     @Environment(RestaurantStore.self) private var store
+    @Environment(LocationManager.self) private var locationManager
 
     private var filtered: [Restaurant] {
-        filterVM.apply(to: store.restaurants)
+        filterVM.apply(to: store.restaurants, userLocation: locationManager.lastLocation, communityRatings: store.communityRatings)
     }
 
     @State private var showingFilters = false
@@ -121,4 +122,5 @@ struct RestaurantListView: View {
     }
     .environment(FilterViewModel())
     .environment(RestaurantStore())
+    .environment(LocationManager())
 }

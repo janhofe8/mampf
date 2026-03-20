@@ -9,7 +9,7 @@ enum RatingSource: String, Codable, CaseIterable, Identifiable {
 
     var displayName: String {
         switch self {
-        case .personal: "Jan"
+        case .personal: "MAMPF"
         case .google: "Google"
         case .community: "Community"
         }

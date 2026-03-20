@@ -255,7 +255,8 @@ struct RestaurantDetailView: View {
             googleRating: 4.6,
             googleReviewCount: 820,
             googlePlaceId: nil,
-            googleMapsUrl: "https://maps.google.com/?cid=12345"
+            googleMapsUrl: "https://maps.google.com/?cid=12345",
+            createdAt: nil
         ))
     }
     .environment(RestaurantStore())

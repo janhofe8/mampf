@@ -28,9 +28,9 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		62CC4AFE2F6C6490008FE0B8 /* FinestFinder.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FinestFinder.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		62CC4B0D2F6C6491008FE0B8 /* FinestFinderTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FinestFinderTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		62CC4B172F6C6491008FE0B8 /* FinestFinderUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FinestFinderUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		62CC4AFE2F6C6490008FE0B8 /* MAMPF.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MAMPF.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		62CC4B0D2F6C6491008FE0B8 /* MAMPFTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MAMPFTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		62CC4B172F6C6491008FE0B8 /* MAMPFUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MAMPFUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -90,9 +90,9 @@
 		62CC4AFF2F6C6490008FE0B8 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				62CC4AFE2F6C6490008FE0B8 /* FinestFinder.app */,
-				62CC4B0D2F6C6491008FE0B8 /* FinestFinderTests.xctest */,
-				62CC4B172F6C6491008FE0B8 /* FinestFinderUITests.xctest */,
+				62CC4AFE2F6C6490008FE0B8 /* MAMPF.app */,
+				62CC4B0D2F6C6491008FE0B8 /* MAMPFTests.xctest */,
+				62CC4B172F6C6491008FE0B8 /* MAMPFUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -100,9 +100,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		62CC4AFD2F6C6490008FE0B8 /* FinestFinder */ = {
+		62CC4AFD2F6C6490008FE0B8 /* MAMPF */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 62CC4B212F6C6491008FE0B8 /* Build configuration list for PBXNativeTarget "FinestFinder" */;
+			buildConfigurationList = 62CC4B212F6C6491008FE0B8 /* Build configuration list for PBXNativeTarget "MAMPF" */;
 			buildPhases = (
 				62CC4AFA2F6C6490008FE0B8 /* Sources */,
 				62CC4AFB2F6C6490008FE0B8 /* Frameworks */,
@@ -115,17 +115,17 @@
 			fileSystemSynchronizedGroups = (
 				62CC4B002F6C6490008FE0B8 /* FinestFinder */,
 			);
-			name = FinestFinder;
+			name = MAMPF;
 			packageProductDependencies = (
 				62CC4B312F6C6491008FE0B8 /* Supabase */,
 			);
 			productName = FinestFinder;
-			productReference = 62CC4AFE2F6C6490008FE0B8 /* FinestFinder.app */;
+			productReference = 62CC4AFE2F6C6490008FE0B8 /* MAMPF.app */;
 			productType = "com.apple.product-type.application";
 		};
-		62CC4B0C2F6C6491008FE0B8 /* FinestFinderTests */ = {
+		62CC4B0C2F6C6491008FE0B8 /* MAMPFTests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 62CC4B242F6C6491008FE0B8 /* Build configuration list for PBXNativeTarget "FinestFinderTests" */;
+			buildConfigurationList = 62CC4B242F6C6491008FE0B8 /* Build configuration list for PBXNativeTarget "MAMPFTests" */;
 			buildPhases = (
 				62CC4B092F6C6491008FE0B8 /* Sources */,
 				62CC4B0A2F6C6491008FE0B8 /* Frameworks */,
@@ -139,16 +139,16 @@
 			fileSystemSynchronizedGroups = (
 				62CC4B102F6C6491008FE0B8 /* FinestFinderTests */,
 			);
-			name = FinestFinderTests;
+			name = MAMPFTests;
 			packageProductDependencies = (
 			);
 			productName = FinestFinderTests;
-			productReference = 62CC4B0D2F6C6491008FE0B8 /* FinestFinderTests.xctest */;
+			productReference = 62CC4B0D2F6C6491008FE0B8 /* MAMPFTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
-		62CC4B162F6C6491008FE0B8 /* FinestFinderUITests */ = {
+		62CC4B162F6C6491008FE0B8 /* MAMPFUITests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 62CC4B272F6C6491008FE0B8 /* Build configuration list for PBXNativeTarget "FinestFinderUITests" */;
+			buildConfigurationList = 62CC4B272F6C6491008FE0B8 /* Build configuration list for PBXNativeTarget "MAMPFUITests" */;
 			buildPhases = (
 				62CC4B132F6C6491008FE0B8 /* Sources */,
 				62CC4B142F6C6491008FE0B8 /* Frameworks */,
@@ -162,11 +162,11 @@
 			fileSystemSynchronizedGroups = (
 				62CC4B1A2F6C6491008FE0B8 /* FinestFinderUITests */,
 			);
-			name = FinestFinderUITests;
+			name = MAMPFUITests;
 			packageProductDependencies = (
 			);
 			productName = FinestFinderUITests;
-			productReference = 62CC4B172F6C6491008FE0B8 /* FinestFinderUITests.xctest */;
+			productReference = 62CC4B172F6C6491008FE0B8 /* MAMPFUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
 /* End PBXNativeTarget section */
@@ -192,7 +192,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 62CC4AF92F6C6490008FE0B8 /* Build configuration list for PBXProject "FinestFinder" */;
+			buildConfigurationList = 62CC4AF92F6C6490008FE0B8 /* Build configuration list for PBXProject "MAMPF" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -209,9 +209,9 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				62CC4AFD2F6C6490008FE0B8 /* FinestFinder */,
-				62CC4B0C2F6C6491008FE0B8 /* FinestFinderTests */,
-				62CC4B162F6C6491008FE0B8 /* FinestFinderUITests */,
+				62CC4AFD2F6C6490008FE0B8 /* MAMPF */,
+				62CC4B0C2F6C6491008FE0B8 /* MAMPFTests */,
+				62CC4B162F6C6491008FE0B8 /* MAMPFUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -267,12 +267,12 @@
 /* Begin PBXTargetDependency section */
 		62CC4B0F2F6C6491008FE0B8 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 62CC4AFD2F6C6490008FE0B8 /* FinestFinder */;
+			target = 62CC4AFD2F6C6490008FE0B8 /* MAMPF */;
 			targetProxy = 62CC4B0E2F6C6491008FE0B8 /* PBXContainerItemProxy */;
 		};
 		62CC4B192F6C6491008FE0B8 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 62CC4AFD2F6C6490008FE0B8 /* FinestFinder */;
+			target = 62CC4AFD2F6C6490008FE0B8 /* MAMPF */;
 			targetProxy = 62CC4B182F6C6491008FE0B8 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -485,7 +485,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/FinestFinder.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/FinestFinder";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/MAMPF.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/MAMPF";
 			};
 			name = Debug;
 		};
@@ -507,7 +507,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/FinestFinder.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/FinestFinder";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/MAMPF.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/MAMPF";
 			};
 			name = Release;
 		};
@@ -554,7 +554,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		62CC4AF92F6C6490008FE0B8 /* Build configuration list for PBXProject "FinestFinder" */ = {
+		62CC4AF92F6C6490008FE0B8 /* Build configuration list for PBXProject "MAMPF" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				62CC4B1F2F6C6491008FE0B8 /* Debug */,
@@ -563,7 +563,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		62CC4B212F6C6491008FE0B8 /* Build configuration list for PBXNativeTarget "FinestFinder" */ = {
+		62CC4B212F6C6491008FE0B8 /* Build configuration list for PBXNativeTarget "MAMPF" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				62CC4B222F6C6491008FE0B8 /* Debug */,
@@ -572,7 +572,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		62CC4B242F6C6491008FE0B8 /* Build configuration list for PBXNativeTarget "FinestFinderTests" */ = {
+		62CC4B242F6C6491008FE0B8 /* Build configuration list for PBXNativeTarget "MAMPFTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				62CC4B252F6C6491008FE0B8 /* Debug */,
@@ -581,7 +581,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		62CC4B272F6C6491008FE0B8 /* Build configuration list for PBXNativeTarget "FinestFinderUITests" */ = {
+		62CC4B272F6C6491008FE0B8 /* Build configuration list for PBXNativeTarget "MAMPFUITests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				62CC4B282F6C6491008FE0B8 /* Debug */,

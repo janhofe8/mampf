@@ -12,10 +12,10 @@ struct MapTabView: View {
         )
     )
     @State private var isZoomedIn = false
-    @State private var locationManager = LocationManager()
+    @Environment(LocationManager.self) private var locationManager
 
     private var filtered: [Restaurant] {
-        filterVM.apply(to: store.restaurants)
+        filterVM.apply(to: store.restaurants, userLocation: locationManager.lastLocation, communityRatings: store.communityRatings)
     }
 
     var body: some View {
@@ -60,7 +60,6 @@ struct MapTabView: View {
             .padding(.top, 60)
             .padding(.trailing, 12)
         }
-        .onAppear { locationManager.requestPermission() }
         .navigationBarHidden(true)
         .sheet(item: $selectedRestaurant) { restaurant in
             NavigationStack {
@@ -106,4 +105,5 @@ struct MapTabView: View {
     }
     .environment(FilterViewModel())
     .environment(RestaurantStore())
+    .environment(LocationManager())
 }

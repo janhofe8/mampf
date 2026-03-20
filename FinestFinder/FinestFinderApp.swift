@@ -4,13 +4,18 @@ import SwiftUI
 struct FinestFinderApp: App {
     @State private var store = RestaurantStore()
     @State private var filterVM = FilterViewModel()
+    @State private var locationManager = LocationManager()
 
     var body: some Scene {
         WindowGroup {
             ContentView()
                 .environment(store)
                 .environment(filterVM)
-                .task { await store.load() }
+                .environment(locationManager)
+                .task {
+                    locationManager.requestPermission()
+                    await store.load()
+                }
         }
     }
 }

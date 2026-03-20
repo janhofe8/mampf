@@ -16,6 +16,7 @@ export interface Restaurant {
   google_review_count: number | null;
   google_place_id: string | null;
   google_maps_url: string | null;
+  created_at: string | null;
 }
 
 export interface CommunityRating {
@@ -44,6 +45,7 @@ export type SortOption =
   | "mampf_asc"
   | "google_desc"
   | "community_desc"
+  | "recently_added"
   | "distance"
   | "name_asc"
   | "name_za";

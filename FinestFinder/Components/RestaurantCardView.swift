@@ -218,7 +218,8 @@ struct RestaurantCardView: View {
             googleRating: 4.7,
             googleReviewCount: 620,
             googlePlaceId: nil,
-            googleMapsUrl: nil
+            googleMapsUrl: nil,
+            createdAt: nil
         ),
         isFavorite: false,
         onFavoriteTap: {}
