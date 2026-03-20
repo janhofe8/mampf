@@ -40,9 +40,6 @@ struct MapTabView: View {
                 }
             }
         }
-        .overlay(alignment: .top) {
-            mapFilterBar
-        }
         .overlay(alignment: .topTrailing) {
             VStack(spacing: 8) {
                 Button {
@@ -110,79 +107,6 @@ struct MapTabView: View {
                 .frame(width: 14, height: 14)
                 .shadow(color: color.opacity(0.4), radius: 4)
         }
-    }
-
-    private var mapFilterBar: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                // Rating filter chips
-                ForEach(Array(["9+", "8+", "7+"] as [String]), id: \.self) { (label: String) in
-                    let minRating: Double = label == "9+" ? 9 : label == "8+" ? 8 : 7
-                    let isActive = filterVM.minimumRating == minRating
-                    Button {
-                        filterVM.minimumRating = isActive ? 0 : minRating
-                    } label: {
-                        Text("★ \(label)")
-                            .font(.caption.bold())
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 6)
-                            .background(isActive ? Color.ffPrimary : Color(.systemBackground).opacity(0.9), in: Capsule())
-                            .shadow(color: .black.opacity(isActive ? 0 : 0.1), radius: 2)
-                            .foregroundStyle(isActive ? .white : .primary)
-                    }
-                }
-
-                Divider().frame(height: 20)
-
-                // Cuisine quick filters
-                ForEach(CuisineType.allCases.prefix(8)) { cuisine in
-                    let isActive = filterVM.selectedCuisines.contains(cuisine)
-                    Button {
-                        filterVM.selectedCuisines.toggle(cuisine)
-                    } label: {
-                        Text("\(cuisine.icon) \(cuisine.displayName)")
-                            .font(.caption.bold())
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 6)
-                            .background(isActive ? Color.ffPrimary : Color(.systemBackground).opacity(0.9), in: Capsule())
-                            .shadow(color: .black.opacity(isActive ? 0 : 0.1), radius: 2)
-                            .foregroundStyle(isActive ? .white : .primary)
-                    }
-                }
-
-                Divider().frame(height: 20)
-
-                // Price range
-                ForEach(PriceRange.allCases) { price in
-                    let isActive = filterVM.selectedPriceRanges.contains(price)
-                    Button {
-                        filterVM.selectedPriceRanges.toggle(price)
-                    } label: {
-                        Text(price.label)
-                            .font(.caption.bold())
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 6)
-                            .background(isActive ? Color.ffPrimary : Color(.systemBackground).opacity(0.9), in: Capsule())
-                            .shadow(color: .black.opacity(isActive ? 0 : 0.1), radius: 2)
-                            .foregroundStyle(isActive ? .white : .primary)
-                    }
-                }
-
-                // Clear all
-                if filterVM.hasActiveFilters {
-                    Button {
-                        filterVM.clearFilters()
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-            }
-            .padding(.horizontal, 12)
-        }
-        .padding(.top, 8)
-        .shadow(color: .black.opacity(0.1), radius: 4, y: 2)
     }
 
     private func annotationColor(for restaurant: Restaurant) -> Color {

@@ -9,6 +9,11 @@ struct FilterSheetView: View {
 
         NavigationStack {
             Form {
+                Section("Minimum Rating: \(vm.minimumRating, specifier: "%.1f")") {
+                    Slider(value: $vm.minimumRating, in: 0...10, step: 0.5)
+                        .tint(.ffPrimary)
+                }
+
                 Section("Cuisine") {
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 100))], spacing: 8) {
                         ForEach(CuisineType.allCases) { cuisine in
@@ -50,10 +55,6 @@ struct FilterSheetView: View {
                     }
                 }
 
-                Section("Minimum Rating: \(vm.minimumRating, specifier: "%.1f")") {
-                    Slider(value: $vm.minimumRating, in: 0...10, step: 0.5)
-                        .tint(.ffPrimary)
-                }
             }
             .navigationTitle("Filters")
             .navigationBarTitleDisplayMode(.inline)

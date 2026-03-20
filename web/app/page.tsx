@@ -22,6 +22,7 @@ export default function Home() {
     lat: number;
     lng: number;
   } | null>(null);
+  const [showMapFilter, setShowMapFilter] = useState(false);
   const [mapMinRating, setMapMinRating] = useState(0);
   const [mapCuisines, setMapCuisines] = useState<Set<string>>(new Set());
   const [mapPrices, setMapPrices] = useState<Set<string>>(new Set());
@@ -193,46 +194,75 @@ export default function Home() {
                 userLocation={userLocation}
                 onRequestLocation={handleRequestLocation}
               />
-              {/* Map filter chips */}
-              <div className="absolute top-2 left-0 right-12 z-20 overflow-x-auto">
-                <div className="flex gap-1.5 px-3 pb-1">
-                  {(["9+", "8+", "7+"] as const).map((label) => {
-                    const min = label === "9+" ? 9 : label === "8+" ? 8 : 7;
-                    const active = mapMinRating === min;
-                    return (
-                      <button key={label} onClick={() => setMapMinRating(active ? 0 : min)}
-                        className={`shrink-0 px-2.5 py-1 rounded-full text-xs font-bold shadow-sm transition-colors ${active ? "bg-[rgb(115,51,217)] text-white" : "bg-white/90 text-gray-700 backdrop-blur-sm"}`}>
-                        ★ {label}
+              {/* Map filter button */}
+              <div className="absolute top-4 left-4 z-20">
+                <button
+                  onClick={() => setShowMapFilter((v) => !v)}
+                  className={`p-3 rounded-full shadow-lg transition-colors ${mapHasFilters ? "bg-[rgb(115,51,217)] text-white" : "bg-white/90 text-gray-900 backdrop-blur-sm"}`}
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75" />
+                  </svg>
+                </button>
+                {showMapFilter && (
+                  <div className="absolute top-14 left-0 w-72 bg-white rounded-2xl shadow-2xl border border-black/10 p-4 space-y-4 animate-fade-in">
+                    {/* Rating */}
+                    <div>
+                      <p className="text-xs font-semibold text-gray-500 mb-2">Minimum Rating</p>
+                      <div className="flex gap-1.5">
+                        {([0, 7, 8, 9] as const).map((min) => (
+                          <button key={min} onClick={() => setMapMinRating(mapMinRating === min ? 0 : min)}
+                            className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-colors ${mapMinRating === min && min > 0 ? "bg-[rgb(115,51,217)] text-white" : "bg-black/5 text-gray-600"}`}>
+                            {min === 0 ? "All" : `★ ${min}+`}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    {/* Cuisine */}
+                    <div>
+                      <p className="text-xs font-semibold text-gray-500 mb-2">Cuisine</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {Object.entries(CUISINE_TYPES).map(([key, emoji]) => {
+                          const active = mapCuisines.has(key);
+                          return (
+                            <button key={key} onClick={() => { const n = new Set(mapCuisines); active ? n.delete(key) : n.add(key); setMapCuisines(n); }}
+                              className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-colors ${active ? "bg-[rgb(115,51,217)] text-white" : "bg-black/5 text-gray-600"}`}>
+                              {emoji} {key.charAt(0).toUpperCase() + key.slice(1)}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    {/* Price */}
+                    <div>
+                      <p className="text-xs font-semibold text-gray-500 mb-2">Price Range</p>
+                      <div className="flex gap-1.5">
+                        {Object.entries(PRICE_LABELS).map(([key, label]) => {
+                          const active = mapPrices.has(key);
+                          return (
+                            <button key={key} onClick={() => { const n = new Set(mapPrices); active ? n.delete(key) : n.add(key); setMapPrices(n); }}
+                              className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-colors ${active ? "bg-[rgb(115,51,217)] text-white" : "bg-black/5 text-gray-600"}`}>
+                              {label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    {/* Actions */}
+                    <div className="flex gap-2 pt-1">
+                      {mapHasFilters && (
+                        <button onClick={() => { setMapMinRating(0); setMapCuisines(new Set()); setMapPrices(new Set()); }}
+                          className="flex-1 py-2 rounded-lg text-xs font-medium text-gray-500 bg-black/5">
+                          Reset
+                        </button>
+                      )}
+                      <button onClick={() => setShowMapFilter(false)}
+                        className="flex-1 py-2 rounded-lg text-xs font-bold text-white bg-[rgb(115,51,217)]">
+                        Done
                       </button>
-                    );
-                  })}
-                  <div className="w-px bg-black/10 shrink-0 my-1" />
-                  {Object.entries(CUISINE_TYPES).slice(0, 8).map(([key, emoji]) => {
-                    const active = mapCuisines.has(key);
-                    return (
-                      <button key={key} onClick={() => { const n = new Set(mapCuisines); active ? n.delete(key) : n.add(key); setMapCuisines(n); }}
-                        className={`shrink-0 px-2.5 py-1 rounded-full text-xs font-bold shadow-sm transition-colors ${active ? "bg-[rgb(115,51,217)] text-white" : "bg-white/90 text-gray-700 backdrop-blur-sm"}`}>
-                        {emoji} {key.charAt(0).toUpperCase() + key.slice(1)}
-                      </button>
-                    );
-                  })}
-                  <div className="w-px bg-black/10 shrink-0 my-1" />
-                  {Object.entries(PRICE_LABELS).map(([key, label]) => {
-                    const active = mapPrices.has(key);
-                    return (
-                      <button key={key} onClick={() => { const n = new Set(mapPrices); active ? n.delete(key) : n.add(key); setMapPrices(n); }}
-                        className={`shrink-0 px-2.5 py-1 rounded-full text-xs font-bold shadow-sm transition-colors ${active ? "bg-[rgb(115,51,217)] text-white" : "bg-white/90 text-gray-700 backdrop-blur-sm"}`}>
-                        {label}
-                      </button>
-                    );
-                  })}
-                  {mapHasFilters && (
-                    <button onClick={() => { setMapMinRating(0); setMapCuisines(new Set()); setMapPrices(new Set()); }}
-                      className="shrink-0 px-2 py-1 text-gray-400 text-xs">
-                      ✕
-                    </button>
-                  )}
-                </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
