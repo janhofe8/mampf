@@ -30,7 +30,7 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   viewportFit: "cover",
-  themeColor: "#26262e",
+  themeColor: "#ffffff",
 };
 
 export default function RootLayout({
@@ -51,7 +51,7 @@ export default function RootLayout({
           crossOrigin=""
         />
       </head>
-      <body className="h-full overflow-hidden bg-[rgb(28,28,34)] text-white font-sans">
+      <body className="h-full overflow-hidden bg-white text-gray-900 font-sans">
         {children}
       </body>
     </html>
