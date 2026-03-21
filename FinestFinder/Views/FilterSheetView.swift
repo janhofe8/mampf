@@ -9,39 +9,9 @@ struct FilterSheetView: View {
 
         NavigationStack {
             Form {
-                Section("Rating: \(vm.minimumRating, specifier: "%.1f") – \(vm.maximumRating, specifier: "%.1f")") {
-                    VStack(spacing: 12) {
-                        HStack {
-                            Text("Min")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                                .frame(width: 30)
-                            Slider(value: $vm.minimumRating, in: 0...10, step: 0.5)
-                                .tint(.ffPrimary)
-                                .onChange(of: vm.minimumRating) {
-                                    if vm.minimumRating > vm.maximumRating {
-                                        vm.maximumRating = vm.minimumRating
-                                    }
-                                }
-                        }
-                        HStack {
-                            Text("Max")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                                .frame(width: 30)
-                            Slider(value: $vm.maximumRating, in: 0...10, step: 0.5)
-                                .tint(.ffPrimary)
-                                .onChange(of: vm.maximumRating) {
-                                    if vm.maximumRating < vm.minimumRating {
-                                        vm.minimumRating = vm.maximumRating
-                                    }
-                                }
-                        }
-                    }
-                }
-
-                Section("Cuisine") {
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 100))], spacing: 8) {
+                Section("filter.cuisine") {
+                    let cols = Array(repeating: GridItem(.flexible(), spacing: 8), count: 3)
+                    LazyVGrid(columns: cols, spacing: 8) {
                         ForEach(CuisineType.allCases) { cuisine in
                             FilterChip(
                                 label: "\(cuisine.icon) \(cuisine.displayName)",
@@ -54,8 +24,9 @@ struct FilterSheetView: View {
                     .padding(.vertical, 4)
                 }
 
-                Section("Neighborhood") {
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 100))], spacing: 8) {
+                Section("filter.neighborhood") {
+                    let cols = Array(repeating: GridItem(.flexible(), spacing: 8), count: 3)
+                    LazyVGrid(columns: cols, spacing: 8) {
                         ForEach(Neighborhood.allCases) { hood in
                             FilterChip(
                                 label: hood.displayName,
@@ -68,8 +39,9 @@ struct FilterSheetView: View {
                     .padding(.vertical, 4)
                 }
 
-                Section("Price Range") {
-                    HStack(spacing: 12) {
+                Section("filter.priceRange") {
+                    let cols = Array(repeating: GridItem(.flexible(), spacing: 8), count: 4)
+                    LazyVGrid(columns: cols, spacing: 8) {
                         ForEach(PriceRange.allCases) { price in
                             FilterChip(
                                 label: price.label,
@@ -82,18 +54,18 @@ struct FilterSheetView: View {
                 }
 
             }
-            .navigationTitle("Filters")
+            .navigationTitle("nav.filters")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("Reset") {
+                    Button("nav.reset") {
                         filterVM.clearFilters()
                     }
                     .foregroundStyle(.ffPrimary)
                     .disabled(!filterVM.hasActiveFilters)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { dismiss() }
+                    Button("nav.done") { dismiss() }
                         .foregroundStyle(.ffPrimary)
                 }
             }
@@ -111,9 +83,10 @@ private struct FilterChip: View {
             Text(label)
                 .font(.caption)
                 .lineLimit(1)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-                .background(isSelected ? Color.ffPrimary : Color(.tertiarySystemFill), in: Capsule())
+                .minimumScaleFactor(0.8)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
+                .background(isSelected ? Color.ffPrimary : Color(.tertiarySystemFill), in: RoundedRectangle(cornerRadius: 8))
                 .foregroundStyle(isSelected ? .white : .primary)
         }
         .buttonStyle(.plain)

@@ -7,9 +7,9 @@ struct FavoritesView: View {
         Group {
             if store.favorites.isEmpty {
                 ContentUnavailableView(
-                    "No Favorites",
+                    "favorites.empty",
                     systemImage: "heart.slash",
-                    description: Text("Tap the heart icon on a restaurant to add it to your favorites.")
+                    description: Text("favorites.emptyHint")
                 )
             } else {
                 ScrollView {

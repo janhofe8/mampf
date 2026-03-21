@@ -3,13 +3,13 @@ import SwiftUI
 struct ContentView: View {
     var body: some View {
         TabView {
-            Tab("Map", systemImage: "map") {
+            Tab("tab.map", systemImage: "map") {
                 NavigationStack {
                     MapTabView()
                 }
             }
 
-            Tab("Restaurants", systemImage: "fork.knife") {
+            Tab("tab.restaurants", systemImage: "fork.knife") {
                 NavigationStack {
                     RestaurantListView()
                         .navigationDestination(for: Restaurant.self) { restaurant in

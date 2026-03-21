@@ -3,16 +3,27 @@ import CoreLocation
 import Observation
 
 enum SortOption: String, CaseIterable, Identifiable {
-    case ratingDescending = "MAMPF Rating ↓"
-    case ratingAscending = "MAMPF Rating ↑"
-    case googleRatingDescending = "Google Rating ↓"
-    case communityRatingDescending = "Community Rating ↓"
-    case recentlyAdded = "Zuletzt hinzugefügt"
-    case distanceAscending = "Entfernung"
-    case nameAscending = "Name A-Z"
-    case nameDescending = "Name Z-A"
+    case ratingDescending, ratingAscending
+    case googleRatingDescending, communityRatingDescending
+    case recentlyAdded, distanceAscending
+    case nameAscending, nameDescending
+    case random
 
     var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .ratingDescending: String(localized: "sort.mampfDesc")
+        case .ratingAscending: String(localized: "sort.mampfAsc")
+        case .googleRatingDescending: String(localized: "sort.googleDesc")
+        case .communityRatingDescending: String(localized: "sort.communityDesc")
+        case .recentlyAdded: String(localized: "sort.recentlyAdded")
+        case .distanceAscending: String(localized: "sort.distance")
+        case .nameAscending: String(localized: "sort.nameAZ")
+        case .nameDescending: String(localized: "sort.nameZA")
+        case .random: String(localized: "sort.random")
+        }
+    }
 }
 
 extension Set {
@@ -33,7 +44,15 @@ final class FilterViewModel {
     var selectedPriceRanges: Set<PriceRange> = []
     var minimumRating: Double = 0
     var maximumRating: Double = 10
-    var sortOption: SortOption = .ratingDescending
+    var sortOption: SortOption = .ratingDescending {
+        didSet {
+            if sortOption == .random {
+                randomSeed = UUID()
+            }
+        }
+    }
+    /// Stable seed for random sort — only changes when user re-selects random
+    private(set) var randomSeed = UUID()
 
     var hasActiveFilters: Bool {
         !selectedCuisines.isEmpty
@@ -104,6 +123,13 @@ final class FilterViewModel {
             result.sort { $0.name.localizedCompare($1.name) == .orderedAscending }
         case .nameDescending:
             result.sort { $0.name.localizedCompare($1.name) == .orderedDescending }
+        case .random:
+            let seed = randomSeed
+            result.sort { a, b in
+                var h1 = Hasher(); h1.combine(a.id); h1.combine(seed)
+                var h2 = Hasher(); h2.combine(b.id); h2.combine(seed)
+                return h1.finalize() < h2.finalize()
+            }
         }
 
         return result

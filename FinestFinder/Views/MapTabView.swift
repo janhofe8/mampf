@@ -13,6 +13,9 @@ struct MapTabView: View {
     )
     @State private var isZoomedIn = false
     @State private var showingFilters = false
+    @State private var showRatingFilter = false
+    @State private var showSearch = false
+    @FocusState private var searchFocused: Bool
     @State private var pulseAnimation = false
     @Environment(LocationManager.self) private var locationManager
 
@@ -21,9 +24,11 @@ struct MapTabView: View {
     }
 
     var body: some View {
+        @Bindable var vm = filterVM
+
         Map(position: $position) {
             if let location = locationManager.lastLocation {
-                Annotation("My Location", coordinate: location) {
+                Annotation(String(localized: "map.myLocation"), coordinate: location) {
                     ZStack {
                         Circle()
                             .fill(.blue.opacity(0.15))
@@ -58,8 +63,48 @@ struct MapTabView: View {
                 }
             }
         }
+        .onTapGesture {
+            if showSearch {
+                searchFocused = false
+                if filterVM.searchText.isEmpty {
+                    showSearch = false
+                }
+            }
+            if showRatingFilter {
+                showRatingFilter = false
+            }
+        }
+        // Rating histogram overlay
+        .overlay(alignment: .bottom) {
+            if showRatingFilter {
+                RatingHistogramFilter(
+                    restaurants: store.restaurants,
+                    minimumRating: $vm.minimumRating,
+                    matchCount: filtered.count,
+                    onDismiss: { withAnimation { showRatingFilter = false } }
+                )
+                .padding(.horizontal, 12)
+                .padding(.bottom, 12)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
+        // Buttons top-right
         .overlay(alignment: .topTrailing) {
             VStack(spacing: 8) {
+                Button {
+                    withAnimation {
+                        showSearch.toggle()
+                        if showSearch { searchFocused = true }
+                        else { filterVM.searchText = "" }
+                    }
+                } label: {
+                    Image(systemName: "magnifyingglass")
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(.ffPrimary)
+                        .frame(width: 44, height: 44)
+                        .background(.regularMaterial, in: Circle())
+                        .shadow(color: .black.opacity(0.15), radius: 4, y: 2)
+                }
                 Button {
                     if let location = locationManager.lastLocation {
                         withAnimation {
@@ -71,6 +116,18 @@ struct MapTabView: View {
                     }
                 } label: {
                     Image(systemName: "location.fill")
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(.ffPrimary)
+                        .frame(width: 44, height: 44)
+                        .background(.regularMaterial, in: Circle())
+                        .shadow(color: .black.opacity(0.15), radius: 4, y: 2)
+                }
+                Button {
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        showRatingFilter.toggle()
+                    }
+                } label: {
+                    Image(systemName: showRatingFilter ? "star.fill" : "star")
                         .font(.body.weight(.semibold))
                         .foregroundStyle(.ffPrimary)
                         .frame(width: 44, height: 44)
@@ -101,19 +158,44 @@ struct MapTabView: View {
                     .transition(.scale.combined(with: .opacity))
                 }
             }
-            .padding(.top, 16)
+            .padding(.top, 8)
             .padding(.trailing, 12)
+        }
+        .overlay(alignment: .top) {
+            if showSearch {
+                HStack(spacing: 6) {
+                    Image(systemName: "magnifyingglass")
+                        .foregroundStyle(.secondary)
+                    TextField(String(format: String(localized: "search.restaurants"), store.restaurants.count), text: $vm.searchText)
+                        .focused($searchFocused)
+                        .textFieldStyle(.plain)
+                    if !filterVM.searchText.isEmpty {
+                        Button {
+                            filterVM.searchText = ""
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+                .padding(10)
+                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+                .padding(.leading, 12)
+                .padding(.trailing, 64)
+                .padding(.top, 8)
+                .transition(.move(edge: .top).combined(with: .opacity))
+            }
         }
         .sheet(isPresented: $showingFilters) {
             FilterSheetView()
         }
-        .navigationBarHidden(true)
+        .toolbar(.hidden, for: .navigationBar)
         .sheet(item: $selectedRestaurant) { restaurant in
             NavigationStack {
                 RestaurantDetailView(restaurant: restaurant)
                     .toolbar {
                         ToolbarItem(placement: .topBarLeading) {
-                            Button("Done") { selectedRestaurant = nil }
+                            Button("nav.done") { selectedRestaurant = nil }
                                 .foregroundStyle(.ffPrimary)
                         }
                     }
@@ -128,7 +210,7 @@ struct MapTabView: View {
         if isZoomedIn, let rating = restaurant.personalRating {
             Text(String(format: rating.truncatingRemainder(dividingBy: 1) == 0 ? "%.0f" : "%.1f", rating))
                 .font(.system(size: 11, weight: .black).monospacedDigit())
-                .foregroundStyle(.white)
+                .foregroundStyle(rating >= 7 && rating < 9 ? .black : .white)
                 .frame(minWidth: 28, minHeight: 28)
                 .background(color, in: Circle())
                 .shadow(color: color.opacity(0.5), radius: 4)

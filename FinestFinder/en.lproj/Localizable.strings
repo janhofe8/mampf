@@ -1,0 +1,64 @@
+/* Tabs */
+"tab.map" = "Map";
+"tab.restaurants" = "Food Spots";
+
+/* Navigation */
+"nav.filters" = "Filters";
+"nav.done" = "Done";
+"nav.reset" = "Reset";
+
+/* Search */
+"search.restaurants" = "Search %d food spots…";
+"search.cancel" = "Cancel";
+
+/* Map */
+"map.myLocation" = "My Location";
+
+/* Restaurant List */
+"list.title" = "MAMPF";
+"list.loading" = "Loading food spots…";
+
+/* Restaurant Detail */
+"detail.closed" = "Permanently Closed";
+"detail.yourRating" = "Your Rating";
+"detail.outOf10" = "/ 10";
+"detail.rate" = "Rate";
+"detail.update" = "Update";
+"detail.info" = "Info";
+"detail.openInGoogleMaps" = "Open in Google Maps";
+
+/* Filter */
+"filter.cuisine" = "Cuisine";
+"filter.neighborhood" = "Neighborhood";
+"filter.priceRange" = "Price Range";
+
+/* Rating Filter */
+"ratingFilter.minRating" = "Min. Rating";
+"ratingFilter.all" = "All";
+"ratingFilter.restaurants" = "Food Spots";
+"ratingFilter.reset" = "Reset";
+
+/* Card / Row */
+"card.closed" = "Closed";
+
+/* Ratings */
+"ratings.title" = "Ratings";
+"ratings.strongAgreement" = "Strong agreement";
+"ratings.mostlyAligned" = "Mostly aligned";
+"ratings.someDisagreement" = "Some disagreement";
+"ratings.divergentOpinions" = "Divergent opinions";
+
+/* Favorites */
+"favorites.empty" = "No Favorites";
+"favorites.emptyHint" = "Tap the heart icon on a food spot to add it to your favorites.";
+
+/* Sort Options */
+"sort.mampfDesc" = "MAMPF Rating ↓";
+"sort.mampfAsc" = "MAMPF Rating ↑";
+"sort.googleDesc" = "Google Rating ↓";
+"sort.communityDesc" = "Community Rating ↓";
+"sort.recentlyAdded" = "Recently Added";
+"sort.distance" = "Distance";
+"sort.nameAZ" = "Name A-Z";
+"sort.nameZA" = "Name Z-A";
+"sort.random" = "Random";

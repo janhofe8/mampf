@@ -14,7 +14,7 @@ struct RestaurantRowView: View {
                         .lineLimit(1)
 
                     if restaurant.isClosed {
-                        Text("Closed")
+                        Text("card.closed")
                             .font(.caption2.bold())
                             .foregroundStyle(.white)
                             .padding(.horizontal, 6)

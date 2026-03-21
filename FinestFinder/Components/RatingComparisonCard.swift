@@ -8,16 +8,17 @@ struct RatingComparisonCard: View {
     }
 
     private var consensus: (average: Double, label: String)? {
-        guard ratings.count >= 2 else { return nil }
-        let normalized = ratings.map(\.normalized)
+        let withValues = ratings.filter { $0.value != nil }
+        guard withValues.count >= 2 else { return nil }
+        let normalized = withValues.map(\.normalized)
         let avg = normalized.reduce(0, +) / Double(normalized.count)
         let spread = (normalized.max() ?? 0) - (normalized.min() ?? 0)
 
         let label: String = switch spread {
-        case ..<0.1: "Strong agreement"
-        case 0.1..<0.2: "Mostly aligned"
-        case 0.2..<0.3: "Some disagreement"
-        default: "Divergent opinions"
+        case ..<0.1: String(localized: "ratings.strongAgreement")
+        case 0.1..<0.2: String(localized: "ratings.mostlyAligned")
+        case 0.2..<0.3: String(localized: "ratings.someDisagreement")
+        default: String(localized: "ratings.divergentOpinions")
         }
 
         return (avg, label)
@@ -25,7 +26,7 @@ struct RatingComparisonCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Ratings")
+            Text("ratings.title")
                 .font(.headline)
 
             ForEach(sortedRatings, id: \.source) { rating in

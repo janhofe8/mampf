@@ -16,7 +16,6 @@ struct RestaurantListView: View {
 
     private let compactColumns = [
         GridItem(.flexible(), spacing: 10),
-        GridItem(.flexible(), spacing: 10),
         GridItem(.flexible(), spacing: 10)
     ]
 
@@ -49,7 +48,7 @@ struct RestaurantListView: View {
                             listRow(for: restaurant)
                         }
                         .buttonStyle(.plain)
-                        Divider().padding(.leading, 120)
+                        Divider().padding(.leading, 110)
                     }
                 }
                 .padding(.top, 8)
@@ -71,7 +70,7 @@ struct RestaurantListView: View {
                 .padding(.top, 8)
             }
         }
-        .searchable(text: $vm.searchText, prompt: "Search restaurants...")
+        .searchable(text: $vm.searchText, prompt: Text(String(format: String(localized: "search.restaurants"), store.restaurants.count)))
         .refreshable { await store.refresh() }
         .navigationTitle("MAMPF")
         .toolbarTitleDisplayMode(.large)
@@ -106,7 +105,7 @@ struct RestaurantListView: View {
                             filterVM.sortOption = option
                         } label: {
                             HStack {
-                                Text(option.rawValue)
+                                Text(option.displayName)
                                 if filterVM.sortOption == option {
                                     Image(systemName: "checkmark")
                                 }
@@ -138,111 +137,95 @@ struct RestaurantListView: View {
         }
         .overlay {
             if store.isLoading && store.restaurants.isEmpty {
-                ProgressView("Loading restaurants...")
+                ProgressView("list.loading")
                     .tint(.ffPrimary)
             }
         }
     }
-    @ViewBuilder
     private func listRow(for restaurant: Restaurant) -> some View {
-        HStack(spacing: 12) {
-            // Thumbnail
-            if let urlString = restaurant.imageUrl, let url = URL(string: urlString) {
-                AsyncImage(url: url) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                    case .failure:
-                        listThumbnailPlaceholder(for: restaurant)
-                    default:
-                        RoundedRectangle(cornerRadius: 10)
-                            .fill(.quaternary)
-                    }
-                }
-                .frame(width: 90, height: 90)
-                .clipShape(RoundedRectangle(cornerRadius: 10))
-            } else {
-                listThumbnailPlaceholder(for: restaurant)
-            }
+        HStack(alignment: .center, spacing: 14) {
+            // Thumbnail — fixed size container
+            listThumbnail(for: restaurant)
+                .frame(width: 80, height: 80)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
 
-            // Name + Ratings
+            // Name + Ratings + Meta
             VStack(alignment: .leading, spacing: 6) {
                 Text(restaurant.name)
-                    .font(.body.weight(.semibold))
-                    .lineLimit(2)
+                    .font(.system(size: 18, weight: .bold))
+                    .lineLimit(1)
 
-                // Ratings: MAMPF → Community → Google
-                HStack(spacing: 12) {
-                    ratingLabel(
-                        icon: "star.fill",
-                        value: restaurant.personalRating,
-                        color: RatingSource.personal.color
-                    )
-                    ratingLabel(
-                        icon: "person.2.fill",
-                        value: store.communityRating(for: restaurant)?.average,
-                        color: RatingSource.community.color
-                    )
-                    ratingLabel(
-                        icon: "globe",
-                        value: restaurant.googleRating,
-                        color: RatingSource.google.color,
-                        maxScale: 5
-                    )
+                // Rating pills like card view
+                HStack(spacing: 6) {
+                    if let personal = restaurant.personalRating {
+                        listPill(icon: "star.fill", value: fmtRating(personal), color: RatingSource.personal.color, textColor: (personal >= 7 && personal < 9) ? .black : .white)
+                    }
+                    if let cr = store.communityRating(for: restaurant) {
+                        listPill(icon: "person.2.fill", value: String(format: "%.1f", cr.average), color: RatingSource.community.color, textColor: .black)
+                    } else {
+                        listPill(icon: "person.2.fill", value: "–", color: Color.gray.opacity(0.2), textColor: .secondary)
+                    }
+                    if let google = restaurant.googleRating {
+                        listPill(icon: "globe", value: String(format: "%.1f", google), color: RatingSource.google.color, textColor: .white)
+                    }
                 }
 
-                Text(restaurant.neighborhood.displayName)
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
-            }
-
-            Spacer(minLength: 4)
-
-            // Metadaten rechts
-            VStack(alignment: .trailing, spacing: 4) {
-                Text(restaurant.cuisineType.icon)
-                    .font(.system(size: 16))
-                Text(restaurant.cuisineType.displayName)
-                    .font(.caption2)
+                // Ort + Cuisine + Preis
+                Text("\(restaurant.neighborhood.displayName) · \(restaurant.cuisineType.icon) \(restaurant.cuisineType.displayName) · \(restaurant.priceRange.label)")
+                    .font(.subheadline)
                     .foregroundStyle(.secondary)
-                Text(restaurant.priceRange.label)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
     }
 
-    private func listThumbnailPlaceholder(for restaurant: Restaurant) -> some View {
-        RoundedRectangle(cornerRadius: 10)
-            .fill(.quaternary)
-            .frame(width: 90, height: 90)
-            .overlay {
-                Text(restaurant.cuisineType.icon)
-                    .font(.largeTitle)
-            }
-    }
-
-    private func ratingLabel(icon: String, value: Double?, color: Color, maxScale: Double = 10) -> some View {
+    private func listPill(icon: String, value: String, color: Color, textColor: Color) -> some View {
         HStack(spacing: 3) {
             Image(systemName: icon)
-                .font(.system(size: 12, weight: .bold))
-                .foregroundStyle(color)
-            if let v = value {
-                let fmt = maxScale <= 5
-                    ? String(format: "%.1f", v)
-                    : String(format: v.truncatingRemainder(dividingBy: 1) == 0 ? "%.0f" : "%.1f", v)
-                Text(fmt)
-                    .font(.system(size: 15, weight: .black).monospacedDigit())
-            } else {
-                Text("–")
-                    .font(.system(size: 15, weight: .bold).monospacedDigit())
-                    .foregroundStyle(.quaternary)
-            }
+                .font(.system(size: 10, weight: .bold))
+            Text(value)
+                .font(.system(size: 14, weight: .black).monospacedDigit())
         }
+        .foregroundStyle(textColor)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(color, in: Capsule())
+    }
+
+    private func fmtRating(_ v: Double) -> String {
+        v.truncatingRemainder(dividingBy: 1) == 0
+            ? String(format: "%.0f", v)
+            : String(format: "%.1f", v)
+    }
+
+    @ViewBuilder
+    private func listThumbnail(for restaurant: Restaurant) -> some View {
+        if let urlString = restaurant.imageUrl, let url = URL(string: urlString) {
+            AsyncImage(url: url) { phase in
+                switch phase {
+                case .success(let image):
+                    image.resizable().aspectRatio(contentMode: .fill)
+                case .failure:
+                    thumbnailPlaceholder(for: restaurant)
+                default:
+                    RoundedRectangle(cornerRadius: 12).fill(.quaternary)
+                }
+            }
+        } else {
+            thumbnailPlaceholder(for: restaurant)
+        }
+    }
+
+    private func thumbnailPlaceholder(for restaurant: Restaurant) -> some View {
+        RoundedRectangle(cornerRadius: 12)
+            .fill(.quaternary)
+            .overlay {
+                Text(restaurant.cuisineType.icon)
+                    .font(.title)
+            }
     }
 
     private var viewModeIcon: String {

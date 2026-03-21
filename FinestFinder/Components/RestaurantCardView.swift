@@ -84,7 +84,7 @@ struct RestaurantCardView: View {
                     }
 
                     if restaurant.isClosed {
-                        Text("Closed")
+                        Text("card.closed")
                             .font(.caption2.bold())
                             .foregroundStyle(.white)
                             .padding(.horizontal, compact ? 6 : 8)
@@ -173,19 +173,6 @@ struct RestaurantCardView: View {
         .foregroundStyle(textColor)
         .padding(.horizontal, 10)
         .padding(.vertical, 5)
-        .background(color, in: Capsule())
-    }
-
-    private func ratingPill(icon: String, value: String, color: Color) -> some View {
-        HStack(spacing: 4) {
-            Image(systemName: icon)
-                .font(.caption2.weight(.bold))
-            Text(value)
-                .font(.caption.monospacedDigit().bold())
-        }
-        .foregroundStyle(color == .ffSecondary ? .black : .ffTertiary)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
         .background(color, in: Capsule())
     }
 }

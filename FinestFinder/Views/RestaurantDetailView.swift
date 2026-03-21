@@ -58,7 +58,7 @@ struct RestaurantDetailView: View {
                 // Gradient overlay with name
                 VStack(alignment: .leading, spacing: 8) {
                     if restaurant.isClosed {
-                        Text("Permanently Closed")
+                        Text("detail.closed")
                             .font(.caption.bold())
                             .foregroundStyle(.white)
                             .padding(.horizontal, 10)
@@ -122,7 +122,6 @@ struct RestaurantDetailView: View {
             RatingComparisonCard(ratings: store.ratingsIncludingCommunity(for: restaurant))
             userRatingCard
             infoCard
-            miniMap
         }
         .padding(20)
         .background(Color(.systemBackground))
@@ -137,7 +136,7 @@ struct RestaurantDetailView: View {
 
     private var userRatingCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Deine Bewertung")
+            Text("detail.yourRating")
                 .font(.headline)
 
             HStack {
@@ -151,7 +150,7 @@ struct RestaurantDetailView: View {
                 Slider(value: $userRating, in: 1...10, step: 0.5)
                     .tint(RatingSource.community.color)
 
-                Text("/ 10")
+                Text("detail.outOf10")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
@@ -163,7 +162,7 @@ struct RestaurantDetailView: View {
                         hasSubmitted = true
                     }
                 } label: {
-                    Text(hasSubmitted ? "Aktualisieren" : "Bewerten")
+                    Text(hasSubmitted ? String(localized: "detail.update") : String(localized: "detail.rate"))
                         .font(.subheadline.weight(.semibold))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 10)
@@ -197,7 +196,7 @@ struct RestaurantDetailView: View {
 
     private var infoCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Info")
+            Text("detail.info")
                 .font(.headline)
 
             infoRow(icon: "mappin.circle.fill", label: restaurant.address)
@@ -210,7 +209,7 @@ struct RestaurantDetailView: View {
                         Image(systemName: "arrow.up.right.square.fill")
                             .foregroundStyle(.ffPrimary)
                             .frame(width: 24)
-                        Text("In Google Maps öffnen")
+                        Text("detail.openInGoogleMaps")
                             .font(.subheadline)
                         Spacer()
                         Image(systemName: "chevron.right")
@@ -253,15 +252,6 @@ struct RestaurantDetailView: View {
         }
     }
 
-    private var miniMap: some View {
-        Map {
-            Marker(restaurant.name, coordinate: restaurant.coordinate)
-                .tint(.ffPrimary)
-        }
-        .frame(height: 200)
-        .clipShape(RoundedRectangle(cornerRadius: 16))
-        .allowsHitTesting(false)
-    }
 }
 
 #Preview {
