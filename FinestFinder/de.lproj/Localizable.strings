@@ -10,6 +10,7 @@
 /* Search */
 "search.restaurants" = "%d Foodspots durchsuchen…";
 "search.cancel" = "Abbrechen";
+"search.noResults" = "Keine Ergebnisse";
 
 /* Map */
 "map.myLocation" = "Mein Standort";
@@ -43,10 +44,6 @@
 
 /* Ratings */
 "ratings.title" = "Bewertungen";
-"ratings.strongAgreement" = "Starke Übereinstimmung";
-"ratings.mostlyAligned" = "Weitgehend einig";
-"ratings.someDisagreement" = "Teilweise abweichend";
-"ratings.divergentOpinions" = "Unterschiedliche Meinungen";
 
 /* Favorites */
 "favorites.empty" = "Keine Favoriten";

@@ -38,6 +38,7 @@ export default function RestaurantDetail({
     restaurant.user_rating != null
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
 
   const openingHours = parseOpeningHours(restaurant.opening_hours);
@@ -71,6 +72,32 @@ export default function RestaurantDetail({
       setIsSubmitting(false);
     }
   }, [restaurant.id, userRating, onRatingSubmitted]);
+
+  const handleDeleteRating = useCallback(async () => {
+    const deviceId = getDeviceId();
+    if (!deviceId) return;
+
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase
+        .from("user_ratings")
+        .delete()
+        .eq("restaurant_id", restaurant.id)
+        .eq("device_id", deviceId);
+
+      if (error) {
+        console.error("Error deleting rating:", error);
+      } else {
+        setUserRating(5);
+        setHasExistingRating(false);
+        onRatingSubmitted();
+      }
+    } catch (err) {
+      console.error("Error deleting rating:", err);
+    } finally {
+      setIsDeleting(false);
+    }
+  }, [restaurant.id, onRatingSubmitted]);
 
   // Reset submit success on rating change
   useEffect(() => {
@@ -224,23 +251,36 @@ export default function RestaurantDetail({
                 className="flex-1 accent-[rgb(115,51,217)] h-2"
               />
             </div>
-            <button
-              onClick={handleSubmitRating}
-              disabled={isSubmitting}
-              className={`w-full mt-3 py-2.5 rounded-xl font-bold text-sm transition-all duration-200 active:scale-[0.98] ${
-                submitSuccess
-                  ? "bg-[rgb(153,255,51)] text-gray-900"
-                  : "bg-[rgb(115,51,217)] text-white hover:bg-[rgb(130,66,232)]"
-              } disabled:opacity-50`}
-            >
-              {isSubmitting
-                ? "Submitting..."
-                : submitSuccess
-                  ? "Submitted!"
-                  : hasExistingRating
-                    ? "Update Rating"
-                    : "Submit Rating"}
-            </button>
+            <div className="flex gap-2 mt-3">
+              <button
+                onClick={handleSubmitRating}
+                disabled={isSubmitting}
+                className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-all duration-200 active:scale-[0.98] ${
+                  submitSuccess
+                    ? "bg-[rgb(153,255,51)] text-gray-900"
+                    : "bg-[rgb(115,51,217)] text-white hover:bg-[rgb(130,66,232)]"
+                } disabled:opacity-50`}
+              >
+                {isSubmitting
+                  ? "Submitting..."
+                  : submitSuccess
+                    ? "Submitted!"
+                    : hasExistingRating
+                      ? "Update Rating"
+                      : "Submit Rating"}
+              </button>
+              {hasExistingRating && (
+                <button
+                  onClick={handleDeleteRating}
+                  disabled={isDeleting}
+                  className="bg-black/5 text-red-500 hover:bg-red-50 rounded-xl px-4 transition-all duration-200 active:scale-[0.98] disabled:opacity-50 flex items-center justify-center"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                  </svg>
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Info card */}
@@ -373,17 +413,6 @@ export default function RestaurantDetail({
             </a>
           )}
 
-          {/* Mini map */}
-          {restaurant.latitude && restaurant.longitude && (
-            <div className="rounded-2xl overflow-hidden h-40">
-              <DetailMiniMap
-                lat={restaurant.latitude}
-                lng={restaurant.longitude}
-                name={restaurant.name}
-              />
-            </div>
-          )}
-
           {/* Notes */}
           {restaurant.notes && (
             <div className="bg-black/5 rounded-2xl p-4">
@@ -399,79 +428,3 @@ export default function RestaurantDetail({
   );
 }
 
-function DetailMiniMap({
-  lat,
-  lng,
-  name,
-}: {
-  lat: number;
-  lng: number;
-  name: string;
-}) {
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) {
-    return (
-      <div className="w-full h-full bg-black/5 flex items-center justify-center">
-        <span className="text-gray-400 text-sm">Loading map...</span>
-      </div>
-    );
-  }
-
-  return <MiniMapInner lat={lat} lng={lng} name={name} />;
-}
-
-function MiniMapInner({
-  lat,
-  lng,
-  name,
-}: {
-  lat: number;
-  lng: number;
-  name: string;
-}) {
-  const mapRef = useCallback(
-    (node: HTMLDivElement | null) => {
-      if (!node) return;
-
-      import("leaflet").then((L) => {
-        // Clean up any existing map
-        const container = node;
-        if ((container as unknown as Record<string, unknown>)._leaflet_id) {
-          (container as unknown as Record<string, unknown>)._leaflet_id = undefined;
-        }
-
-        const map = L.map(container, {
-          zoomControl: false,
-          attributionControl: false,
-          dragging: false,
-          scrollWheelZoom: false,
-          doubleClickZoom: false,
-          touchZoom: false,
-        }).setView([lat, lng], 15);
-
-        L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
-          attribution: "",
-        }).addTo(map);
-
-        L.circleMarker([lat, lng], {
-          radius: 8,
-          fillColor: "rgb(115, 51, 217)",
-          color: "white",
-          weight: 2,
-          opacity: 1,
-          fillOpacity: 1,
-        })
-          .addTo(map)
-          .bindPopup(name);
-      });
-    },
-    [lat, lng, name]
-  );
-
-  return <div ref={mapRef} className="w-full h-full" />;
-}

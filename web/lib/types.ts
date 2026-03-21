@@ -48,7 +48,8 @@ export type SortOption =
   | "recently_added"
   | "distance"
   | "name_asc"
-  | "name_za";
+  | "name_za"
+  | "random";
 
 export interface Filters {
   cuisines: string[];

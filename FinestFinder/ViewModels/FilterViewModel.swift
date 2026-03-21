@@ -77,6 +77,7 @@ final class FilterViewModel {
                     || $0.cuisineType.displayName.lowercased().contains(query)
                     || $0.neighborhood.rawValue.lowercased().contains(query)
                     || $0.neighborhood.displayName.lowercased().contains(query)
+                    || $0.priceRange.label.contains(query)
             }
         }
 

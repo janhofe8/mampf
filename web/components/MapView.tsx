@@ -22,7 +22,7 @@ interface MapViewProps {
   onToggleFavorite: (id: string) => void;
   onSelectRestaurant: (restaurant: RestaurantWithCommunity) => void;
   userLocation: { lat: number; lng: number } | null;
-  onRequestLocation: () => void;
+  onRequestLocation?: () => void;
 }
 
 export default function MapView({
@@ -31,7 +31,6 @@ export default function MapView({
   onToggleFavorite,
   onSelectRestaurant,
   userLocation,
-  onRequestLocation,
 }: MapViewProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
@@ -222,15 +221,6 @@ export default function MapView({
     }
   }, [leafletLoaded, userLocation]);
 
-  const handleLocateMe = useCallback(() => {
-    onRequestLocation();
-    if (userLocation && mapRef.current) {
-      mapRef.current.setView([userLocation.lat, userLocation.lng], 15, {
-        animate: true,
-      });
-    }
-  }, [onRequestLocation, userLocation]);
-
   const isFav = selectedRestaurant
     ? favorites.has(selectedRestaurant.id)
     : false;
@@ -239,31 +229,6 @@ export default function MapView({
     <div className="relative h-full w-full">
       {/* Map container */}
       <div ref={mapContainerRef} className="absolute inset-0 z-0" />
-
-      {/* Locate me button */}
-      <button
-        onClick={handleLocateMe}
-        className="absolute top-4 right-4 z-10 p-3 rounded-full bg-white/90 backdrop-blur-sm text-gray-900 shadow-lg hover:bg-gray-100 transition-colors"
-      >
-        <svg
-          className="w-5 h-5"
-          fill="none"
-          viewBox="0 0 24 24"
-          strokeWidth={2}
-          stroke="currentColor"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"
-          />
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"
-          />
-        </svg>
-      </button>
 
       {/* Selected restaurant card */}
       {selectedRestaurant && (

@@ -21,12 +21,13 @@ struct RatingBarView: View {
                 if let value = rating.value {
                     Text("\(value, specifier: value.truncatingRemainder(dividingBy: 1) == 0 ? "%.0f" : "%.1f") / \(Int(rating.source.maxValue))")
                         .font(.subheadline.monospacedDigit().bold())
-                        .frame(width: 55, alignment: .trailing)
+                        .lineLimit(1)
+                        .fixedSize()
                 } else {
                     Text("–")
                         .font(.subheadline.bold())
                         .foregroundStyle(.quaternary)
-                        .frame(width: 55, alignment: .trailing)
+                        .fixedSize()
                 }
 
                 if let count = rating.reviewCount {

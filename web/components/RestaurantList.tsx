@@ -2,7 +2,15 @@
 
 import { useState, useMemo } from "react";
 import { RestaurantWithCommunity, SortOption, Filters } from "@/lib/types";
-import { calculateDistance } from "@/lib/utils";
+import {
+  calculateDistance,
+  getRatingBgClass,
+  getRatingTextClass,
+  getCuisineEmoji,
+  getCuisineLabel,
+  getPriceLabel,
+  getNeighborhoodLabel,
+} from "@/lib/utils";
 import RestaurantCard from "./RestaurantCard";
 import FilterSheet from "./FilterSheet";
 
@@ -12,6 +20,17 @@ interface RestaurantListProps {
   onToggleFavorite: (id: string) => void;
   onSelectRestaurant: (restaurant: RestaurantWithCommunity) => void;
   userLocation: { lat: number; lng: number } | null;
+  showFavoritesOnly: boolean;
+  onToggleFavoritesOnly: () => void;
+}
+
+function hashCode(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = hash * 31 + str.charCodeAt(i);
+    hash |= 0; // Convert to 32-bit integer
+  }
+  return hash;
 }
 
 export default function RestaurantList({
@@ -20,10 +39,12 @@ export default function RestaurantList({
   onToggleFavorite,
   onSelectRestaurant,
   userLocation,
+  showFavoritesOnly,
+  onToggleFavoritesOnly,
 }: RestaurantListProps) {
   const [search, setSearch] = useState("");
   const [sortOption, setSortOption] = useState<SortOption>("mampf_desc");
-  const [compact, setCompact] = useState(false);
+  const [viewMode, setViewMode] = useState(0); // 0=cards, 1=grid, 2=list
   const [showFilters, setShowFilters] = useState(false);
   const [showSort, setShowSort] = useState(false);
   const [filters, setFilters] = useState<Filters>({
@@ -32,6 +53,7 @@ export default function RestaurantList({
     priceRanges: [],
     minRating: 0,
   });
+  const [randomSeed, setRandomSeed] = useState(() => Date.now());
 
   const activeFilterCount =
     filters.cuisines.length +
@@ -41,6 +63,11 @@ export default function RestaurantList({
 
   const filteredAndSorted = useMemo(() => {
     let result = [...restaurants];
+
+    // Favorites filter
+    if (showFavoritesOnly) {
+      result = result.filter((r) => favorites.has(r.id));
+    }
 
     // Search
     if (search.trim()) {
@@ -105,13 +132,15 @@ export default function RestaurantList({
           return a.name.localeCompare(b.name);
         case "name_za":
           return b.name.localeCompare(a.name);
+        case "random":
+          return hashCode(a.id + randomSeed) - hashCode(b.id + randomSeed);
         default:
           return 0;
       }
     });
 
     return result;
-  }, [restaurants, search, sortOption, filters, userLocation]);
+  }, [restaurants, search, sortOption, filters, userLocation, showFavoritesOnly, favorites, randomSeed]);
 
   const sortLabels: Record<SortOption, string> = {
     mampf_desc: "MAMPF Rating \u2193",
@@ -122,6 +151,7 @@ export default function RestaurantList({
     distance: "Distance",
     name_asc: "Name A-Z",
     name_za: "Name Z-A",
+    random: "Random",
   };
 
   return (
@@ -147,7 +177,7 @@ export default function RestaurantList({
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search restaurants..."
+            placeholder={`Search ${restaurants.length} food spots...`}
             className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-black/5 border border-black/10 text-gray-900 placeholder-gray-400 text-sm focus:outline-none focus:border-[rgb(115,51,217)] focus:ring-1 focus:ring-[rgb(115,51,217)] transition-colors"
           />
         </div>
@@ -182,6 +212,9 @@ export default function RestaurantList({
                     <button
                       key={key}
                       onClick={() => {
+                        if (key === "random") {
+                          setRandomSeed(Date.now());
+                        }
                         setSortOption(key);
                         setShowSort(false);
                       }}
@@ -229,26 +262,33 @@ export default function RestaurantList({
             )}
           </button>
 
+          {/* Favorites toggle */}
+          <button
+            onClick={onToggleFavoritesOnly}
+            className="p-1.5 rounded-lg bg-black/5 hover:bg-black/5 transition-colors"
+          >
+            <svg
+              className="w-4 h-4"
+              viewBox="0 0 24 24"
+              strokeWidth={2}
+              stroke={showFavoritesOnly ? "rgb(239,68,68)" : "currentColor"}
+              fill={showFavoritesOnly ? "rgb(239,68,68)" : "none"}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"
+              />
+            </svg>
+          </button>
+
           {/* View toggle */}
           <button
-            onClick={() => setCompact(!compact)}
+            onClick={() => setViewMode((viewMode + 1) % 3)}
             className="p-1.5 rounded-lg bg-black/5 text-gray-600 hover:bg-black/5 transition-colors"
           >
-            {compact ? (
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={2}
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
-                />
-              </svg>
-            ) : (
+            {viewMode === 0 ? (
+              /* Cards icon — next click goes to grid */
               <svg
                 className="w-4 h-4"
                 fill="none"
@@ -260,6 +300,36 @@ export default function RestaurantList({
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z"
+                />
+              </svg>
+            ) : viewMode === 1 ? (
+              /* Grid icon — next click goes to list */
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={2}
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 010 3.75H5.625a1.875 1.875 0 010-3.75z"
+                />
+              </svg>
+            ) : (
+              /* List icon — next click goes to cards */
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={2}
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
                 />
               </svg>
             )}
@@ -278,8 +348,7 @@ export default function RestaurantList({
       {/* Results count */}
       <div className="px-4 py-2">
         <span className="text-xs text-gray-400">
-          {filteredAndSorted.length} restaurant
-          {filteredAndSorted.length !== 1 ? "s" : ""}
+          {filteredAndSorted.length} food spots
         </span>
       </div>
 
@@ -288,12 +357,12 @@ export default function RestaurantList({
         {filteredAndSorted.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <span className="text-4xl mb-3">{"\ud83d\udd0d"}</span>
-            <p className="text-gray-500 font-medium">No restaurants found</p>
+            <p className="text-gray-500 font-medium">No food spots found</p>
             <p className="text-gray-400 text-sm mt-1">
               Try adjusting your search or filters
             </p>
           </div>
-        ) : compact ? (
+        ) : viewMode === 1 ? (
           <div className="grid grid-cols-2 gap-3">
             {filteredAndSorted.map((r) => (
               <RestaurantCard
@@ -304,6 +373,79 @@ export default function RestaurantList({
                 onToggleFavorite={onToggleFavorite}
                 onClick={onSelectRestaurant}
               />
+            ))}
+          </div>
+        ) : viewMode === 2 ? (
+          <div>
+            {filteredAndSorted.map((r, index) => (
+              <button
+                key={r.id}
+                onClick={() => onSelectRestaurant(r)}
+                className={`flex items-center gap-3 py-3 w-full text-left ${
+                  index < filteredAndSorted.length - 1 ? "border-b border-black/5" : ""
+                }`}
+              >
+                {/* Thumbnail */}
+                {r.image_url ? (
+                  <img
+                    src={r.image_url}
+                    alt={r.name}
+                    className="w-20 h-20 rounded-xl object-cover flex-shrink-0"
+                    loading="lazy"
+                  />
+                ) : (
+                  <div className="w-20 h-20 rounded-xl bg-black/5 flex items-center justify-center flex-shrink-0">
+                    <span className="text-2xl">
+                      {getCuisineEmoji(r.cuisine_type)}
+                    </span>
+                  </div>
+                )}
+                {/* Text column */}
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-base font-bold truncate text-gray-900">
+                    {r.name}
+                  </h3>
+                  {/* Rating pills */}
+                  <div className="flex items-center gap-1.5 mt-1">
+                    {/* MAMPF */}
+                    <span
+                      className={`${getRatingBgClass(r.personal_rating)} ${getRatingTextClass(r.personal_rating)} px-2 py-0.5 rounded-full text-xs font-bold flex items-center gap-1`}
+                    >
+                      <svg className="w-3 h-3 fill-current" viewBox="0 0 20 20">
+                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                      </svg>
+                      {r.personal_rating?.toFixed(1) ?? "N/A"}
+                    </span>
+                    {/* Community */}
+                    {r.community_rating != null ? (
+                      <span className="bg-[rgb(153,255,51)] text-black px-2 py-0.5 rounded-full text-xs font-bold flex items-center gap-1">
+                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
+                        </svg>
+                        {r.community_rating.toFixed(1)}
+                      </span>
+                    ) : (
+                      <span className="bg-gray-200 text-gray-400 px-2 py-0.5 rounded-full text-xs font-bold flex items-center gap-1">
+                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
+                        </svg>
+                        &ndash;
+                      </span>
+                    )}
+                    {/* Google */}
+                    <span className="bg-gray-500 text-white px-2 py-0.5 rounded-full text-xs font-bold flex items-center gap-1">
+                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0121 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0112 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 013 12c0-1.605.42-3.113 1.157-4.418" />
+                      </svg>
+                      {r.google_rating?.toFixed(1) ?? "N/A"}
+                    </span>
+                  </div>
+                  {/* Meta line */}
+                  <p className="text-sm text-gray-500 truncate mt-1">
+                    {getNeighborhoodLabel(r.neighborhood)} · {getCuisineEmoji(r.cuisine_type)} {getCuisineLabel(r.cuisine_type)} · {getPriceLabel(r.price_range)}
+                  </p>
+                </div>
+              </button>
             ))}
           </div>
         ) : (

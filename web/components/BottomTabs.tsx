@@ -1,6 +1,6 @@
 "use client";
 
-export type TabId = "map" | "list" | "favorites";
+export type TabId = "map" | "list";
 
 interface BottomTabsProps {
   activeTab: TabId;
@@ -30,7 +30,7 @@ export default function BottomTabs({ activeTab, onTabChange }: BottomTabsProps) 
     },
     {
       id: "list",
-      label: "Restaurants",
+      label: "Food Spots",
       icon: (
         <svg
           className="w-6 h-6"
@@ -42,26 +42,7 @@ export default function BottomTabs({ activeTab, onTabChange }: BottomTabsProps) 
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
-            d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
-          />
-        </svg>
-      ),
-    },
-    {
-      id: "favorites",
-      label: "Favorites",
-      icon: (
-        <svg
-          className="w-6 h-6"
-          fill="none"
-          viewBox="0 0 24 24"
-          strokeWidth={1.5}
-          stroke="currentColor"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"
+            d="M15.75 2.25v6m0-6l2.25 6m-2.25-6l-2.25 6m-6-1.5V21m0 0h4.5m-4.5 0H3m9.75-9.75h.008v.008H12.75v-.008zM9.75 9v.008H9.742V9h.008zm0 2.25v.008H9.742v-.008h.008zM7.5 9v.008H7.492V9H7.5zm0 2.25v.008H7.492v-.008H7.5zm0 2.25v.008H7.492v-.008H7.5z"
           />
         </svg>
       ),

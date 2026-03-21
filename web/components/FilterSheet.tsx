@@ -74,8 +74,7 @@ export default function FilterSheet({
   const activeFilterCount =
     localFilters.cuisines.length +
     localFilters.neighborhoods.length +
-    localFilters.priceRanges.length +
-    (localFilters.minRating > 0 ? 1 : 0);
+    localFilters.priceRanges.length;
 
   if (!isOpen) return null;
 
@@ -110,32 +109,6 @@ export default function FilterSheet({
 
         {/* Scrollable content */}
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-6">
-          {/* Minimum Rating */}
-          <div>
-            <h4 className="text-sm font-semibold text-gray-600 uppercase tracking-wider mb-3">
-              Minimum MAMPF Rating
-            </h4>
-            <div className="flex items-center gap-3">
-              <input
-                type="range"
-                min={0}
-                max={10}
-                step={0.5}
-                value={localFilters.minRating}
-                onChange={(e) =>
-                  setLocalFilters((prev) => ({
-                    ...prev,
-                    minRating: parseFloat(e.target.value),
-                  }))
-                }
-                className="flex-1 accent-[rgb(115,51,217)]"
-              />
-              <span className="text-gray-900 font-bold w-8 text-center text-sm">
-                {localFilters.minRating > 0 ? localFilters.minRating : "Any"}
-              </span>
-            </div>
-          </div>
-
           {/* Price Range */}
           <div>
             <h4 className="text-sm font-semibold text-gray-600 uppercase tracking-wider mb-3">
@@ -163,12 +136,12 @@ export default function FilterSheet({
             <h4 className="text-sm font-semibold text-gray-600 uppercase tracking-wider mb-3">
               Cuisine
             </h4>
-            <div className="flex flex-wrap gap-2">
+            <div className="grid grid-cols-3 gap-2">
               {Object.entries(CUISINE_TYPES).map(([key, emoji]) => (
                 <button
                   key={key}
                   onClick={() => toggleCuisine(key)}
-                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-200 ${
+                  className={`py-1.5 rounded-lg text-sm font-medium text-center transition-all duration-200 ${
                     localFilters.cuisines.includes(key)
                       ? "bg-[rgb(115,51,217)] text-white"
                       : "bg-black/5 text-gray-500 hover:bg-black/5"
@@ -185,12 +158,12 @@ export default function FilterSheet({
             <h4 className="text-sm font-semibold text-gray-600 uppercase tracking-wider mb-3">
               Neighborhood
             </h4>
-            <div className="flex flex-wrap gap-2">
+            <div className="grid grid-cols-3 gap-2">
               {NEIGHBORHOODS.map((hood) => (
                 <button
                   key={hood}
                   onClick={() => toggleNeighborhood(hood)}
-                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-200 ${
+                  className={`py-1.5 rounded-lg text-sm font-medium text-center transition-all duration-200 ${
                     localFilters.neighborhoods.includes(hood)
                       ? "bg-[rgb(115,51,217)] text-white"
                       : "bg-black/5 text-gray-500 hover:bg-black/5"

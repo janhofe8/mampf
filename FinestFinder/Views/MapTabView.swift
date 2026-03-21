@@ -163,23 +163,72 @@ struct MapTabView: View {
         }
         .overlay(alignment: .top) {
             if showSearch {
-                HStack(spacing: 6) {
-                    Image(systemName: "magnifyingglass")
-                        .foregroundStyle(.secondary)
-                    TextField(String(format: String(localized: "search.restaurants"), store.restaurants.count), text: $vm.searchText)
-                        .focused($searchFocused)
-                        .textFieldStyle(.plain)
-                    if !filterVM.searchText.isEmpty {
-                        Button {
-                            filterVM.searchText = ""
-                        } label: {
-                            Image(systemName: "xmark.circle.fill")
-                                .foregroundStyle(.secondary)
+                VStack(spacing: 0) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "magnifyingglass")
+                            .foregroundStyle(.secondary)
+                        TextField(String(format: String(localized: "search.restaurants"), store.restaurants.count), text: $vm.searchText)
+                            .focused($searchFocused)
+                            .textFieldStyle(.plain)
+                            .onSubmit {
+                                if let first = searchSuggestions.first {
+                                    selectSearchResult(first)
+                                }
+                            }
+                        if !filterVM.searchText.isEmpty {
+                            Button {
+                                filterVM.searchText = ""
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundStyle(.secondary)
+                            }
                         }
                     }
+                    .padding(10)
+                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: filterVM.searchText.isEmpty ? 12 : 0))
+                    .clipShape(.rect(topLeadingRadius: 12, topTrailingRadius: 12))
+
+                    if !filterVM.searchText.isEmpty {
+                        Divider().padding(.horizontal, 8)
+                        ScrollView {
+                            LazyVStack(spacing: 0) {
+                                ForEach(searchSuggestions) { restaurant in
+                                    Button {
+                                        selectSearchResult(restaurant)
+                                    } label: {
+                                        HStack(spacing: 8) {
+                                            Text(restaurant.cuisineType.icon)
+                                                .font(.system(size: 16))
+                                            Text(restaurant.name)
+                                                .font(.subheadline)
+                                                .foregroundStyle(.primary)
+                                                .lineLimit(1)
+                                            Spacer()
+                                            Text(restaurant.neighborhood.displayName)
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
+                                            Text(restaurant.priceRange.label)
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
+                                        }
+                                        .padding(.horizontal, 10)
+                                        .padding(.vertical, 8)
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                                if searchSuggestions.isEmpty {
+                                    Text("search.noResults")
+                                        .font(.subheadline)
+                                        .foregroundStyle(.secondary)
+                                        .padding(.vertical, 12)
+                                }
+                            }
+                        }
+                        .frame(maxHeight: 240)
+                        .background(.regularMaterial)
+                        .clipShape(.rect(bottomLeadingRadius: 12, bottomTrailingRadius: 12))
+                    }
                 }
-                .padding(10)
-                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
                 .padding(.leading, 12)
                 .padding(.trailing, 64)
                 .padding(.top, 8)
@@ -201,6 +250,24 @@ struct MapTabView: View {
                     }
             }
             .presentationDetents([.medium, .large])
+        }
+    }
+
+    private var searchSuggestions: [Restaurant] {
+        guard !filterVM.searchText.isEmpty else { return [] }
+        return filterVM.apply(to: store.restaurants, userLocation: locationManager.lastLocation, communityRatings: store.communityRatings)
+    }
+
+    private func selectSearchResult(_ restaurant: Restaurant) {
+        searchFocused = false
+        withAnimation {
+            position = .region(MKCoordinateRegion(
+                center: restaurant.coordinate,
+                span: MKCoordinateSpan(latitudeDelta: 0.005, longitudeDelta: 0.005)
+            ))
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            selectedRestaurant = restaurant
         }
     }
 

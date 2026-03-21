@@ -10,6 +10,7 @@
 /* Search */
 "search.restaurants" = "Search %d food spots…";
 "search.cancel" = "Cancel";
+"search.noResults" = "No results";
 
 /* Map */
 "map.myLocation" = "My Location";
@@ -43,10 +44,6 @@
 
 /* Ratings */
 "ratings.title" = "Ratings";
-"ratings.strongAgreement" = "Strong agreement";
-"ratings.mostlyAligned" = "Mostly aligned";
-"ratings.someDisagreement" = "Some disagreement";
-"ratings.divergentOpinions" = "Divergent opinions";
 
 /* Favorites */
 "favorites.empty" = "No Favorites";
