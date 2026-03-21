@@ -2,26 +2,51 @@ import Foundation
 import CoreLocation
 import Observation
 
-enum SortOption: String, CaseIterable, Identifiable {
-    case ratingDescending, ratingAscending
-    case googleRatingDescending, communityRatingDescending
-    case recentlyAdded, distanceAscending
-    case nameAscending, nameDescending
+enum SortField: String, CaseIterable, Identifiable {
+    case mampfRating, googleRating, communityRating
+    case recentlyAdded, distance
+    case name
     case random
 
     var id: String { rawValue }
 
     var displayName: String {
         switch self {
-        case .ratingDescending: String(localized: "sort.mampfDesc")
-        case .ratingAscending: String(localized: "sort.mampfAsc")
-        case .googleRatingDescending: String(localized: "sort.googleDesc")
-        case .communityRatingDescending: String(localized: "sort.communityDesc")
+        case .mampfRating: "MAMPF Rating"
+        case .googleRating: "Google Rating"
+        case .communityRating: "Community Rating"
         case .recentlyAdded: String(localized: "sort.recentlyAdded")
-        case .distanceAscending: String(localized: "sort.distance")
-        case .nameAscending: String(localized: "sort.nameAZ")
-        case .nameDescending: String(localized: "sort.nameZA")
+        case .distance: String(localized: "sort.distance")
+        case .name: String(localized: "sort.name")
         case .random: String(localized: "sort.random")
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .mampfRating: "star.fill"
+        case .googleRating: "globe"
+        case .communityRating: "person.2.fill"
+        case .recentlyAdded: "clock"
+        case .distance: "location"
+        case .name: "textformat.abc"
+        case .random: "shuffle"
+        }
+    }
+
+    /// Whether this field supports ascending/descending toggle
+    var supportsDirection: Bool {
+        switch self {
+        case .random, .recentlyAdded: false
+        default: true
+        }
+    }
+
+    /// Default: ratings descending (highest first), name/distance ascending
+    var defaultAscending: Bool {
+        switch self {
+        case .name, .distance: true
+        default: false
         }
     }
 }
@@ -44,15 +69,23 @@ final class FilterViewModel {
     var selectedPriceRanges: Set<PriceRange> = []
     var minimumRating: Double = 0
     var maximumRating: Double = 10
-    var sortOption: SortOption = .ratingDescending {
-        didSet {
-            if sortOption == .random {
+    var sortField: SortField = .mampfRating
+    var sortAscending: Bool = false
+    /// Stable seed for random sort — only changes when user re-selects random
+    private(set) var randomSeed = UUID()
+
+    /// Select a sort field. If already selected, toggle direction. Otherwise set with default direction.
+    func selectSort(_ field: SortField) {
+        if sortField == field && field.supportsDirection {
+            sortAscending.toggle()
+        } else {
+            sortField = field
+            sortAscending = field.defaultAscending
+            if field == .random {
                 randomSeed = UUID()
             }
         }
     }
-    /// Stable seed for random sort — only changes when user re-selects random
-    private(set) var randomSeed = UUID()
 
     var hasActiveFilters: Bool {
         !selectedCuisines.isEmpty
@@ -100,30 +133,31 @@ final class FilterViewModel {
             }
         }
 
-        switch sortOption {
-        case .ratingDescending:
-            result.sort { ($0.personalRating ?? 0) > ($1.personalRating ?? 0) }
-        case .ratingAscending:
-            result.sort { ($0.personalRating ?? 0) < ($1.personalRating ?? 0) }
-        case .googleRatingDescending:
-            result.sort { ($0.googleRating ?? 0) > ($1.googleRating ?? 0) }
-        case .communityRatingDescending:
-            result.sort { (communityRatings[$0.id]?.average ?? 0) > (communityRatings[$1.id]?.average ?? 0) }
+        let asc = sortAscending
+        switch sortField {
+        case .mampfRating:
+            result.sort { asc ? ($0.personalRating ?? 0) < ($1.personalRating ?? 0)
+                              : ($0.personalRating ?? 0) > ($1.personalRating ?? 0) }
+        case .googleRating:
+            result.sort { asc ? ($0.googleRating ?? 0) < ($1.googleRating ?? 0)
+                              : ($0.googleRating ?? 0) > ($1.googleRating ?? 0) }
+        case .communityRating:
+            result.sort { asc ? (communityRatings[$0.id]?.average ?? 0) < (communityRatings[$1.id]?.average ?? 0)
+                              : (communityRatings[$0.id]?.average ?? 0) > (communityRatings[$1.id]?.average ?? 0) }
         case .recentlyAdded:
             result.sort { ($0.createdAt ?? "") > ($1.createdAt ?? "") }
-        case .distanceAscending:
+        case .distance:
             if let loc = userLocation {
                 let userCL = CLLocation(latitude: loc.latitude, longitude: loc.longitude)
                 result.sort {
                     let d0 = userCL.distance(from: CLLocation(latitude: $0.latitude, longitude: $0.longitude))
                     let d1 = userCL.distance(from: CLLocation(latitude: $1.latitude, longitude: $1.longitude))
-                    return d0 < d1
+                    return asc ? d0 < d1 : d0 > d1
                 }
             }
-        case .nameAscending:
-            result.sort { $0.name.localizedCompare($1.name) == .orderedAscending }
-        case .nameDescending:
-            result.sort { $0.name.localizedCompare($1.name) == .orderedDescending }
+        case .name:
+            result.sort { asc ? $0.name.localizedCompare($1.name) == .orderedAscending
+                              : $0.name.localizedCompare($1.name) == .orderedDescending }
         case .random:
             let seed = randomSeed
             result.sort { a, b in

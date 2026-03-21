@@ -1,0 +1,1737 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MAMPF — Kuratierte Foodspots in Hamburg</title>
+  <meta name="description" content="MAMPF ist Jans persoenlicher Food-Guide fuer Hamburg. 137+ kuratierte Restaurants mit ehrlichen Bewertungen, interaktiver Karte und Community-Ratings.">
+  <meta name="theme-color" content="#7333D9">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍽</text></svg>">
+  <style>
+    /* ===== Reset & Base ===== */
+    *, *::before, *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --purple: #7333D9;
+      --purple-light: #9B6AE8;
+      --purple-dark: #5A21B6;
+      --purple-glow: rgba(115, 51, 217, 0.15);
+      --lime: #99FF33;
+      --lime-dark: #7ACC29;
+      --lime-glow: rgba(153, 255, 51, 0.15);
+      --charcoal: #262630;
+      --charcoal-light: #36364A;
+      --gray-100: #F7F7FA;
+      --gray-200: #EDEDF2;
+      --gray-300: #D4D4DE;
+      --gray-500: #8888A0;
+      --white: #FFFFFF;
+      --amber: #F5A623;
+      --red: #E53E3E;
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 20px;
+      --radius-xl: 28px;
+      --shadow-sm: 0 1px 3px rgba(38, 38, 48, 0.08);
+      --shadow-md: 0 4px 16px rgba(38, 38, 48, 0.10);
+      --shadow-lg: 0 8px 32px rgba(38, 38, 48, 0.12);
+      --shadow-xl: 0 16px 48px rgba(38, 38, 48, 0.16);
+    }
+
+    html {
+      scroll-behavior: smooth;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
+      color: var(--charcoal);
+      background: var(--white);
+      line-height: 1.6;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* ===== Typography ===== */
+    h1, h2, h3, h4 {
+      line-height: 1.2;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    h1 { font-size: clamp(2.5rem, 6vw, 4rem); }
+    h2 { font-size: clamp(1.75rem, 4vw, 2.75rem); }
+    h3 { font-size: clamp(1.25rem, 2.5vw, 1.5rem); }
+
+    p {
+      font-size: clamp(1rem, 1.5vw, 1.125rem);
+      color: var(--charcoal-light);
+    }
+
+    a {
+      color: var(--purple);
+      text-decoration: none;
+      transition: color 0.2s ease;
+    }
+    a:hover { color: var(--purple-light); }
+
+    /* ===== Layout ===== */
+    .container {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    section {
+      padding: 96px 0;
+    }
+
+    /* ===== Animations ===== */
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(30px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-12px); }
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 0.6; }
+      50% { opacity: 1; }
+    }
+
+    @keyframes slideInLeft {
+      from { opacity: 0; transform: translateX(-40px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    @keyframes slideInRight {
+      from { opacity: 0; transform: translateX(40px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    @keyframes scaleIn {
+      from { opacity: 0; transform: scale(0.9); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    @keyframes shimmer {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+
+    .animate-on-scroll {
+      opacity: 0;
+      transform: translateY(30px);
+      transition: opacity 0.7s ease, transform 0.7s ease;
+    }
+
+    .animate-on-scroll.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* ===== Navigation ===== */
+    nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      padding: 16px 0;
+      transition: all 0.3s ease;
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid transparent;
+    }
+
+    nav.scrolled {
+      border-bottom-color: var(--gray-200);
+      box-shadow: var(--shadow-sm);
+    }
+
+    nav .container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: var(--charcoal);
+      letter-spacing: -0.03em;
+    }
+
+    .nav-logo-icon {
+      width: 36px;
+      height: 36px;
+      background: var(--purple);
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      box-shadow: 0 2px 8px rgba(115, 51, 217, 0.3);
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 32px;
+      list-style: none;
+    }
+
+    .nav-links a {
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: var(--gray-500);
+      transition: color 0.2s ease;
+    }
+
+    .nav-links a:hover {
+      color: var(--charcoal);
+    }
+
+    .nav-mobile-toggle {
+      display: none;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 8px;
+    }
+
+    .nav-mobile-toggle span {
+      display: block;
+      width: 22px;
+      height: 2px;
+      background: var(--charcoal);
+      margin: 5px 0;
+      border-radius: 2px;
+      transition: all 0.3s ease;
+    }
+
+    /* ===== Hero ===== */
+    .hero {
+      position: relative;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 120px 0 80px;
+      overflow: hidden;
+      background: linear-gradient(160deg, var(--white) 0%, var(--gray-100) 50%, rgba(115, 51, 217, 0.03) 100%);
+    }
+
+    .hero::before {
+      content: "";
+      position: absolute;
+      top: -200px;
+      right: -200px;
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, var(--purple-glow) 0%, transparent 70%);
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    .hero::after {
+      content: "";
+      position: absolute;
+      bottom: -100px;
+      left: -150px;
+      width: 400px;
+      height: 400px;
+      background: radial-gradient(circle, var(--lime-glow) 0%, transparent 70%);
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    .hero-content {
+      text-align: center;
+      position: relative;
+      z-index: 2;
+      max-width: 720px;
+      margin: 0 auto;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 18px;
+      background: var(--purple-glow);
+      border: 1px solid rgba(115, 51, 217, 0.15);
+      border-radius: 100px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--purple);
+      margin-bottom: 28px;
+      animation: fadeIn 0.6s ease both;
+    }
+
+    .hero-badge-dot {
+      width: 6px;
+      height: 6px;
+      background: var(--purple);
+      border-radius: 50%;
+      animation: pulse 2s ease infinite;
+    }
+
+    .hero h1 {
+      color: var(--charcoal);
+      margin-bottom: 8px;
+      animation: fadeInUp 0.8s ease both 0.15s;
+    }
+
+    .hero h1 .highlight {
+      background: linear-gradient(135deg, var(--purple), var(--purple-light));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero-tagline {
+      font-size: clamp(1.25rem, 3vw, 1.75rem);
+      font-weight: 600;
+      color: var(--charcoal-light);
+      margin-bottom: 20px;
+      animation: fadeInUp 0.8s ease both 0.3s;
+    }
+
+    .hero-description {
+      font-size: clamp(1.05rem, 1.8vw, 1.2rem);
+      color: var(--gray-500);
+      max-width: 540px;
+      margin: 0 auto 40px;
+      animation: fadeInUp 0.8s ease both 0.45s;
+    }
+
+    .hero-cta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      justify-content: center;
+      animation: fadeInUp 0.8s ease both 0.6s;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 28px;
+      border-radius: var(--radius-md);
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: all 0.25s ease;
+      text-decoration: none;
+    }
+
+    .btn-primary {
+      background: var(--purple);
+      color: var(--white);
+      box-shadow: 0 4px 16px rgba(115, 51, 217, 0.3);
+    }
+
+    .btn-primary:hover {
+      background: var(--purple-dark);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 24px rgba(115, 51, 217, 0.4);
+      color: var(--white);
+    }
+
+    .btn-secondary {
+      background: var(--white);
+      color: var(--charcoal);
+      border: 1.5px solid var(--gray-200);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .btn-secondary:hover {
+      border-color: var(--gray-300);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+      color: var(--charcoal);
+    }
+
+    /* Floating emoji decoration */
+    .hero-emoji {
+      position: absolute;
+      font-size: 2rem;
+      opacity: 0.15;
+      pointer-events: none;
+      animation: float 6s ease-in-out infinite;
+    }
+
+    .hero-emoji:nth-child(1) { top: 15%; left: 8%; animation-delay: 0s; font-size: 2.5rem; }
+    .hero-emoji:nth-child(2) { top: 25%; right: 10%; animation-delay: 1.2s; font-size: 1.8rem; }
+    .hero-emoji:nth-child(3) { bottom: 30%; left: 5%; animation-delay: 2.4s; font-size: 2.2rem; }
+    .hero-emoji:nth-child(4) { bottom: 20%; right: 7%; animation-delay: 0.8s; font-size: 2rem; }
+    .hero-emoji:nth-child(5) { top: 40%; left: 15%; animation-delay: 3.6s; font-size: 1.6rem; }
+    .hero-emoji:nth-child(6) { top: 12%; right: 20%; animation-delay: 2s; font-size: 1.4rem; }
+    .hero-emoji:nth-child(7) { bottom: 40%; right: 15%; animation-delay: 4s; font-size: 1.8rem; }
+
+    /* ===== Phone Mockup ===== */
+    .hero-mockup {
+      margin-top: 60px;
+      animation: fadeInUp 1s ease both 0.8s;
+      position: relative;
+    }
+
+    .phone-frame {
+      width: 280px;
+      height: 560px;
+      margin: 0 auto;
+      background: var(--charcoal);
+      border-radius: 40px;
+      padding: 12px;
+      box-shadow: var(--shadow-xl), 0 0 0 1px rgba(255,255,255,0.1) inset;
+      position: relative;
+    }
+
+    .phone-screen {
+      width: 100%;
+      height: 100%;
+      background: var(--white);
+      border-radius: 30px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .phone-notch {
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 120px;
+      height: 28px;
+      background: var(--charcoal);
+      border-radius: 0 0 18px 18px;
+      z-index: 2;
+    }
+
+    .phone-screen-content {
+      padding: 40px 16px 16px;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .mock-header {
+      text-align: center;
+      margin-bottom: 16px;
+    }
+
+    .mock-header h4 {
+      font-size: 0.95rem;
+      color: var(--charcoal);
+      letter-spacing: -0.01em;
+    }
+
+    .mock-search {
+      background: var(--gray-100);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      font-size: 0.75rem;
+      color: var(--gray-500);
+      margin-bottom: 14px;
+    }
+
+    .mock-card {
+      background: var(--gray-100);
+      border-radius: var(--radius-md);
+      padding: 12px;
+      margin-bottom: 10px;
+    }
+
+    .mock-card-img {
+      width: 100%;
+      height: 80px;
+      border-radius: var(--radius-sm);
+      margin-bottom: 8px;
+    }
+
+    .mock-card:nth-child(1) .mock-card-img {
+      background: linear-gradient(135deg, #E8D5F5, #D5C8F0);
+    }
+    .mock-card:nth-child(2) .mock-card-img {
+      background: linear-gradient(135deg, #D5F0C8, #C8E8B8);
+    }
+
+    .mock-card-title {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--charcoal);
+      margin-bottom: 4px;
+    }
+
+    .mock-card-meta {
+      display: flex;
+      gap: 6px;
+    }
+
+    .mock-pill {
+      padding: 2px 8px;
+      border-radius: 100px;
+      font-size: 0.6rem;
+      font-weight: 700;
+      color: var(--white);
+    }
+
+    .mock-pill.purple { background: var(--purple); }
+    .mock-pill.lime { background: var(--lime-dark); color: var(--charcoal); }
+    .mock-pill.gray { background: var(--gray-300); color: var(--charcoal-light); }
+
+    .mock-tab-bar {
+      margin-top: auto;
+      display: flex;
+      justify-content: space-around;
+      padding: 10px 0 4px;
+      border-top: 1px solid var(--gray-200);
+    }
+
+    .mock-tab {
+      text-align: center;
+      font-size: 0.55rem;
+      color: var(--gray-500);
+      font-weight: 500;
+    }
+
+    .mock-tab.active {
+      color: var(--purple);
+    }
+
+    .mock-tab-icon {
+      font-size: 1.1rem;
+      display: block;
+      margin-bottom: 2px;
+    }
+
+    /* ===== Story Section ===== */
+    .story {
+      background: var(--white);
+      position: relative;
+    }
+
+    .story-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 64px;
+      align-items: center;
+    }
+
+    .story-text {
+      max-width: 480px;
+    }
+
+    .section-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--purple);
+      margin-bottom: 16px;
+    }
+
+    .section-label::before {
+      content: "";
+      display: inline-block;
+      width: 24px;
+      height: 2px;
+      background: var(--purple);
+      border-radius: 2px;
+    }
+
+    .story-text h2 {
+      margin-bottom: 20px;
+      color: var(--charcoal);
+    }
+
+    .story-text p {
+      margin-bottom: 16px;
+      line-height: 1.75;
+    }
+
+    .story-visual {
+      display: flex;
+      justify-content: center;
+      position: relative;
+    }
+
+    .story-card-stack {
+      position: relative;
+      width: 300px;
+      height: 360px;
+    }
+
+    .story-card {
+      position: absolute;
+      width: 260px;
+      background: var(--white);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg);
+      overflow: hidden;
+      transition: transform 0.4s ease;
+    }
+
+    .story-card:nth-child(1) {
+      top: 0;
+      left: 20px;
+      z-index: 3;
+      transform: rotate(-2deg);
+    }
+
+    .story-card:nth-child(2) {
+      top: 60px;
+      left: 40px;
+      z-index: 2;
+      transform: rotate(1.5deg);
+    }
+
+    .story-card:nth-child(3) {
+      top: 120px;
+      left: 10px;
+      z-index: 1;
+      transform: rotate(-1deg);
+    }
+
+    .story-card-img {
+      height: 100px;
+      width: 100%;
+    }
+
+    .story-card:nth-child(1) .story-card-img {
+      background: linear-gradient(135deg, #7333D9, #9B6AE8);
+    }
+    .story-card:nth-child(2) .story-card-img {
+      background: linear-gradient(135deg, #6BB540, #99FF33);
+    }
+    .story-card:nth-child(3) .story-card-img {
+      background: linear-gradient(135deg, #F5A623, #FFD166);
+    }
+
+    .story-card-body {
+      padding: 14px 16px;
+    }
+
+    .story-card-name {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--charcoal);
+      margin-bottom: 4px;
+    }
+
+    .story-card-cuisine {
+      font-size: 0.75rem;
+      color: var(--gray-500);
+      margin-bottom: 8px;
+    }
+
+    .story-card-rating {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 10px;
+      border-radius: 100px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--white);
+    }
+
+    .story-card:nth-child(1) .story-card-rating { background: var(--purple); }
+    .story-card:nth-child(2) .story-card-rating { background: var(--lime-dark); color: var(--charcoal); }
+    .story-card:nth-child(3) .story-card-rating { background: var(--amber); }
+
+    /* ===== Features Section ===== */
+    .features {
+      background: var(--gray-100);
+      position: relative;
+    }
+
+    .features::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--gray-200), transparent);
+    }
+
+    .features-header {
+      text-align: center;
+      max-width: 600px;
+      margin: 0 auto 64px;
+    }
+
+    .features-header h2 {
+      margin-bottom: 16px;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+    }
+
+    .feature-card {
+      background: var(--white);
+      border-radius: var(--radius-lg);
+      padding: 32px 28px;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      border: 1px solid var(--gray-200);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .feature-card::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--purple), var(--lime));
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .feature-card:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .feature-card:hover::before {
+      opacity: 1;
+    }
+
+    .feature-icon {
+      width: 52px;
+      height: 52px;
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      margin-bottom: 20px;
+    }
+
+    .feature-icon.purple { background: var(--purple-glow); }
+    .feature-icon.lime { background: var(--lime-glow); }
+    .feature-icon.amber { background: rgba(245, 166, 35, 0.12); }
+
+    .feature-card h3 {
+      margin-bottom: 10px;
+      color: var(--charcoal);
+    }
+
+    .feature-card p {
+      font-size: 0.95rem;
+      line-height: 1.65;
+    }
+
+    /* ===== Rating System ===== */
+    .rating-section {
+      background: var(--charcoal);
+      color: var(--white);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .rating-section::before {
+      content: "";
+      position: absolute;
+      top: -300px;
+      right: -200px;
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(115, 51, 217, 0.2) 0%, transparent 70%);
+      border-radius: 50%;
+    }
+
+    .rating-header {
+      text-align: center;
+      max-width: 600px;
+      margin: 0 auto 64px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .rating-header .section-label {
+      color: var(--lime);
+    }
+
+    .rating-header .section-label::before {
+      background: var(--lime);
+    }
+
+    .rating-header h2 {
+      color: var(--white);
+    }
+
+    .rating-header p {
+      color: rgba(255, 255, 255, 0.6);
+    }
+
+    .rating-sources {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+      margin-bottom: 64px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .rating-source-card {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: var(--radius-lg);
+      padding: 32px 24px;
+      text-align: center;
+      transition: transform 0.3s ease, background 0.3s ease;
+      backdrop-filter: blur(10px);
+    }
+
+    .rating-source-card:hover {
+      transform: translateY(-4px);
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .rating-source-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 16px;
+      font-size: 1.5rem;
+    }
+
+    .rating-source-icon.mampf {
+      background: rgba(115, 51, 217, 0.25);
+      box-shadow: 0 0 20px rgba(115, 51, 217, 0.2);
+    }
+
+    .rating-source-icon.community {
+      background: rgba(153, 255, 51, 0.15);
+      box-shadow: 0 0 20px rgba(153, 255, 51, 0.1);
+    }
+
+    .rating-source-icon.google {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .rating-source-card h3 {
+      color: var(--white);
+      margin-bottom: 8px;
+      font-size: 1.15rem;
+    }
+
+    .rating-source-card p {
+      color: rgba(255, 255, 255, 0.5);
+      font-size: 0.9rem;
+    }
+
+    /* Rating color scale */
+    .rating-scale {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
+      position: relative;
+      z-index: 1;
+    }
+
+    .rating-tier {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      background: rgba(255, 255, 255, 0.06);
+      border-radius: 100px;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    .rating-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+
+    .rating-dot.elite { background: var(--purple); box-shadow: 0 0 8px rgba(115, 51, 217, 0.5); }
+    .rating-dot.great { background: var(--lime); box-shadow: 0 0 8px rgba(153, 255, 51, 0.3); }
+    .rating-dot.solid { background: var(--amber); }
+    .rating-dot.okay { background: var(--gray-500); }
+    .rating-dot.avoid { background: var(--red); }
+
+    .rating-tier span {
+      color: rgba(255, 255, 255, 0.7);
+    }
+
+    /* ===== Stats Section ===== */
+    .stats {
+      background: var(--white);
+      padding: 80px 0;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 32px;
+    }
+
+    .stat-card {
+      text-align: center;
+      padding: 32px 16px;
+      border-radius: var(--radius-lg);
+      background: var(--gray-100);
+      border: 1px solid var(--gray-200);
+      transition: transform 0.3s ease;
+    }
+
+    .stat-card:hover {
+      transform: translateY(-4px);
+    }
+
+    .stat-emoji {
+      font-size: 2rem;
+      margin-bottom: 12px;
+      display: block;
+    }
+
+    .stat-number {
+      font-size: clamp(2rem, 4vw, 2.75rem);
+      font-weight: 800;
+      color: var(--purple);
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+      margin-bottom: 4px;
+    }
+
+    .stat-label {
+      font-size: 0.9rem;
+      color: var(--gray-500);
+      font-weight: 500;
+    }
+
+    /* ===== Neighborhoods ===== */
+    .neighborhoods {
+      background: var(--gray-100);
+      overflow: hidden;
+    }
+
+    .neighborhoods-header {
+      text-align: center;
+      max-width: 520px;
+      margin: 0 auto 48px;
+    }
+
+    .neighborhoods-header h2 {
+      margin-bottom: 12px;
+    }
+
+    .hood-track {
+      display: flex;
+      gap: 14px;
+      animation: scroll-left 40s linear infinite;
+      width: max-content;
+    }
+
+    .hood-track:hover {
+      animation-play-state: paused;
+    }
+
+    @keyframes scroll-left {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-50%); }
+    }
+
+    .hood-chip {
+      padding: 10px 22px;
+      background: var(--white);
+      border: 1px solid var(--gray-200);
+      border-radius: 100px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--charcoal);
+      white-space: nowrap;
+      transition: all 0.3s ease;
+      cursor: default;
+    }
+
+    .hood-chip:hover {
+      border-color: var(--purple);
+      color: var(--purple);
+      background: var(--purple-glow);
+    }
+
+    .cuisine-track {
+      display: flex;
+      gap: 14px;
+      animation: scroll-right 35s linear infinite;
+      width: max-content;
+      margin-top: 14px;
+    }
+
+    .cuisine-track:hover {
+      animation-play-state: paused;
+    }
+
+    @keyframes scroll-right {
+      0% { transform: translateX(-50%); }
+      100% { transform: translateX(0); }
+    }
+
+    .cuisine-chip {
+      padding: 10px 22px;
+      background: var(--white);
+      border: 1px solid var(--gray-200);
+      border-radius: 100px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--charcoal);
+      white-space: nowrap;
+      transition: all 0.3s ease;
+      cursor: default;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .cuisine-chip:hover {
+      border-color: var(--lime-dark);
+      color: var(--charcoal);
+      background: var(--lime-glow);
+    }
+
+    /* ===== CTA Section ===== */
+    .cta-section {
+      background: linear-gradient(135deg, var(--purple-dark), var(--purple), var(--purple-light));
+      color: var(--white);
+      text-align: center;
+      padding: 96px 0;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .cta-section::before {
+      content: "";
+      position: absolute;
+      top: -100px;
+      left: -100px;
+      width: 400px;
+      height: 400px;
+      background: radial-gradient(circle, rgba(153, 255, 51, 0.1), transparent 70%);
+      border-radius: 50%;
+    }
+
+    .cta-section h2 {
+      color: var(--white);
+      margin-bottom: 16px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .cta-section p {
+      color: rgba(255, 255, 255, 0.75);
+      max-width: 500px;
+      margin: 0 auto 36px;
+      font-size: 1.15rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    .btn-cta {
+      background: var(--white);
+      color: var(--purple);
+      padding: 16px 36px;
+      font-size: 1.05rem;
+      font-weight: 700;
+      border-radius: var(--radius-md);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+      transition: all 0.25s ease;
+      position: relative;
+      z-index: 1;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+
+    .btn-cta:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+      color: var(--purple);
+    }
+
+    /* ===== Footer ===== */
+    footer {
+      background: var(--charcoal);
+      color: rgba(255, 255, 255, 0.5);
+      padding: 48px 0;
+    }
+
+    .footer-content {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .footer-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .footer-logo {
+      width: 32px;
+      height: 32px;
+      background: var(--purple);
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.95rem;
+    }
+
+    .footer-name {
+      font-weight: 700;
+      color: var(--white);
+      font-size: 1rem;
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 24px;
+      list-style: none;
+    }
+
+    .footer-links a {
+      color: rgba(255, 255, 255, 0.5);
+      font-size: 0.875rem;
+      transition: color 0.2s ease;
+    }
+
+    .footer-links a:hover {
+      color: var(--white);
+    }
+
+    .footer-copy {
+      font-size: 0.8rem;
+    }
+
+    /* ===== Responsive ===== */
+    @media (max-width: 900px) {
+      .features-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .rating-sources {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .rating-sources > :last-child {
+        grid-column: 1 / -1;
+        max-width: 400px;
+        margin: 0 auto;
+      }
+
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .story-grid {
+        grid-template-columns: 1fr;
+        gap: 48px;
+      }
+
+      .story-visual {
+        order: -1;
+      }
+
+      .story-text {
+        max-width: 100%;
+        text-align: center;
+      }
+
+      .story-card-stack {
+        width: 260px;
+        height: 320px;
+      }
+    }
+
+    @media (max-width: 640px) {
+      section {
+        padding: 64px 0;
+      }
+
+      .nav-links {
+        display: none;
+      }
+
+      .nav-mobile-toggle {
+        display: block;
+      }
+
+      nav.mobile-open .nav-links {
+        display: flex;
+        flex-direction: column;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: var(--white);
+        padding: 16px 24px 24px;
+        border-bottom: 1px solid var(--gray-200);
+        box-shadow: var(--shadow-md);
+        gap: 16px;
+      }
+
+      .hero {
+        padding: 100px 0 60px;
+        min-height: auto;
+      }
+
+      .hero-emoji {
+        display: none;
+      }
+
+      .phone-frame {
+        width: 240px;
+        height: 480px;
+        border-radius: 34px;
+        padding: 10px;
+      }
+
+      .phone-screen {
+        border-radius: 26px;
+      }
+
+      .phone-notch {
+        width: 100px;
+        height: 24px;
+        border-radius: 0 0 14px 14px;
+      }
+
+      .features-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .rating-sources {
+        grid-template-columns: 1fr;
+      }
+
+      .rating-sources > :last-child {
+        max-width: 100%;
+      }
+
+      .rating-scale {
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
+      }
+
+      .stat-card {
+        padding: 24px 12px;
+      }
+
+      .hero-cta {
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .btn {
+        width: 100%;
+        max-width: 280px;
+        justify-content: center;
+      }
+
+      .footer-content {
+        flex-direction: column;
+        text-align: center;
+      }
+
+      .footer-links {
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .story-card-stack {
+        width: 240px;
+        height: 300px;
+      }
+
+      .story-card {
+        width: 230px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav id="navbar">
+    <div class="container">
+      <a href="#" class="nav-logo">
+        <div class="nav-logo-icon">🍽</div>
+        MAMPF
+      </a>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="#story" onclick="closeNav()">Story</a></li>
+        <li><a href="#features" onclick="closeNav()">Features</a></li>
+        <li><a href="#ratings" onclick="closeNav()">Bewertungen</a></li>
+        <li><a href="#stats" onclick="closeNav()">Zahlen</a></li>
+      </ul>
+      <button class="nav-mobile-toggle" id="navToggle" aria-label="Menu">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-emoji">🍔</div>
+    <div class="hero-emoji">🍕</div>
+    <div class="hero-emoji">🍜</div>
+    <div class="hero-emoji">🥘</div>
+    <div class="hero-emoji">🍣</div>
+    <div class="hero-emoji">🌮</div>
+    <div class="hero-emoji">🍛</div>
+
+    <div class="container">
+      <div class="hero-content">
+        <div class="hero-badge">
+          <span class="hero-badge-dot"></span>
+          Hamburg Food Guide
+        </div>
+        <h1><span class="highlight">MAMPF</span></h1>
+        <p class="hero-tagline">Kuratierte Foodspots in Hamburg</p>
+        <p class="hero-description">
+          Dein persoenlicher Guide zu den besten Restaurants der Stadt.
+          Ehrliche Bewertungen, interaktive Karte, Community-Ratings.
+        </p>
+        <div class="hero-cta">
+          <a href="#features" class="btn btn-primary">
+            Entdecken
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3v10M8 13l4-4M8 13L4 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </a>
+          <a href="#story" class="btn btn-secondary">
+            Die Story
+          </a>
+        </div>
+
+        <!-- Phone Mockup -->
+        <div class="hero-mockup">
+          <div class="phone-frame">
+            <div class="phone-screen">
+              <div class="phone-notch"></div>
+              <div class="phone-screen-content">
+                <div class="mock-header">
+                  <h4>🍽 Food Spots</h4>
+                </div>
+                <div class="mock-search">137 Foodspots durchsuchen...</div>
+                <div class="mock-card">
+                  <div class="mock-card-img"></div>
+                  <div class="mock-card-title">Chilli Club</div>
+                  <div class="mock-card-meta">
+                    <span class="mock-pill purple">9.0</span>
+                    <span class="mock-pill lime">8.2</span>
+                    <span class="mock-pill gray">4.5</span>
+                  </div>
+                </div>
+                <div class="mock-card">
+                  <div class="mock-card-img"></div>
+                  <div class="mock-card-title">Bami House</div>
+                  <div class="mock-card-meta">
+                    <span class="mock-pill purple">8.5</span>
+                    <span class="mock-pill lime">8.0</span>
+                    <span class="mock-pill gray">4.3</span>
+                  </div>
+                </div>
+                <div class="mock-tab-bar">
+                  <div class="mock-tab">
+                    <span class="mock-tab-icon">🗺</span>
+                    Karte
+                  </div>
+                  <div class="mock-tab active">
+                    <span class="mock-tab-icon">🍽</span>
+                    Food Spots
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Story -->
+  <section class="story" id="story">
+    <div class="container">
+      <div class="story-grid">
+        <div class="story-text animate-on-scroll">
+          <div class="section-label">Die Story</div>
+          <h2>Von der persoenlichen Liste zur App</h2>
+          <p>
+            MAMPF ist aus einer simplen Idee entstanden: Jan wollte seine liebsten
+            Restaurants in Hamburg an einem Ort sammeln. Was als persoenliche Notiz
+            begann, wuchs ueber die Zeit zu einer kuratierten Sammlung von ueber
+            137 Foodspots.
+          </p>
+          <p>
+            Jedes Restaurant wurde persoenlich besucht und ehrlich bewertet. Keine
+            gesponserten Eintraege, keine bezahlten Reviews. Nur ehrliche
+            Empfehlungen von jemandem, der Hamburg's Food-Szene liebt.
+          </p>
+          <p>
+            Heute koennen auch andere ihre Bewertungen abgeben und so gemeinsam
+            den besten Food-Guide fuer Hamburg gestalten.
+          </p>
+        </div>
+        <div class="story-visual animate-on-scroll">
+          <div class="story-card-stack">
+            <div class="story-card">
+              <div class="story-card-img"></div>
+              <div class="story-card-body">
+                <div class="story-card-name">🍜 Pho &amp; Rice</div>
+                <div class="story-card-cuisine">Vietnamesisch &middot; Sternschanze</div>
+                <span class="story-card-rating">9.5</span>
+              </div>
+            </div>
+            <div class="story-card">
+              <div class="story-card-img"></div>
+              <div class="story-card-body">
+                <div class="story-card-name">🍔 Otto's Burger</div>
+                <div class="story-card-cuisine">Burger &middot; Schanze</div>
+                <span class="story-card-rating">8.5</span>
+              </div>
+            </div>
+            <div class="story-card">
+              <div class="story-card-img"></div>
+              <div class="story-card-body">
+                <div class="story-card-name">🌮 Taqueria</div>
+                <div class="story-card-cuisine">Mexikanisch &middot; St. Pauli</div>
+                <span class="story-card-rating">7.5</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section class="features" id="features">
+    <div class="container">
+      <div class="features-header animate-on-scroll">
+        <div class="section-label">Features</div>
+        <h2>Alles, was du brauchst</h2>
+        <p>
+          MAMPF vereint persoenliche Empfehlungen mit Community-Feedback
+          und einer intuitiven Oberflaeche.
+        </p>
+      </div>
+
+      <div class="features-grid">
+        <div class="feature-card animate-on-scroll">
+          <div class="feature-icon purple">🗺</div>
+          <h3>Interaktive Karte</h3>
+          <p>Alle Foodspots auf einer Karte. Suche nach Namen, filtere nach Rating und entdecke neue Spots in deiner Naehe.</p>
+        </div>
+        <div class="feature-card animate-on-scroll">
+          <div class="feature-icon lime">📋</div>
+          <h3>3 Ansichtsmodi</h3>
+          <p>Wechsle zwischen Cards, Grid und kompakter Liste. Jeder Modus zeigt die wichtigsten Infos auf einen Blick.</p>
+        </div>
+        <div class="feature-card animate-on-scroll">
+          <div class="feature-icon amber">⭐</div>
+          <h3>3-fach Bewertungen</h3>
+          <p>Jedes Restaurant hat ein MAMPF-Rating, Community-Bewertungen und die Google-Note. Drei Perspektiven, eine Entscheidung.</p>
+        </div>
+        <div class="feature-card animate-on-scroll">
+          <div class="feature-icon purple">🎛</div>
+          <h3>Smarte Filter</h3>
+          <p>Filtere nach Kueche, Stadtteil, Preis und Rating. Das Histogramm auf der Karte zeigt die Verteilung live.</p>
+        </div>
+        <div class="feature-card animate-on-scroll">
+          <div class="feature-icon lime">❤️</div>
+          <h3>Favoriten</h3>
+          <p>Markiere deine Lieblingsspots mit einem Herz und finde sie jederzeit ueber den Favoriten-Filter wieder.</p>
+        </div>
+        <div class="feature-card animate-on-scroll">
+          <div class="feature-icon amber">👥</div>
+          <h3>Community</h3>
+          <p>Gib deine eigene Bewertung ab und sieh, was andere denken. Zusammen entsteht der beste Food-Guide fuer Hamburg.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Rating System -->
+  <section class="rating-section" id="ratings">
+    <div class="container">
+      <div class="rating-header animate-on-scroll">
+        <div class="section-label">Bewertungssystem</div>
+        <h2>Drei Perspektiven, eine Entscheidung</h2>
+        <p>
+          Jedes Restaurant wird aus drei Blickwinkeln bewertet.
+          Du entscheidest, welche Quelle dir am wichtigsten ist.
+        </p>
+      </div>
+
+      <div class="rating-sources">
+        <div class="rating-source-card animate-on-scroll">
+          <div class="rating-source-icon mampf">🟣</div>
+          <h3>MAMPF Rating</h3>
+          <p>Jans persoenliche Bewertung auf einer Skala von 1 bis 10. Ehrlich, subjektiv, ueberall selbst getestet.</p>
+        </div>
+        <div class="rating-source-card animate-on-scroll">
+          <div class="rating-source-icon community">🟢</div>
+          <h3>Community Rating</h3>
+          <p>Die Durchschnittsbewertung aller MAMPF-Nutzer. Je mehr mitmachen, desto besser wird der Guide.</p>
+        </div>
+        <div class="rating-source-card animate-on-scroll">
+          <div class="rating-source-icon google">⚪</div>
+          <h3>Google Rating</h3>
+          <p>Die bekannte Google-Bewertung als Referenzwert. Breite Datenbasis, aber nicht immer aussagekraeftig.</p>
+        </div>
+      </div>
+
+      <div class="rating-scale animate-on-scroll">
+        <div class="rating-tier">
+          <span class="rating-dot elite"></span>
+          <span>9+ Elite</span>
+        </div>
+        <div class="rating-tier">
+          <span class="rating-dot great"></span>
+          <span>8 - 8.5 Sehr gut</span>
+        </div>
+        <div class="rating-tier">
+          <span class="rating-dot solid"></span>
+          <span>7 - 7.5 Solide</span>
+        </div>
+        <div class="rating-tier">
+          <span class="rating-dot okay"></span>
+          <span>5 - 6.5 Okay</span>
+        </div>
+        <div class="rating-tier">
+          <span class="rating-dot avoid"></span>
+          <span>&le; 4.5 Meiden</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Stats -->
+  <section class="stats" id="stats">
+    <div class="container">
+      <div class="stats-grid">
+        <div class="stat-card animate-on-scroll">
+          <span class="stat-emoji">🍽</span>
+          <div class="stat-number">137+</div>
+          <div class="stat-label">Restaurants</div>
+        </div>
+        <div class="stat-card animate-on-scroll">
+          <span class="stat-emoji">🌍</span>
+          <div class="stat-number">19</div>
+          <div class="stat-label">Kuechen</div>
+        </div>
+        <div class="stat-card animate-on-scroll">
+          <span class="stat-emoji">📍</span>
+          <div class="stat-number">13+</div>
+          <div class="stat-label">Stadtteile</div>
+        </div>
+        <div class="stat-card animate-on-scroll">
+          <span class="stat-emoji">⭐</span>
+          <div class="stat-number">3</div>
+          <div class="stat-label">Rating-Quellen</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Neighborhoods & Cuisines Ticker -->
+  <section class="neighborhoods">
+    <div class="container">
+      <div class="neighborhoods-header animate-on-scroll">
+        <div class="section-label">Stadtteile &amp; Kuechen</div>
+        <h2>Ganz Hamburg auf dem Teller</h2>
+        <p>Von der Schanze bis zur HafenCity, von Pho bis Pizza.</p>
+      </div>
+    </div>
+    <div style="overflow: hidden;">
+      <div class="hood-track">
+        <span class="hood-chip">Sternschanze</span>
+        <span class="hood-chip">St. Pauli</span>
+        <span class="hood-chip">Ottensen</span>
+        <span class="hood-chip">Eimsbuettel</span>
+        <span class="hood-chip">Neustadt</span>
+        <span class="hood-chip">Altona</span>
+        <span class="hood-chip">Winterhude</span>
+        <span class="hood-chip">Eppendorf</span>
+        <span class="hood-chip">Barmbek</span>
+        <span class="hood-chip">St. Georg</span>
+        <span class="hood-chip">HafenCity</span>
+        <span class="hood-chip">Altstadt</span>
+        <span class="hood-chip">Karolinenviertel</span>
+        <!-- Duplicated for seamless loop -->
+        <span class="hood-chip">Sternschanze</span>
+        <span class="hood-chip">St. Pauli</span>
+        <span class="hood-chip">Ottensen</span>
+        <span class="hood-chip">Eimsbuettel</span>
+        <span class="hood-chip">Neustadt</span>
+        <span class="hood-chip">Altona</span>
+        <span class="hood-chip">Winterhude</span>
+        <span class="hood-chip">Eppendorf</span>
+        <span class="hood-chip">Barmbek</span>
+        <span class="hood-chip">St. Georg</span>
+        <span class="hood-chip">HafenCity</span>
+        <span class="hood-chip">Altstadt</span>
+        <span class="hood-chip">Karolinenviertel</span>
+      </div>
+      <div class="cuisine-track">
+        <span class="cuisine-chip">🍔 Burger</span>
+        <span class="cuisine-chip">🍕 Pizza</span>
+        <span class="cuisine-chip">🍜 Vietnamesisch</span>
+        <span class="cuisine-chip">🥘 Koreanisch</span>
+        <span class="cuisine-chip">🍣 Japanisch</span>
+        <span class="cuisine-chip">🌮 Mexikanisch</span>
+        <span class="cuisine-chip">🥙 Tuerkisch</span>
+        <span class="cuisine-chip">🍛 Indisch</span>
+        <span class="cuisine-chip">🥞 Brunch</span>
+        <span class="cuisine-chip">🍝 Italienisch</span>
+        <span class="cuisine-chip">🥗 Griechisch</span>
+        <span class="cuisine-chip">🥩 Steak</span>
+        <span class="cuisine-chip">🐟 Seafood</span>
+        <span class="cuisine-chip">🍚 Chinesisch</span>
+        <span class="cuisine-chip">🍲 Thai</span>
+        <span class="cuisine-chip">🥨 Deutsch</span>
+        <span class="cuisine-chip">🐙 Portugiesisch</span>
+        <span class="cuisine-chip">🧆 Oriental</span>
+        <span class="cuisine-chip">🥗 Poke</span>
+        <!-- Duplicated for seamless loop -->
+        <span class="cuisine-chip">🍔 Burger</span>
+        <span class="cuisine-chip">🍕 Pizza</span>
+        <span class="cuisine-chip">🍜 Vietnamesisch</span>
+        <span class="cuisine-chip">🥘 Koreanisch</span>
+        <span class="cuisine-chip">🍣 Japanisch</span>
+        <span class="cuisine-chip">🌮 Mexikanisch</span>
+        <span class="cuisine-chip">🥙 Tuerkisch</span>
+        <span class="cuisine-chip">🍛 Indisch</span>
+        <span class="cuisine-chip">🥞 Brunch</span>
+        <span class="cuisine-chip">🍝 Italienisch</span>
+        <span class="cuisine-chip">🥗 Griechisch</span>
+        <span class="cuisine-chip">🥩 Steak</span>
+        <span class="cuisine-chip">🐟 Seafood</span>
+        <span class="cuisine-chip">🍚 Chinesisch</span>
+        <span class="cuisine-chip">🍲 Thai</span>
+        <span class="cuisine-chip">🥨 Deutsch</span>
+        <span class="cuisine-chip">🐙 Portugiesisch</span>
+        <span class="cuisine-chip">🧆 Oriental</span>
+        <span class="cuisine-chip">🥗 Poke</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta-section">
+    <div class="container">
+      <h2 class="animate-on-scroll">Bereit fuer deinen naechsten Foodspot?</h2>
+      <p class="animate-on-scroll">
+        Lade MAMPF herunter und entdecke Hamburgs beste Restaurants.
+      </p>
+      <a href="#" class="btn-cta animate-on-scroll">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M14.5 10.6l-4.5 4.5-4.5-4.5M10 14.5V3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 15v1a2 2 0 002 2h10a2 2 0 002-2v-1" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Bald im App Store
+      </a>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <div class="container">
+      <div class="footer-content">
+        <div class="footer-brand">
+          <div class="footer-logo">🍽</div>
+          <span class="footer-name">MAMPF</span>
+        </div>
+        <ul class="footer-links">
+          <li><a href="privacy.html">Datenschutz</a></li>
+          <li><a href="mailto:jan.hoferichter@icloud.com">Kontakt</a></li>
+        </ul>
+        <span class="footer-copy">&copy; 2026 Jan Hoferichter. Alle Rechte vorbehalten.</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script>
+    // Navbar scroll effect
+    const navbar = document.getElementById('navbar');
+    window.addEventListener('scroll', () => {
+      navbar.classList.toggle('scrolled', window.scrollY > 20);
+    });
+
+    // Mobile nav toggle
+    const navToggle = document.getElementById('navToggle');
+    navToggle.addEventListener('click', () => {
+      navbar.classList.toggle('mobile-open');
+    });
+
+    function closeNav() {
+      navbar.classList.remove('mobile-open');
+    }
+
+    // Scroll animation observer
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry, index) => {
+        if (entry.isIntersecting) {
+          // Stagger animation based on sibling index
+          const siblings = entry.target.parentElement.querySelectorAll('.animate-on-scroll');
+          let delay = 0;
+          siblings.forEach((sib, i) => {
+            if (sib === entry.target) delay = i * 100;
+          });
+          setTimeout(() => {
+            entry.target.classList.add('visible');
+          }, delay);
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+
+    document.querySelectorAll('.animate-on-scroll').forEach(el => observer.observe(el));
+  </script>
+</body>
+</html>

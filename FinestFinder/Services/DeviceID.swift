@@ -11,4 +11,9 @@ enum DeviceID {
         UserDefaults.standard.set(new, forKey: key)
         return new
     }
+
+    /// Reset the device ID (generates a new one on next access)
+    static func reset() {
+        UserDefaults.standard.removeObject(forKey: key)
+    }
 }

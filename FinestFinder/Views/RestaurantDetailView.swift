@@ -35,25 +35,15 @@ struct RestaurantDetailView: View {
     private var heroImage: some View {
         GeometryReader { geo in
             ZStack(alignment: .bottomLeading) {
-                if let urlString = restaurant.imageUrl, let url = URL(string: urlString) {
-                    AsyncImage(url: url) { phase in
-                        switch phase {
-                        case .success(let image):
-                            image
-                                .resizable()
-                                .aspectRatio(contentMode: .fill)
-                                .frame(width: geo.size.width, height: 350)
-                                .clipped()
-                        case .failure:
-                            heroPlaceholder
-                        default:
-                            heroPlaceholder
-                                .overlay { ProgressView().tint(.white) }
-                        }
-                    }
-                } else {
-                    heroPlaceholder
-                }
+                AsyncRestaurantImage(
+                    url: restaurant.imageUrl.flatMap(URL.init),
+                    cuisineIcon: restaurant.cuisineType.icon,
+                    cornerRadius: 0,
+                    showProgress: true,
+                    gradient: true
+                )
+                .frame(width: geo.size.width, height: 350)
+                .clipped()
 
                 // Gradient overlay with name
                 VStack(alignment: .leading, spacing: 8) {
@@ -100,22 +90,6 @@ struct RestaurantDetailView: View {
         .frame(height: 350)
     }
 
-    private var heroPlaceholder: some View {
-        Rectangle()
-            .fill(
-                LinearGradient(
-                    colors: [.ffPrimary, .ffTertiary],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            )
-            .frame(height: 350)
-            .overlay {
-                Text(restaurant.cuisineType.icon)
-                    .font(.system(size: 80))
-                    .opacity(0.4)
-            }
-    }
 
     private var content: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -140,7 +114,7 @@ struct RestaurantDetailView: View {
                 .font(.headline)
 
             HStack {
-                Text(userRating > 0 ? String(format: userRating.truncatingRemainder(dividingBy: 1) == 0 ? "%.0f" : "%.1f", userRating) : "–")
+                Text(userRating > 0 ? userRating.formattedRating : "–")
                     .font(.system(size: 28, weight: .black).monospacedDigit())
                     .foregroundStyle(userRating > 0 ? .primary : .secondary)
                     .lineLimit(1)

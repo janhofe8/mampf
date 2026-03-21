@@ -58,6 +58,8 @@ export function getNeighborhoodLabel(neighborhood: string): string {
     barmbek: "Barmbek",
     stGeorg: "St. Georg",
     hafenCity: "HafenCity",
+    uhlenhorst: "Uhlenhorst",
+    karolinenviertel: "Karolinenviertel",
     other: "Other",
   };
   return labels[neighborhood] || neighborhood;

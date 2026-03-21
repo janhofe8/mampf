@@ -14,7 +14,7 @@ struct RestaurantCardView: View {
             // Ratings top-left
             if compact {
                 if let personal = restaurant.personalRating {
-                    compactPill(icon: "star.fill", value: String(format: personal.truncatingRemainder(dividingBy: 1) == 0 ? "%.0f" : "%.1f", personal), color: RatingSource.personal.color, textColor: .white)
+                    RatingPill(icon: "star.fill", value: personal.formattedRating, color: RatingSource.personal.color, textColor: .white, size: .compact)
                         .padding(6)
                 }
             } else {
@@ -23,7 +23,7 @@ struct RestaurantCardView: View {
                         HStack(spacing: 5) {
                             Image(systemName: "star.fill")
                                 .font(.system(size: 14, weight: .bold))
-                            Text(String(format: personal.truncatingRemainder(dividingBy: 1) == 0 ? "%.0f" : "%.1f", personal))
+                            Text(personal.formattedRating)
                                 .font(.system(size: 26, weight: .black).monospacedDigit())
                         }
                         .foregroundStyle(.white)
@@ -32,10 +32,10 @@ struct RestaurantCardView: View {
                         .background(RatingSource.personal.color, in: Capsule())
                     }
                     if let cr = communityRating {
-                        smallPill(icon: "person.2.fill", value: String(format: "%.1f", cr.average), color: RatingSource.community.color, textColor: .black)
+                        RatingPill(icon: "person.2.fill", value: String(format: "%.1f", cr.average), color: RatingSource.community.color, textColor: .black, size: .small)
                     }
                     if let google = restaurant.googleRating {
-                        smallPill(icon: "globe", value: String(format: "%.1f", google), color: RatingSource.google.color, textColor: .white)
+                        RatingPill(icon: "globe", value: String(format: "%.1f", google), color: RatingSource.google.color, textColor: .white, size: .small)
                     }
                 }
                 .padding(12)
@@ -108,73 +108,17 @@ struct RestaurantCardView: View {
         .shadow(color: .black.opacity(0.15), radius: compact ? 5 : 10, y: compact ? 2 : 5)
     }
 
-    @ViewBuilder
     private var cardImage: some View {
-        if let urlString = restaurant.imageUrl, let url = URL(string: urlString) {
-            AsyncImage(url: url) { phase in
-                switch phase {
-                case .success(let image):
-                    image
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                        .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
-                case .failure:
-                    placeholderImage
-                default:
-                    placeholderImage
-                        .overlay { ProgressView().tint(.white) }
-                }
-            }
-        } else {
-            placeholderImage
-        }
+        AsyncRestaurantImage(
+            url: restaurant.imageUrl.flatMap(URL.init),
+            cuisineIcon: restaurant.cuisineType.icon,
+            cornerRadius: compact ? 12 : 20,
+            showProgress: true,
+            gradient: true
+        )
+        .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
     }
 
-    private var placeholderImage: some View {
-        Rectangle()
-            .fill(
-                LinearGradient(
-                    colors: [.ffPrimary.opacity(0.8), .ffTertiary],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            )
-            .frame(height: compact ? 120 : 280)
-            .overlay {
-                Text(restaurant.cuisineType.icon)
-                    .font(.system(size: compact ? 36 : 60))
-                    .opacity(0.5)
-            }
-    }
-
-    private func compactPill(icon: String, value: String, color: Color, textColor: Color) -> some View {
-        HStack(spacing: 2) {
-            Image(systemName: icon)
-                .font(.system(size: 8, weight: .bold))
-                .frame(width: 10)
-            Text(value)
-                .font(.system(size: 12, weight: .black).monospacedDigit())
-        }
-        .foregroundStyle(textColor)
-        .frame(minWidth: 44)
-        .padding(.horizontal, 6)
-        .padding(.vertical, 3)
-        .background(color, in: Capsule())
-    }
-
-    private func smallPill(icon: String, value: String, color: Color, textColor: Color) -> some View {
-        HStack(spacing: 4) {
-            Image(systemName: icon)
-                .font(.system(size: 10, weight: .semibold))
-                .frame(width: 14)
-            Text(value)
-                .font(.system(size: 14, weight: .bold).monospacedDigit())
-        }
-        .foregroundStyle(textColor)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 5)
-        .background(color, in: Capsule())
-    }
 }
 
 #Preview {

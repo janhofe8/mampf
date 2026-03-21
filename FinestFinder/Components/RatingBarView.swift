@@ -14,30 +14,31 @@ struct RatingBarView: View {
                     .frame(width: 20)
                 Text(rating.source.displayName)
                     .font(.subheadline.weight(.medium))
-                    .frame(width: 90, alignment: .leading)
+                if rating.source == .google {
+                    Text("Powered by Google")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
 
                 Spacer()
 
-                if let value = rating.value {
-                    Text("\(value, specifier: value.truncatingRemainder(dividingBy: 1) == 0 ? "%.0f" : "%.1f") / \(Int(rating.source.maxValue))")
-                        .font(.subheadline.monospacedDigit().bold())
-                        .lineLimit(1)
-                        .fixedSize()
-                } else {
-                    Text("–")
-                        .font(.subheadline.bold())
-                        .foregroundStyle(.quaternary)
-                        .fixedSize()
-                }
+                HStack(spacing: 4) {
+                    if let value = rating.value {
+                        Text("\(value, specifier: value.truncatingRemainder(dividingBy: 1) == 0 ? "%.0f" : "%.1f") / \(Int(rating.source.maxValue))")
+                            .font(.subheadline.monospacedDigit().bold())
+                    } else {
+                        Text("–")
+                            .font(.subheadline.bold())
+                            .foregroundStyle(.quaternary)
+                    }
 
-                if let count = rating.reviewCount {
-                    Text("(\(count))")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .frame(width: 50, alignment: .trailing)
-                } else {
-                    Spacer().frame(width: 50)
+                    if let count = rating.reviewCount {
+                        Text("(\(count))")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                 }
+                .frame(width: 110, alignment: .trailing)
             }
 
             GeometryReader { geo in

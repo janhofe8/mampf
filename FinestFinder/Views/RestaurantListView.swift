@@ -11,6 +11,7 @@ struct RestaurantListView: View {
     }
 
     @State private var showingFilters = false
+    @State private var showingSettings = false
     @State private var viewMode = 0 // 0 = cards, 1 = grid, 2 = list
     @State private var showFavoritesOnly = false
 
@@ -76,6 +77,13 @@ struct RestaurantListView: View {
         .toolbarTitleDisplayMode(.large)
         .onAppear { applyBrandedNavBarAppearance() }
         .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button { showingSettings = true } label: {
+                    Image(systemName: "gearshape")
+                        .foregroundStyle(.ffPrimary)
+                }
+            }
+
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
                     withAnimation(.easeInOut(duration: 0.25)) {
@@ -100,14 +108,17 @@ struct RestaurantListView: View {
 
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
-                    ForEach(SortOption.allCases) { option in
+                    ForEach(SortField.allCases) { field in
                         Button {
-                            filterVM.sortOption = option
+                            filterVM.selectSort(field)
                         } label: {
-                            HStack {
-                                Text(option.displayName)
-                                if filterVM.sortOption == option {
-                                    Image(systemName: "checkmark")
+                            Label {
+                                Text(field.displayName)
+                            } icon: {
+                                if filterVM.sortField == field {
+                                    Image(systemName: field.supportsDirection
+                                          ? (filterVM.sortAscending ? "chevron.up" : "chevron.down")
+                                          : "checkmark")
                                 }
                             }
                         }
@@ -130,6 +141,9 @@ struct RestaurantListView: View {
         .sheet(isPresented: $showingFilters) {
             FilterSheetView()
         }
+        .sheet(isPresented: $showingSettings) {
+            SettingsView()
+        }
         .overlay {
             if filtered.isEmpty && !store.isLoading {
                 ContentUnavailableView.search(text: filterVM.searchText)
@@ -145,7 +159,7 @@ struct RestaurantListView: View {
     private func listRow(for restaurant: Restaurant) -> some View {
         HStack(alignment: .center, spacing: 14) {
             // Thumbnail — fixed size container
-            listThumbnail(for: restaurant)
+            AsyncRestaurantImage(url: restaurant.imageUrl.flatMap(URL.init), cuisineIcon: restaurant.cuisineType.icon)
                 .frame(width: 80, height: 80)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
 
@@ -158,15 +172,15 @@ struct RestaurantListView: View {
                 // Rating pills like card view
                 HStack(spacing: 6) {
                     if let personal = restaurant.personalRating {
-                        listPill(icon: "star.fill", value: fmtRating(personal), color: RatingSource.personal.color, textColor: (personal >= 7 && personal < 9) ? .black : .white)
+                        RatingPill(icon: "star.fill", value: personal.formattedRating, color: RatingSource.personal.color, textColor: (personal >= 7 && personal < 9) ? .black : .white)
                     }
                     if let cr = store.communityRating(for: restaurant) {
-                        listPill(icon: "person.2.fill", value: String(format: "%.1f", cr.average), color: RatingSource.community.color, textColor: .black)
+                        RatingPill(icon: "person.2.fill", value: String(format: "%.1f", cr.average), color: RatingSource.community.color, textColor: .black)
                     } else {
-                        listPill(icon: "person.2.fill", value: "–", color: Color.gray.opacity(0.2), textColor: .secondary)
+                        RatingPill(icon: "person.2.fill", value: "–", color: Color.gray.opacity(0.2), textColor: .secondary)
                     }
                     if let google = restaurant.googleRating {
-                        listPill(icon: "globe", value: String(format: "%.1f", google), color: RatingSource.google.color, textColor: .white)
+                        RatingPill(icon: "globe", value: String(format: "%.1f", google), color: RatingSource.google.color, textColor: .white)
                     }
                 }
 
@@ -182,51 +196,8 @@ struct RestaurantListView: View {
         .padding(.vertical, 8)
     }
 
-    private func listPill(icon: String, value: String, color: Color, textColor: Color) -> some View {
-        HStack(spacing: 3) {
-            Image(systemName: icon)
-                .font(.system(size: 10, weight: .bold))
-            Text(value)
-                .font(.system(size: 14, weight: .black).monospacedDigit())
-        }
-        .foregroundStyle(textColor)
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .background(color, in: Capsule())
-    }
 
-    private func fmtRating(_ v: Double) -> String {
-        v.truncatingRemainder(dividingBy: 1) == 0
-            ? String(format: "%.0f", v)
-            : String(format: "%.1f", v)
-    }
 
-    @ViewBuilder
-    private func listThumbnail(for restaurant: Restaurant) -> some View {
-        if let urlString = restaurant.imageUrl, let url = URL(string: urlString) {
-            AsyncImage(url: url) { phase in
-                switch phase {
-                case .success(let image):
-                    image.resizable().aspectRatio(contentMode: .fill)
-                case .failure:
-                    thumbnailPlaceholder(for: restaurant)
-                default:
-                    RoundedRectangle(cornerRadius: 12).fill(.quaternary)
-                }
-            }
-        } else {
-            thumbnailPlaceholder(for: restaurant)
-        }
-    }
-
-    private func thumbnailPlaceholder(for restaurant: Restaurant) -> some View {
-        RoundedRectangle(cornerRadius: 12)
-            .fill(.quaternary)
-            .overlay {
-                Text(restaurant.cuisineType.icon)
-                    .font(.title)
-            }
-    }
 
     private var viewModeIcon: String {
         switch viewMode {

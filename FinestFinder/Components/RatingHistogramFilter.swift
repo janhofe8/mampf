@@ -1,37 +1,41 @@
 import SwiftUI
 
 struct RatingHistogramFilter: View {
-    let restaurants: [Restaurant]
     @Binding var minimumRating: Double
     let matchCount: Int
     let onDismiss: () -> Void
 
     private let step: Double = 0.5
     private let hi: Double = 10.0
+    private let lo: Double
+    private let bucketValues: [Double]
+    private let histogramData: [Double: Int]
 
-    private var lowestRating: Double {
+    init(restaurants: [Restaurant], minimumRating: Binding<Double>, matchCount: Int, onDismiss: @escaping () -> Void) {
+        self._minimumRating = minimumRating
+        self.matchCount = matchCount
+        self.onDismiss = onDismiss
+
         let ratings = restaurants.compactMap(\.personalRating)
-        guard let min = ratings.min() else { return 5.0 }
-        return (min / step).rounded(.down) * step
-    }
+        let minRating = ratings.min() ?? 5.0
+        let lo = (minRating / step).rounded(.down) * step
+        self.lo = lo
 
-    private var buckets: [Double] {
-        stride(from: lowestRating, through: hi, by: step).map { $0 }
-    }
+        let buckets = stride(from: lo, through: 10.0, by: step).map { $0 }
+        self.bucketValues = buckets
 
-    private var histogram: [Double: Int] {
         var counts: [Double: Int] = [:]
         for b in buckets { counts[b] = 0 }
         for r in restaurants {
             guard let rating = r.personalRating else { continue }
             let snapped = (rating / step).rounded() * step
-            let clamped = max(lowestRating, min(hi, snapped))
+            let clamped = max(lo, min(10.0, snapped))
             counts[clamped, default: 0] += 1
         }
-        return counts
+        self.histogramData = counts
     }
 
-    private var isFiltering: Bool { minimumRating > 0 }
+    private var isFiltering: Bool { minimumRating > lo }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -44,7 +48,7 @@ struct RatingHistogramFilter: View {
                 Spacer()
 
                 if isFiltering {
-                    Text(fmtRating(minimumRating))
+                    Text(minimumRating.formattedRating)
                         .font(.system(size: 44, weight: .black, design: .rounded).monospacedDigit())
                         .foregroundStyle(Color.ratingColor(for: minimumRating))
                         .contentTransition(.numericText())
@@ -65,14 +69,14 @@ struct RatingHistogramFilter: View {
 
             // Histogram bars
             GeometryReader { geo in
-                let maxCount = max(histogram.values.max() ?? 1, 1)
+                let maxCount = max(histogramData.values.max() ?? 1, 1)
                 let spacing: CGFloat = 2.5
-                let barW = (geo.size.width - CGFloat(buckets.count - 1) * spacing) / CGFloat(buckets.count)
+                let barW = (geo.size.width - CGFloat(bucketValues.count - 1) * spacing) / CGFloat(bucketValues.count)
                 let barAreaHeight = geo.size.height - 18
 
                 HStack(alignment: .bottom, spacing: spacing) {
-                    ForEach(buckets, id: \.self) { bucket in
-                        let count = histogram[bucket] ?? 0
+                    ForEach(bucketValues, id: \.self) { bucket in
+                        let count = histogramData[bucket] ?? 0
                         let frac = CGFloat(count) / CGFloat(maxCount)
                         let inRange = !isFiltering || bucket >= minimumRating
 
@@ -86,7 +90,6 @@ struct RatingHistogramFilter: View {
                             RoundedRectangle(cornerRadius: 3)
                                 .fill(inRange ? Color.ratingColor(for: bucket) : Color.gray.opacity(0.12))
                                 .frame(width: barW, height: max(4, frac * barAreaHeight))
-                                .animation(.easeInOut(duration: 0.15), value: minimumRating)
                         }
                     }
                 }
@@ -95,14 +98,14 @@ struct RatingHistogramFilter: View {
             .frame(height: 85)
 
             // Slider
-            Slider(value: $minimumRating, in: 0...hi, step: step) {
+            Slider(value: $minimumRating, in: lo...hi, step: step) {
                 EmptyView()
             } minimumValueLabel: {
-                Text(fmtRating(lowestRating))
+                Text(lo.formattedRating)
                     .font(.system(size: 12, weight: .bold, design: .rounded).monospacedDigit())
                     .foregroundStyle(.tertiary)
             } maximumValueLabel: {
-                Text(fmtRating(hi))
+                Text(hi.formattedRating)
                     .font(.system(size: 12, weight: .bold, design: .rounded).monospacedDigit())
                     .foregroundStyle(.tertiary)
             }
@@ -118,7 +121,7 @@ struct RatingHistogramFilter: View {
 
                 if isFiltering {
                     Button {
-                        withAnimation { minimumRating = 0 }
+                        withAnimation { minimumRating = lo }
                     } label: {
                         Text("ratingFilter.reset")
                             .font(.body.weight(.bold))
@@ -130,11 +133,11 @@ struct RatingHistogramFilter: View {
         .padding(20)
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20))
         .shadow(color: .black.opacity(0.15), radius: 10, y: 5)
+        .onAppear {
+            if minimumRating < lo {
+                minimumRating = lo
+            }
+        }
     }
 
-    private func fmtRating(_ v: Double) -> String {
-        v.truncatingRemainder(dividingBy: 1) == 0
-            ? String(format: "%.0f", v)
-            : String(format: "%.1f", v)
-    }
 }

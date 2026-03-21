@@ -41,7 +41,7 @@ enum CuisineType: String, Codable, CaseIterable, Identifiable {
 
 enum Neighborhood: String, Codable, CaseIterable, Identifiable {
     case altona, ottensen, stPauli, sternschanze, eimsbüttel, neustadt, altstadt
-    case winterhude, eppendorf, barmbek, stGeorg, hafenCity, other
+    case winterhude, eppendorf, barmbek, stGeorg, hafenCity, uhlenhorst, karolinenviertel, other
 
     var id: String { rawValue }
 
@@ -51,6 +51,8 @@ enum Neighborhood: String, Codable, CaseIterable, Identifiable {
         case .stGeorg: "St. Georg"
         case .hafenCity: "HafenCity"
         case .eimsbüttel: "Eimsbüttel"
+        case .uhlenhorst: "Uhlenhorst"
+        case .karolinenviertel: "Karolinenviertel"
         default: rawValue.capitalized
         }
     }

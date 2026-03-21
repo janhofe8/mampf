@@ -15,6 +15,7 @@ struct RatingComparisonCard: View {
             ForEach(sortedRatings, id: \.source) { rating in
                 RatingBarView(rating: rating)
             }
+
         }
         .padding()
         .frame(maxWidth: .infinity, alignment: .leading)

@@ -13,7 +13,6 @@ struct FinestFinderApp: App {
                 .environment(filterVM)
                 .environment(locationManager)
                 .task {
-                    locationManager.requestPermission()
                     await store.load()
                 }
         }

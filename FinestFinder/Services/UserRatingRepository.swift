@@ -73,6 +73,15 @@ actor UserRatingRepository {
             .execute()
     }
 
+    /// Delete ALL ratings for the current device
+    func deleteAllRatings() async throws {
+        try await client
+            .from("user_ratings")
+            .delete()
+            .eq("device_id", value: DeviceID.current)
+            .execute()
+    }
+
     /// Submit or update the current device's rating
     func submitRating(restaurantId: UUID, rating: Double) async throws {
         let row: [String: String] = [

@@ -106,7 +106,9 @@ struct MapTabView: View {
                         .shadow(color: .black.opacity(0.15), radius: 4, y: 2)
                 }
                 Button {
-                    if let location = locationManager.lastLocation {
+                    if locationManager.authorizationStatus == .notDetermined {
+                        locationManager.requestPermission()
+                    } else if let location = locationManager.lastLocation {
                         withAnimation {
                             position = .region(MKCoordinateRegion(
                                 center: location,
@@ -224,6 +226,7 @@ struct MapTabView: View {
                                 }
                             }
                         }
+                        .fixedSize(horizontal: false, vertical: true)
                         .frame(maxHeight: 240)
                         .background(.regularMaterial)
                         .clipShape(.rect(bottomLeadingRadius: 12, bottomTrailingRadius: 12))
@@ -275,7 +278,7 @@ struct MapTabView: View {
     private func mapPin(for restaurant: Restaurant) -> some View {
         let color = annotationColor(for: restaurant)
         if isZoomedIn, let rating = restaurant.personalRating {
-            Text(String(format: rating.truncatingRemainder(dividingBy: 1) == 0 ? "%.0f" : "%.1f", rating))
+            Text(rating.formattedRating)
                 .font(.system(size: 11, weight: .black).monospacedDigit())
                 .foregroundStyle(rating >= 7 && rating < 9 ? .black : .white)
                 .frame(minWidth: 28, minHeight: 28)

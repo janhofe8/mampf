@@ -90,6 +90,21 @@ final class RestaurantStore {
         }
     }
 
+    /// Delete all user data: ratings from server, favorites, device ID
+    func deleteAllData() async {
+        do {
+            try await userRatingRepo.deleteAllRatings()
+        } catch {
+            self.error = error
+        }
+        myRatings.removeAll()
+        favoriteIDs.removeAll()
+        DeviceID.reset()
+        if let updated = try? await userRatingRepo.fetchCommunityRatings() {
+            communityRatings = updated
+        }
+    }
+
     func load() async {
         // Show cached data immediately while fetching
         let cached = await repository.loadCachedRestaurants()

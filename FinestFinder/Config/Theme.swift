@@ -49,3 +49,12 @@ extension ShapeStyle where Self == Color {
     static var ffSecondary: Color { .ffSecondary }
     static var ffTertiary: Color { .ffTertiary }
 }
+
+extension Double {
+    /// Formats a rating value: "9" for whole numbers, "8.5" for halves
+    var formattedRating: String {
+        truncatingRemainder(dividingBy: 1) == 0
+            ? String(format: "%.0f", self)
+            : String(format: "%.1f", self)
+    }
+}

@@ -50,12 +50,21 @@
 "favorites.emptyHint" = "Tippe auf das Herz-Symbol bei einem Foodspot, um ihn als Favorit zu speichern.";
 
 /* Sort Options */
-"sort.mampfDesc" = "MAMPF Rating ↓";
-"sort.mampfAsc" = "MAMPF Rating ↑";
-"sort.googleDesc" = "Google Rating ↓";
-"sort.communityDesc" = "Community Rating ↓";
 "sort.recentlyAdded" = "Zuletzt hinzugefügt";
 "sort.distance" = "Entfernung";
-"sort.nameAZ" = "Name A-Z";
-"sort.nameZA" = "Name Z-A";
+"sort.name" = "Name";
 "sort.random" = "Zufällig";
+
+/* Settings */
+"settings.title" = "Einstellungen";
+"settings.privacy" = "Datenschutz";
+"settings.privacyPolicy" = "Datenschutzerklärung";
+"settings.dataCollection" = "Datenerhebung";
+"settings.dataCollectionInfo" = "MAMPF nutzt eine anonyme Geräte-ID, um deine Community-Bewertungen zu speichern. Dein Standort wird nur zur Anzeige nahegelegener Foodspots auf der Karte verwendet und nie gespeichert.";
+"settings.deleteData" = "Alle meine Daten löschen";
+"settings.deleteDataInfo" = "Löscht alle deine Community-Bewertungen von unseren Servern, setzt deine Geräte-ID zurück und entfernt deine Favoriten.";
+"settings.deleteConfirmTitle" = "Alle Daten löschen?";
+"settings.deleteConfirmMessage" = "Alle deine Bewertungen und Favoriten werden unwiderruflich gelöscht.";
+"settings.deleteConfirmButton" = "Alles löschen";
+"settings.cancel" = "Abbrechen";
+"settings.dataDeleted" = "Alle Daten gelöscht";
