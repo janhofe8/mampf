@@ -23,10 +23,17 @@
 
 **Content-Session neue Spots:** Siggys, The Window, An An, Thämer's, Pizzanatics, Chingu→St.Pauli, Il Siciliano, Köz-Antep, Vu Food, Bolle→Schanze, memán, FAVORITA, Instinct Coffee, Yume Ramen, New City Smash, Falafel Haus, Monsieur Alfons, Atlantik Fisch, Ai Bánh Mì, Neustädter Grill Meier, Qrito Grindel, China Restaurant Spicy, MOMO Ramen, Fischereihafen, Bistro Cà Phê Viet, Kardelen, SVAAdish, Kebaba, Dulf's WH + Eimsbüttel, Mit Herz und Zucker, Hanging out Café, Kimo, Falafelstern, Confiserie Niko, Café Dailycioso, Karo Fisch, Kleine Haie, Spaccaforno WH, Burger Heroes Reeperbahn
 
+### 2026-03-21 (Abend)
+| SKU | Calls | Kontext |
+|-----|-------|---------|
+| Text Search | 4 | Hofbräu, Yaku, Kropkå, Luigi's |
+| Place Details | 4 | Photo-Lookups für alle 4 |
+| Place Photo | 4 | Download für alle 4 |
+
 ### Monats-Summe März
 | SKU | Verbraucht | Gratis-Limit | Rest |
 |-----|-----------|--------------|------|
-| Text Search | ~441 | 5.000 | ~4.559 |
-| Place Details | ~239 | 5.000 | ~4.761 |
-| Place Photo | ~243 | 1.000 | ~757 |
-| **Gesamt** | **~924** | | |
+| Text Search | ~445 | 5.000 | ~4.555 |
+| Place Details | ~243 | 5.000 | ~4.757 |
+| Place Photo | ~247 | 1.000 | ~753 |
+| **Gesamt** | **~936** | | |

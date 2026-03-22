@@ -4,7 +4,7 @@ import CoreLocation
 enum CuisineType: String, Codable, CaseIterable, Identifiable {
     case burger, pizza, italian, korean, vietnamese, japanese, chinese, thai
     case turkish, greek, mexican, german, indian, portuguese, oriental
-    case seafood, poke, brunch, steak
+    case seafood, poke, brunch, steak, peruvian, persian
 
     var id: String { rawValue }
 
@@ -29,6 +29,8 @@ enum CuisineType: String, Codable, CaseIterable, Identifiable {
         case .poke: "🥗"
         case .brunch: "🥞"
         case .steak: "🥩"
+        case .peruvian: "🫕"
+        case .persian: "🍖"
         }
     }
 
