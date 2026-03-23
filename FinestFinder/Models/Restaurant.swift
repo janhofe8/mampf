@@ -4,7 +4,7 @@ import CoreLocation
 enum CuisineType: String, Codable, CaseIterable, Identifiable {
     case burger, pizza, italian, korean, vietnamese, japanese, chinese, thai
     case turkish, greek, mexican, german, indian, portuguese, oriental
-    case seafood, poke, brunch, steak, peruvian, persian
+    case seafood, poke, brunch, steak, peruvian, persian, asian
 
     var id: String { rawValue }
 
@@ -31,6 +31,7 @@ enum CuisineType: String, Codable, CaseIterable, Identifiable {
         case .steak: "🥩"
         case .peruvian: "🫕"
         case .persian: "🍖"
+        case .asian: "🍚"
         }
     }
 
@@ -43,7 +44,7 @@ enum CuisineType: String, Codable, CaseIterable, Identifiable {
 
 enum Neighborhood: String, Codable, CaseIterable, Identifiable {
     case altona, ottensen, stPauli, sternschanze, eimsbüttel, neustadt, altstadt
-    case winterhude, eppendorf, barmbek, stGeorg, hafenCity, uhlenhorst, karolinenviertel, other
+    case winterhude, eppendorf, barmbek, stGeorg, hafenCity, uhlenhorst, karolinenviertel, hoheluft, other
 
     var id: String { rawValue }
 
@@ -55,6 +56,7 @@ enum Neighborhood: String, Codable, CaseIterable, Identifiable {
         case .eimsbüttel: "Eimsbüttel"
         case .uhlenhorst: "Uhlenhorst"
         case .karolinenviertel: "Karolinenviertel"
+        case .hoheluft: "Hoheluft"
         default: rawValue.capitalized
         }
     }

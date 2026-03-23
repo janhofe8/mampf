@@ -172,7 +172,7 @@ struct RestaurantListView: View {
                 // Rating pills like card view
                 HStack(spacing: 6) {
                     if let personal = restaurant.personalRating {
-                        RatingPill(icon: "star.fill", value: personal.formattedRating, color: RatingSource.personal.color, textColor: (personal >= 7 && personal < 9) ? .black : .white)
+                        RatingPill(icon: "star.fill", value: personal.formattedRating, color: RatingSource.personal.color, textColor: .white)
                     }
                     if let cr = store.communityRating(for: restaurant) {
                         RatingPill(icon: "person.2.fill", value: String(format: "%.1f", cr.average), color: RatingSource.community.color, textColor: .black)

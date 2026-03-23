@@ -1,6 +1,6 @@
 # MAMPF — Kuratierte Foodspots
 
-Restaurant-Rating-App für Hamburg (~93 Restaurants). MAMPF-Rating (Jans persönliche Bewertung 1-10) neben Google- und Community-Bewertungen.
+Restaurant-Rating-App für Hamburg (~155 Restaurants). MAMPF-Rating (Jans persönliche Bewertung 1-10) neben Google- und Community-Bewertungen.
 
 ## Plattformen
 
@@ -78,9 +78,9 @@ Schema-Änderungen (ALTER TABLE) müssen im Supabase SQL Editor ausgeführt werd
 
 ### Tabellen
 
-**restaurants** (93 Einträge): id, name, cuisine_type, neighborhood, price_range, address, latitude, longitude, opening_hours, is_closed, notes, image_url, personal_rating, google_rating, google_review_count, google_place_id, google_maps_url, created_at, updated_at
+**restaurants** (~155 Einträge): id, name, cuisine_type, neighborhood, price_range, address, latitude, longitude, opening_hours, is_closed, notes, image_url, personal_rating, google_rating, google_review_count, google_place_id, google_maps_url, created_at, updated_at
 
-**user_ratings**: id, restaurant_id, device_id, rating (1-10), created_at, updated_at — UNIQUE(restaurant_id, device_id)
+**user_ratings**: id, restaurant_id, device_id, user_id (nullable, für zukünftigen Auth-Login), rating (1-10), created_at, updated_at — UNIQUE(restaurant_id, device_id), UNIQUE(restaurant_id, user_id)
 
 **restaurant_community_ratings** (View): restaurant_id, community_rating, community_rating_count
 
@@ -90,17 +90,17 @@ Schema-Änderungen (ALTER TABLE) müssen im Supabase SQL Editor ausgeführt werd
 2. **Erst DB prüfen** ob Restaurant schon existiert (`name=ilike.*name*`), bevor Places API aufgerufen wird
 3. **Immer recherchieren:** Cuisine Type, Price Range über Google/Web
 4. Google Places API: Adresse, Koordinaten, Rating, Öffnungszeiten, Place ID, Maps URL
-5. Foto aus Google Places holen (Landscape, Essen bevorzugt) → Supabase Storage
+5. Foto aus Google Places holen (Landscape, Essen bevorzugt) → Supabase Storage **Root** (nicht `own/`)
 6. Stadtteil aus PLZ der Adresse ableiten
 7. INSERT in restaurants-Tabelle
 
 ### Cuisine Types
 
-burger, pizza, italian, korean, vietnamese, japanese, chinese, thai, turkish, greek, mexican, german, indian, portuguese, oriental, seafood, poke, brunch, steak
+burger, pizza, italian, korean, vietnamese, japanese, chinese, thai, turkish, greek, mexican, german, indian, portuguese, oriental, seafood, poke, brunch, steak, peruvian, persian, asian
 
 ### Neighborhoods (basierend auf PLZ)
 
-altona, ottensen, stPauli, sternschanze, eimsbüttel, neustadt, altstadt, winterhude, eppendorf, barmbek, stGeorg, hafenCity, other
+altona, ottensen, stPauli, sternschanze, eimsbüttel, neustadt, altstadt, winterhude, eppendorf, barmbek, stGeorg, hafenCity, uhlenhorst, karolinenviertel, hoheluft, other
 
 ### Price Ranges
 
@@ -152,4 +152,6 @@ budget (€ <15€), moderate (€€ 15-25€), upscale (€€€ 25-40€), f
 ## Bekannte Themen
 
 - Google-Fotos in Supabase Storage verstoßen gegen Google ToS (Caching). Okay für privaten Gebrauch, vor Public Release durch eigene Fotos ersetzen.
+- **Storage-Struktur:** `restaurant-images/` Root = Google Places Fotos, `restaurant-images/own/` = eigene Fotos (von Jan). **Niemals Google Places Fotos in `own/` speichern.**
+- `user_ratings` hat vorbereitete `user_id`-Spalte + Constraint für zukünftigen Email-Login (Supabase Auth Email Provider ist aktiviert, aktuell aber nicht genutzt — Ratings laufen über Device-ID)
 - Custom DragGesture-Slider auf Map funktioniert nicht (offset/position verschiebt Hit-Area nicht) — nativen SwiftUI Slider verwenden

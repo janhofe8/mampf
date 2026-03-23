@@ -193,7 +193,7 @@ struct MapTabView: View {
                     if !filterVM.searchText.isEmpty {
                         Divider().padding(.horizontal, 8)
                         ScrollView {
-                            LazyVStack(spacing: 0) {
+                            VStack(spacing: 0) {
                                 ForEach(searchSuggestions) { restaurant in
                                     Button {
                                         selectSearchResult(restaurant)
