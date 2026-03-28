@@ -110,6 +110,7 @@ struct RatingHistogramFilter: View {
                     .foregroundStyle(.tertiary)
             }
                 .tint(.ffPrimary)
+                .sensoryFeedback(.selection, trigger: minimumRating)
 
             // Footer
             HStack {

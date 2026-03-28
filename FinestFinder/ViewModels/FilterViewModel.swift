@@ -12,9 +12,9 @@ enum SortField: String, CaseIterable, Identifiable {
 
     var displayName: String {
         switch self {
-        case .mampfRating: "MAMPF Rating"
-        case .googleRating: "Google Rating"
-        case .communityRating: "Community Rating"
+        case .mampfRating: String(localized: "sort.mampfRating")
+        case .googleRating: String(localized: "sort.googleRating")
+        case .communityRating: String(localized: "sort.communityRating")
         case .recentlyAdded: String(localized: "sort.recentlyAdded")
         case .distance: String(localized: "sort.distance")
         case .name: String(localized: "sort.name")
@@ -63,7 +63,11 @@ extension Set {
 
 @Observable
 final class FilterViewModel {
-    var searchText = ""
+    var searchText = "" {
+        didSet { debounceSearch() }
+    }
+    private(set) var activeSearchText = ""
+    private var searchTask: Task<Void, Never>?
     var selectedCuisines: Set<CuisineType> = []
     var selectedNeighborhoods: Set<Neighborhood> = []
     var selectedPriceRanges: Set<PriceRange> = []
@@ -87,6 +91,19 @@ final class FilterViewModel {
         }
     }
 
+    private func debounceSearch() {
+        searchTask?.cancel()
+        if searchText.isEmpty {
+            activeSearchText = ""
+            return
+        }
+        searchTask = Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(250))
+            guard !Task.isCancelled else { return }
+            activeSearchText = searchText
+        }
+    }
+
     var hasActiveFilters: Bool {
         !selectedCuisines.isEmpty
             || !selectedNeighborhoods.isEmpty
@@ -100,16 +117,21 @@ final class FilterViewModel {
         userLocation: CLLocationCoordinate2D? = nil,
         communityRatings: [UUID: (average: Double, count: Int)] = [:]
     ) -> [Restaurant] {
+        var result = filter(restaurants)
+        sort(&result, userLocation: userLocation, communityRatings: communityRatings)
+        return result
+    }
+
+    private func filter(_ restaurants: [Restaurant]) -> [Restaurant] {
         var result = restaurants
 
-        if !searchText.isEmpty {
-            let query = searchText.lowercased()
+        if !activeSearchText.isEmpty {
+            let query = activeSearchText
             result = result.filter {
-                $0.name.lowercased().contains(query)
-                    || $0.cuisineType.rawValue.lowercased().contains(query)
-                    || $0.cuisineType.displayName.lowercased().contains(query)
-                    || $0.neighborhood.rawValue.lowercased().contains(query)
-                    || $0.neighborhood.displayName.lowercased().contains(query)
+                $0.name.localizedCaseInsensitiveContains(query)
+                    || $0.cuisineType.rawValue.localizedCaseInsensitiveContains(query)
+                    || $0.cuisineType.displayName.localizedCaseInsensitiveContains(query)
+                    || $0.neighborhood.displayName.localizedCaseInsensitiveContains(query)
                     || $0.priceRange.label.contains(query)
             }
         }
@@ -133,6 +155,14 @@ final class FilterViewModel {
             }
         }
 
+        return result
+    }
+
+    private func sort(
+        _ result: inout [Restaurant],
+        userLocation: CLLocationCoordinate2D?,
+        communityRatings: [UUID: (average: Double, count: Int)]
+    ) {
         let asc = sortAscending
         switch sortField {
         case .mampfRating:
@@ -166,8 +196,6 @@ final class FilterViewModel {
                 return h1.finalize() < h2.finalize()
             }
         }
-
-        return result
     }
 
     func clearFilters() {

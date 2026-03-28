@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import {
   Filters,
   CUISINE_TYPES,
@@ -16,65 +15,49 @@ interface FilterSheetProps {
   isOpen: boolean;
   onClose: () => void;
   filters: Filters;
-  onApply: (filters: Filters) => void;
+  onFiltersChange: (filters: Filters) => void;
+  filteredCount: number;
 }
 
 export default function FilterSheet({
   isOpen,
   onClose,
   filters,
-  onApply,
+  onFiltersChange,
+  filteredCount,
 }: FilterSheetProps) {
-  const [localFilters, setLocalFilters] = useState<Filters>(filters);
-
   const toggleCuisine = (cuisine: string) => {
-    setLocalFilters((prev) => ({
-      ...prev,
-      cuisines: prev.cuisines.includes(cuisine)
-        ? prev.cuisines.filter((c) => c !== cuisine)
-        : [...prev.cuisines, cuisine],
-    }));
+    const cuisines = filters.cuisines.includes(cuisine)
+      ? filters.cuisines.filter((c) => c !== cuisine)
+      : [...filters.cuisines, cuisine];
+    onFiltersChange({ ...filters, cuisines });
   };
 
   const toggleNeighborhood = (hood: string) => {
-    setLocalFilters((prev) => ({
-      ...prev,
-      neighborhoods: prev.neighborhoods.includes(hood)
-        ? prev.neighborhoods.filter((n) => n !== hood)
-        : [...prev.neighborhoods, hood],
-    }));
+    const neighborhoods = filters.neighborhoods.includes(hood)
+      ? filters.neighborhoods.filter((n) => n !== hood)
+      : [...filters.neighborhoods, hood];
+    onFiltersChange({ ...filters, neighborhoods });
   };
 
   const togglePrice = (price: string) => {
-    setLocalFilters((prev) => ({
-      ...prev,
-      priceRanges: prev.priceRanges.includes(price)
-        ? prev.priceRanges.filter((p) => p !== price)
-        : [...prev.priceRanges, price],
-    }));
-  };
-
-  const handleApply = () => {
-    onApply(localFilters);
-    onClose();
+    const priceRanges = filters.priceRanges.includes(price)
+      ? filters.priceRanges.filter((p) => p !== price)
+      : [...filters.priceRanges, price];
+    onFiltersChange({ ...filters, priceRanges });
   };
 
   const handleReset = () => {
-    const resetFilters: Filters = {
-      cuisines: [],
-      neighborhoods: [],
-      priceRanges: [],
-      minRating: 0,
-    };
-    setLocalFilters(resetFilters);
-    onApply(resetFilters);
-    onClose();
+    onFiltersChange({ cuisines: [], neighborhoods: [], priceRanges: [], minRating: 0 });
   };
 
-  const activeFilterCount =
-    localFilters.cuisines.length +
-    localFilters.neighborhoods.length +
-    localFilters.priceRanges.length;
+  const hasActiveFilters =
+    filters.cuisines.length > 0 ||
+    filters.neighborhoods.length > 0 ||
+    filters.priceRanges.length > 0;
+
+  // Filter out "other" from display — it's only a fallback
+  const cuisineEntries = Object.entries(CUISINE_TYPES).filter(([key]) => key !== "other");
 
   if (!isOpen) return null;
 
@@ -94,7 +77,8 @@ export default function FilterSheet({
         <div className="flex items-center justify-between px-5 py-3 border-b border-black/10">
           <button
             onClick={handleReset}
-            className="text-sm text-gray-500 hover:text-black transition-colors"
+            disabled={!hasActiveFilters}
+            className="text-sm text-gray-500 hover:text-black transition-colors disabled:opacity-30"
           >
             Reset
           </button>
@@ -115,19 +99,23 @@ export default function FilterSheet({
               Price Range
             </h4>
             <div className="flex gap-2">
-              {Object.entries(PRICE_LABELS).map(([key, label]) => (
-                <button
-                  key={key}
-                  onClick={() => togglePrice(key)}
-                  className={`flex-1 py-2 rounded-xl text-sm font-semibold transition-all duration-200 ${
-                    localFilters.priceRanges.includes(key)
-                      ? "bg-[rgb(115,51,217)] text-white"
-                      : "bg-black/5 text-gray-500 hover:bg-black/5"
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
+              {Object.entries(PRICE_LABELS).map(([key, label]) => {
+                const selected = filters.priceRanges.includes(key);
+                return (
+                  <button
+                    key={key}
+                    onClick={() => togglePrice(key)}
+                    className={`flex-1 py-2 rounded-xl text-sm font-semibold transition-all duration-200 ${
+                      selected
+                        ? "bg-[rgb(115,51,217)] text-white scale-[1.02]"
+                        : "bg-black/5 text-gray-500 hover:bg-black/10"
+                    }`}
+                  >
+                    {selected && <span className="mr-1">&#10003;</span>}
+                    {label}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -137,19 +125,23 @@ export default function FilterSheet({
               Cuisine
             </h4>
             <div className="grid grid-cols-3 gap-2">
-              {Object.entries(CUISINE_TYPES).map(([key, emoji]) => (
-                <button
-                  key={key}
-                  onClick={() => toggleCuisine(key)}
-                  className={`py-1.5 rounded-lg text-sm font-medium text-center transition-all duration-200 ${
-                    localFilters.cuisines.includes(key)
-                      ? "bg-[rgb(115,51,217)] text-white"
-                      : "bg-black/5 text-gray-500 hover:bg-black/5"
-                  }`}
-                >
-                  {emoji} {getCuisineLabel(key)}
-                </button>
-              ))}
+              {cuisineEntries.map(([key, emoji]) => {
+                const selected = filters.cuisines.includes(key);
+                return (
+                  <button
+                    key={key}
+                    onClick={() => toggleCuisine(key)}
+                    className={`py-1.5 rounded-lg text-sm font-medium text-center transition-all duration-200 ${
+                      selected
+                        ? "bg-[rgb(115,51,217)] text-white scale-[1.02]"
+                        : "bg-black/5 text-gray-500 hover:bg-black/10"
+                    }`}
+                  >
+                    {selected && <span className="mr-0.5 text-xs">&#10003;</span>}
+                    {emoji} {getCuisineLabel(key)}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -159,31 +151,34 @@ export default function FilterSheet({
               Neighborhood
             </h4>
             <div className="grid grid-cols-3 gap-2">
-              {NEIGHBORHOODS.map((hood) => (
-                <button
-                  key={hood}
-                  onClick={() => toggleNeighborhood(hood)}
-                  className={`py-1.5 rounded-lg text-sm font-medium text-center transition-all duration-200 ${
-                    localFilters.neighborhoods.includes(hood)
-                      ? "bg-[rgb(115,51,217)] text-white"
-                      : "bg-black/5 text-gray-500 hover:bg-black/5"
-                  }`}
-                >
-                  {getNeighborhoodLabel(hood)}
-                </button>
-              ))}
+              {NEIGHBORHOODS.map((hood) => {
+                const selected = filters.neighborhoods.includes(hood);
+                return (
+                  <button
+                    key={hood}
+                    onClick={() => toggleNeighborhood(hood)}
+                    className={`py-1.5 rounded-lg text-sm font-medium text-center transition-all duration-200 ${
+                      selected
+                        ? "bg-[rgb(115,51,217)] text-white scale-[1.02]"
+                        : "bg-black/5 text-gray-500 hover:bg-black/10"
+                    }`}
+                  >
+                    {selected && <span className="mr-0.5 text-xs">&#10003;</span>}
+                    {getNeighborhoodLabel(hood)}
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
 
-        {/* Apply button */}
+        {/* Result count button */}
         <div className="px-5 py-4 border-t border-black/10 safe-area-bottom">
           <button
-            onClick={handleApply}
+            onClick={onClose}
             className="w-full py-3 rounded-2xl bg-[rgb(115,51,217)] text-white font-bold text-base hover:bg-[rgb(130,66,232)] transition-colors active:scale-[0.98]"
           >
-            Apply Filters
-            {activeFilterCount > 0 && ` (${activeFilterCount})`}
+            Show {filteredCount} Food Spots
           </button>
         </div>
       </div>

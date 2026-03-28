@@ -3,12 +3,24 @@ import SwiftUI
 struct SettingsView: View {
     @Environment(RestaurantStore.self) private var store
     @Environment(\.dismiss) private var dismiss
+    @AppStorage("appearanceMode") private var appearanceMode: AppearanceMode = .system
     @State private var showDeleteConfirm = false
     @State private var showDeletedBanner = false
 
     var body: some View {
         NavigationStack {
             List {
+                Section {
+                    Picker("settings.appearance", selection: $appearanceMode) {
+                        ForEach(AppearanceMode.allCases) { mode in
+                            Text(mode.displayName).tag(mode)
+                        }
+                    }
+                    .sensoryFeedback(.selection, trigger: appearanceMode)
+                } header: {
+                    Text("settings.appearanceHeader")
+                }
+
                 Section {
                     Text("settings.dataCollectionInfo")
                         .font(.subheadline)
@@ -65,6 +77,28 @@ struct SettingsView: View {
                 }
             }
             .animation(.easeInOut, value: showDeletedBanner)
+        }
+    }
+}
+
+enum AppearanceMode: String, CaseIterable, Identifiable {
+    case system, light, dark
+
+    var id: String { rawValue }
+
+    var displayName: LocalizedStringKey {
+        switch self {
+        case .system: "settings.appearance.system"
+        case .light: "settings.appearance.light"
+        case .dark: "settings.appearance.dark"
+        }
+    }
+
+    var colorScheme: ColorScheme? {
+        switch self {
+        case .system: nil
+        case .light: .light
+        case .dark: .dark
         }
     }
 }

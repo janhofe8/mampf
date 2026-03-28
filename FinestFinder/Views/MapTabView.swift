@@ -91,21 +91,14 @@ struct MapTabView: View {
         // Buttons top-right
         .overlay(alignment: .topTrailing) {
             VStack(spacing: 8) {
-                Button {
+                MapControlButton(icon: "magnifyingglass") {
                     withAnimation {
                         showSearch.toggle()
                         if showSearch { searchFocused = true }
                         else { filterVM.searchText = "" }
                     }
-                } label: {
-                    Image(systemName: "magnifyingglass")
-                        .font(.body.weight(.semibold))
-                        .foregroundStyle(.ffPrimary)
-                        .frame(width: 44, height: 44)
-                        .background(.regularMaterial, in: Circle())
-                        .shadow(color: .black.opacity(0.15), radius: 4, y: 2)
                 }
-                Button {
+                MapControlButton(icon: "location.fill") {
                     if locationManager.authorizationStatus == .notDetermined {
                         locationManager.requestPermission()
                     } else if let location = locationManager.lastLocation {
@@ -116,46 +109,18 @@ struct MapTabView: View {
                             ))
                         }
                     }
-                } label: {
-                    Image(systemName: "location.fill")
-                        .font(.body.weight(.semibold))
-                        .foregroundStyle(.ffPrimary)
-                        .frame(width: 44, height: 44)
-                        .background(.regularMaterial, in: Circle())
-                        .shadow(color: .black.opacity(0.15), radius: 4, y: 2)
                 }
-                Button {
+                MapControlButton(icon: showRatingFilter ? "star.fill" : "star") {
                     withAnimation(.easeInOut(duration: 0.25)) {
                         showRatingFilter.toggle()
                     }
-                } label: {
-                    Image(systemName: showRatingFilter ? "star.fill" : "star")
-                        .font(.body.weight(.semibold))
-                        .foregroundStyle(.ffPrimary)
-                        .frame(width: 44, height: 44)
-                        .background(.regularMaterial, in: Circle())
-                        .shadow(color: .black.opacity(0.15), radius: 4, y: 2)
                 }
-                Button {
+                MapControlButton(icon: filterVM.hasActiveFilters ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle") {
                     showingFilters = true
-                } label: {
-                    Image(systemName: filterVM.hasActiveFilters ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
-                        .font(.body.weight(.semibold))
-                        .foregroundStyle(.ffPrimary)
-                        .frame(width: 44, height: 44)
-                        .background(.regularMaterial, in: Circle())
-                        .shadow(color: .black.opacity(0.15), radius: 4, y: 2)
                 }
                 if filterVM.hasActiveFilters {
-                    Button {
+                    MapControlButton(icon: "xmark", tint: .ffWeak) {
                         withAnimation { filterVM.clearFilters() }
-                    } label: {
-                        Image(systemName: "xmark")
-                            .font(.body.weight(.semibold))
-                            .foregroundStyle(Color.ffWeak)
-                            .frame(width: 44, height: 44)
-                            .background(.regularMaterial, in: Circle())
-                            .shadow(color: .black.opacity(0.15), radius: 4, y: 2)
                     }
                     .transition(.scale.combined(with: .opacity))
                 }
@@ -164,84 +129,15 @@ struct MapTabView: View {
             .padding(.trailing, 12)
         }
         .overlay(alignment: .top) {
-            if showSearch {
-                VStack(spacing: 0) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "magnifyingglass")
-                            .foregroundStyle(.secondary)
-                        TextField(String(format: String(localized: "search.restaurants"), store.restaurants.count), text: $vm.searchText)
-                            .focused($searchFocused)
-                            .textFieldStyle(.plain)
-                            .onSubmit {
-                                if let first = searchSuggestions.first {
-                                    selectSearchResult(first)
-                                }
-                            }
-                        if !filterVM.searchText.isEmpty {
-                            Button {
-                                filterVM.searchText = ""
-                            } label: {
-                                Image(systemName: "xmark.circle.fill")
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                    }
-                    .padding(10)
-                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: filterVM.searchText.isEmpty ? 12 : 0))
-                    .clipShape(.rect(topLeadingRadius: 12, topTrailingRadius: 12))
-
-                    if !filterVM.searchText.isEmpty {
-                        Divider().padding(.horizontal, 8)
-                        ScrollView {
-                            VStack(spacing: 0) {
-                                ForEach(searchSuggestions) { restaurant in
-                                    Button {
-                                        selectSearchResult(restaurant)
-                                    } label: {
-                                        HStack(spacing: 8) {
-                                            Text(restaurant.cuisineType.icon)
-                                                .font(.system(size: 16))
-                                            Text(restaurant.name)
-                                                .font(.subheadline)
-                                                .foregroundStyle(.primary)
-                                                .lineLimit(1)
-                                            Spacer()
-                                            Text(restaurant.neighborhood.displayName)
-                                                .font(.caption)
-                                                .foregroundStyle(.secondary)
-                                            Text(restaurant.priceRange.label)
-                                                .font(.caption)
-                                                .foregroundStyle(.secondary)
-                                        }
-                                        .padding(.horizontal, 10)
-                                        .padding(.vertical, 8)
-                                    }
-                                    .buttonStyle(.plain)
-                                }
-                                if searchSuggestions.isEmpty {
-                                    Text("search.noResults")
-                                        .font(.subheadline)
-                                        .foregroundStyle(.secondary)
-                                        .padding(.vertical, 12)
-                                }
-                            }
-                        }
-                        .fixedSize(horizontal: false, vertical: true)
-                        .frame(maxHeight: 240)
-                        .background(.regularMaterial)
-                        .clipShape(.rect(bottomLeadingRadius: 12, bottomTrailingRadius: 12))
-                    }
-                }
-                .padding(.leading, 12)
-                .padding(.trailing, 64)
-                .padding(.top, 8)
-                .transition(.move(edge: .top).combined(with: .opacity))
-            }
+            if showSearch { searchOverlay }
         }
         .sheet(isPresented: $showingFilters) {
             FilterSheetView()
         }
         .toolbar(.hidden, for: .navigationBar)
+        .sensoryFeedback(.selection, trigger: selectedRestaurant)
+        .sensoryFeedback(.impact(weight: .light), trigger: showSearch)
+        .sensoryFeedback(.impact(weight: .light), trigger: showRatingFilter)
         .sheet(item: $selectedRestaurant) { restaurant in
             NavigationStack {
                 RestaurantDetailView(restaurant: restaurant)
@@ -256,9 +152,95 @@ struct MapTabView: View {
         }
     }
 
+    @ViewBuilder
+    private var searchOverlay: some View {
+        @Bindable var vm = filterVM
+
+        VStack(spacing: 0) {
+            HStack(spacing: 6) {
+                Image(systemName: "magnifyingglass")
+                    .foregroundStyle(.secondary)
+                TextField(String(format: String(localized: "search.restaurants"), store.restaurants.count), text: $vm.searchText)
+                    .focused($searchFocused)
+                    .textFieldStyle(.plain)
+                    .onSubmit {
+                        if let first = searchSuggestions.first {
+                            selectSearchResult(first)
+                        }
+                    }
+                if !filterVM.searchText.isEmpty {
+                    Button {
+                        filterVM.searchText = ""
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+            .padding(10)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: filterVM.searchText.isEmpty ? 12 : 0))
+            .clipShape(.rect(topLeadingRadius: 12, topTrailingRadius: 12))
+
+            if !filterVM.searchText.isEmpty {
+                Divider().padding(.horizontal, 8)
+                ScrollView {
+                    VStack(spacing: 0) {
+                        ForEach(searchSuggestions) { restaurant in
+                            searchSuggestionRow(for: restaurant)
+                        }
+                        if searchSuggestions.isEmpty {
+                            Text("search.noResults")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                                .padding(.vertical, 12)
+                        }
+                    }
+                }
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxHeight: 240)
+                .background(.regularMaterial)
+                .clipShape(.rect(bottomLeadingRadius: 12, bottomTrailingRadius: 12))
+            }
+        }
+        .padding(.leading, 12)
+        .padding(.trailing, 64)
+        .padding(.top, 8)
+        .transition(.move(edge: .top).combined(with: .opacity))
+    }
+
+    private func searchSuggestionRow(for restaurant: Restaurant) -> some View {
+        Button {
+            selectSearchResult(restaurant)
+        } label: {
+            HStack(spacing: 8) {
+                Text(restaurant.cuisineType.icon)
+                    .font(.system(size: 16))
+                Text(restaurant.name)
+                    .font(.subheadline)
+                    .foregroundStyle(.primary)
+                    .lineLimit(1)
+                Spacer()
+                Text(restaurant.neighborhood.displayName)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Text(restaurant.priceRange.label)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
+        }
+        .buttonStyle(.plain)
+    }
+
     private var searchSuggestions: [Restaurant] {
         guard !filterVM.searchText.isEmpty else { return [] }
-        return filterVM.apply(to: store.restaurants, userLocation: locationManager.lastLocation, communityRatings: store.communityRatings)
+        let query = filterVM.searchText
+        return store.restaurants.filter {
+            $0.name.localizedCaseInsensitiveContains(query)
+                || $0.cuisineType.displayName.localizedCaseInsensitiveContains(query)
+                || $0.neighborhood.displayName.localizedCaseInsensitiveContains(query)
+        }
     }
 
     private func selectSearchResult(_ restaurant: Restaurant) {
@@ -280,7 +262,7 @@ struct MapTabView: View {
         if isZoomedIn, let rating = restaurant.personalRating {
             Text(rating.formattedRating)
                 .font(.system(size: 11, weight: .black).monospacedDigit())
-                .foregroundStyle(rating >= 7 && rating < 9 ? .black : .white)
+                .foregroundStyle(Color.ratingTextColor(for: rating))
                 .frame(minWidth: 28, minHeight: 28)
                 .background(color, in: Circle())
                 .shadow(color: color.opacity(0.5), radius: 4)
@@ -295,6 +277,23 @@ struct MapTabView: View {
     private func annotationColor(for restaurant: Restaurant) -> Color {
         guard let rating = restaurant.personalRating else { return .ffMuted }
         return .ratingColor(for: rating)
+    }
+}
+
+private struct MapControlButton: View {
+    let icon: String
+    var tint: Color = .ffPrimary
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: icon)
+                .font(.body.weight(.semibold))
+                .foregroundStyle(tint)
+                .frame(width: 44, height: 44)
+                .background(.regularMaterial, in: Circle())
+                .shadow(color: .black.opacity(0.15), radius: 4, y: 2)
+        }
     }
 }
 

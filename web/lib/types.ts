@@ -71,13 +71,16 @@ export const CUISINE_TYPES: Record<string, string> = {
   greek: "\ud83e\udeda",
   mexican: "\ud83c\udf2e",
   german: "\ud83e\udd68",
-  middleEastern: "\ud83e\uddc6",
   portuguese: "\ud83d\udc19",
   oriental: "\ud83e\uddc6",
   seafood: "\ud83d\udc1f",
   poke: "\ud83e\udd57",
   brunch: "\ud83e\udd5e",
   steak: "\ud83e\udd69",
+  indian: "\ud83c\udf5b",
+  peruvian: "\ud83e\uded5",
+  persian: "\ud83c\udf56",
+  asian: "\ud83c\udf5a",
   other: "\ud83c\udf7d\ufe0f",
 };
 
@@ -101,5 +104,8 @@ export const NEIGHBORHOODS: string[] = [
   "barmbek",
   "stGeorg",
   "hafenCity",
+  "uhlenhorst",
+  "karolinenviertel",
+  "hoheluft",
   "other",
 ];

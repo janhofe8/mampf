@@ -26,12 +26,15 @@
 "detail.rate" = "Bewerten";
 "detail.update" = "Aktualisieren";
 "detail.info" = "Info";
+"detail.notes" = "Notizen";
 "detail.openInGoogleMaps" = "In Google Maps öffnen";
+"detail.beFirstToRate" = "Sei der Erste, der bewertet!";
 
 /* Filter */
 "filter.cuisine" = "Küche";
 "filter.neighborhood" = "Stadtteil";
 "filter.priceRange" = "Preisklasse";
+"filter.showResults" = "%d Foodspots anzeigen";
 
 /* Rating Filter */
 "ratingFilter.minRating" = "Mind. Rating";
@@ -50,6 +53,9 @@
 "favorites.emptyHint" = "Tippe auf das Herz-Symbol bei einem Foodspot, um ihn als Favorit zu speichern.";
 
 /* Sort Options */
+"sort.mampfRating" = "MAMPF Rating";
+"sort.googleRating" = "Google Rating";
+"sort.communityRating" = "Community Rating";
 "sort.recentlyAdded" = "Zuletzt hinzugefügt";
 "sort.distance" = "Entfernung";
 "sort.name" = "Name";
@@ -67,4 +73,9 @@
 "settings.deleteConfirmMessage" = "Alle deine Bewertungen und Favoriten werden unwiderruflich gelöscht.";
 "settings.deleteConfirmButton" = "Alles löschen";
 "settings.cancel" = "Abbrechen";
+"settings.appearanceHeader" = "Darstellung";
+"settings.appearance" = "Erscheinungsbild";
+"settings.appearance.system" = "System";
+"settings.appearance.light" = "Hell";
+"settings.appearance.dark" = "Dunkel";
 "settings.dataDeleted" = "Alle Daten gelöscht";

@@ -1,7 +1,7 @@
 import SwiftUI
 
 @main
-struct FinestFinderApp: App {
+struct MAMPFApp: App {
     @State private var store = RestaurantStore()
     @State private var filterVM = FilterViewModel()
     @State private var locationManager = LocationManager()

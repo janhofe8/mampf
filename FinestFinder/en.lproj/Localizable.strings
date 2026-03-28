@@ -26,12 +26,15 @@
 "detail.rate" = "Rate";
 "detail.update" = "Update";
 "detail.info" = "Info";
+"detail.notes" = "Notes";
 "detail.openInGoogleMaps" = "Open in Google Maps";
+"detail.beFirstToRate" = "Be the first to rate!";
 
 /* Filter */
 "filter.cuisine" = "Cuisine";
 "filter.neighborhood" = "Neighborhood";
 "filter.priceRange" = "Price Range";
+"filter.showResults" = "Show %d Food Spots";
 
 /* Rating Filter */
 "ratingFilter.minRating" = "Min. Rating";
@@ -50,6 +53,9 @@
 "favorites.emptyHint" = "Tap the heart icon on a food spot to add it to your favorites.";
 
 /* Sort Options */
+"sort.mampfRating" = "MAMPF Rating";
+"sort.googleRating" = "Google Rating";
+"sort.communityRating" = "Community Rating";
 "sort.recentlyAdded" = "Recently Added";
 "sort.distance" = "Distance";
 "sort.name" = "Name";
@@ -67,4 +73,9 @@
 "settings.deleteConfirmMessage" = "This will permanently delete all your ratings and favorites. This cannot be undone.";
 "settings.deleteConfirmButton" = "Delete Everything";
 "settings.cancel" = "Cancel";
+"settings.appearanceHeader" = "Appearance";
+"settings.appearance" = "Theme";
+"settings.appearance.system" = "System";
+"settings.appearance.light" = "Light";
+"settings.appearance.dark" = "Dark";
 "settings.dataDeleted" = "All data deleted";

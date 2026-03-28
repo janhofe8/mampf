@@ -27,6 +27,7 @@ struct RestaurantDetailView: View {
                         .frame(width: 36, height: 36)
                         .background(.ultraThinMaterial, in: Circle())
                 }
+                .sensoryFeedback(.impact(weight: .medium), trigger: store.isFavorite(restaurant))
             }
         }
     }
@@ -96,6 +97,9 @@ struct RestaurantDetailView: View {
             RatingComparisonCard(ratings: store.ratingsIncludingCommunity(for: restaurant))
             userRatingCard
             infoCard
+            if !restaurant.notes.isEmpty {
+                notesCard
+            }
         }
         .padding(20)
         .background(Color(.systemBackground))
@@ -113,6 +117,12 @@ struct RestaurantDetailView: View {
             Text("detail.yourRating")
                 .font(.headline)
 
+            if !hasSubmitted && store.communityRating(for: restaurant) == nil {
+                Label("detail.beFirstToRate", systemImage: "sparkles")
+                    .font(.subheadline)
+                    .foregroundStyle(.ffPrimary)
+            }
+
             HStack {
                 Text(userRating > 0 ? userRating.formattedRating : "–")
                     .font(.system(size: 28, weight: .black).monospacedDigit())
@@ -123,6 +133,7 @@ struct RestaurantDetailView: View {
 
                 Slider(value: $userRating, in: 1...10, step: 0.5)
                     .tint(RatingSource.community.color)
+                    .sensoryFeedback(.selection, trigger: userRating)
 
                 Text("detail.outOf10")
                     .font(.subheadline)
@@ -134,6 +145,7 @@ struct RestaurantDetailView: View {
                     Task {
                         await store.submitRating(for: restaurant, rating: userRating)
                         hasSubmitted = true
+                        UINotificationFeedbackGenerator().notificationOccurred(.success)
                     }
                 } label: {
                     Text(hasSubmitted ? String(localized: "detail.update") : String(localized: "detail.rate"))
@@ -151,6 +163,7 @@ struct RestaurantDetailView: View {
                             await store.deleteRating(for: restaurant)
                             userRating = 0
                             hasSubmitted = false
+                            UINotificationFeedbackGenerator().notificationOccurred(.warning)
                         }
                     } label: {
                         Image(systemName: "trash")
@@ -192,6 +205,19 @@ struct RestaurantDetailView: View {
                     }
                 }
             }
+        }
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+    }
+
+    private var notesCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("detail.notes")
+                .font(.headline)
+            Text(restaurant.notes)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
         }
         .padding()
         .frame(maxWidth: .infinity, alignment: .leading)

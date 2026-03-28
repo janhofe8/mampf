@@ -6,6 +6,7 @@ struct RestaurantCardView: View {
     let onFavoriteTap: () -> Void
     var compact: Bool = false
     var communityRating: (average: Double, count: Int)? = nil
+    var distanceText: String? = nil
 
     var body: some View {
         ZStack(alignment: .topLeading) {
@@ -20,16 +21,7 @@ struct RestaurantCardView: View {
             } else {
                 VStack(alignment: .leading, spacing: 6) {
                     if let personal = restaurant.personalRating {
-                        HStack(spacing: 5) {
-                            Image(systemName: "star.fill")
-                                .font(.system(size: 14, weight: .bold))
-                            Text(personal.formattedRating)
-                                .font(.system(size: 26, weight: .black).monospacedDigit())
-                        }
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        .background(RatingSource.personal.color, in: Capsule())
+                        RatingPill(icon: "star.fill", value: personal.formattedRating, color: RatingSource.personal.color, textColor: .white, size: .large)
                     }
                     if let cr = communityRating {
                         RatingPill(icon: "person.2.fill", value: String(format: "%.1f", cr.average), color: RatingSource.community.color, textColor: .black, size: .small)
@@ -53,6 +45,7 @@ struct RestaurantCardView: View {
                                 .frame(width: 36, height: 36)
                                 .background(.ultraThinMaterial, in: Circle())
                         }
+                        .sensoryFeedback(.impact(weight: .medium), trigger: isFavorite)
                         .padding(12)
                     }
                     Spacer()
@@ -77,6 +70,10 @@ struct RestaurantCardView: View {
                                 Text(restaurant.cuisineType.displayName)
                             }
                             Spacer()
+                            if let dist = distanceText {
+                                Label(dist, systemImage: "location")
+                                Text("·")
+                            }
                             Text(restaurant.priceRange.label)
                         }
                         .font(.caption.weight(.medium))

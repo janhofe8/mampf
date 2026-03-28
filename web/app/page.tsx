@@ -1,14 +1,15 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useDeferredValue } from "react";
 import { supabase } from "@/lib/supabase";
 import { getDeviceId } from "@/lib/device-id";
-import { getFavorites, saveFavorites, getRatingColor } from "@/lib/utils";
-import { RestaurantWithCommunity, CommunityRating, CUISINE_TYPES, PRICE_LABELS } from "@/lib/types";
+import { getFavorites, saveFavorites, getNeighborhoodLabel, filterRestaurants } from "@/lib/utils";
+import { RestaurantWithCommunity, CommunityRating, CUISINE_TYPES, PRICE_LABELS, NEIGHBORHOODS } from "@/lib/types";
 import BottomTabs, { TabId } from "@/components/BottomTabs";
 import MapView from "@/components/MapView";
 import RestaurantList from "@/components/RestaurantList";
 import RestaurantDetail from "@/components/RestaurantDetail";
+import RatingHistogram from "@/components/RatingHistogram";
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<TabId>("map");
@@ -26,19 +27,21 @@ export default function Home() {
   const [mapMinRating, setMapMinRating] = useState(0);
   const [mapCuisines, setMapCuisines] = useState<Set<string>>(new Set());
   const [mapPrices, setMapPrices] = useState<Set<string>>(new Set());
+  const [mapNeighborhoods, setMapNeighborhoods] = useState<Set<string>>(new Set());
   const [mapSearch, setMapSearch] = useState("");
+  const deferredMapSearch = useDeferredValue(mapSearch);
   const [showMapSearch, setShowMapSearch] = useState(false);
   const [showRatingHistogram, setShowRatingHistogram] = useState(false);
 
-  const mapFilteredRestaurants = restaurants.filter((r) => {
-    if (mapMinRating > 0 && (r.personal_rating ?? 0) < mapMinRating) return false;
-    if (mapCuisines.size > 0 && !mapCuisines.has(r.cuisine_type)) return false;
-    if (mapPrices.size > 0 && !mapPrices.has(r.price_range)) return false;
-    if (mapSearch.trim() && !r.name.toLowerCase().includes(mapSearch.trim().toLowerCase())) return false;
-    return true;
-  });
+  const mapFilteredRestaurants = useMemo(() => filterRestaurants(restaurants, {
+    search: deferredMapSearch,
+    cuisines: mapCuisines,
+    priceRanges: mapPrices,
+    neighborhoods: mapNeighborhoods,
+    minRating: mapMinRating,
+  }), [restaurants, mapMinRating, mapCuisines, mapPrices, mapNeighborhoods, deferredMapSearch]);
 
-  const mapHasFilters = mapMinRating > 0 || mapCuisines.size > 0 || mapPrices.size > 0;
+  const mapHasFilters = mapMinRating > 0 || mapCuisines.size > 0 || mapPrices.size > 0 || mapNeighborhoods.size > 0;
 
   // Build histogram buckets for rating filter
   const ratingBuckets = useMemo(() => {
@@ -194,13 +197,19 @@ export default function Home() {
       {/* Main content */}
       <main className="flex-1 relative overflow-hidden">
         {loading ? (
-          <div className="flex items-center justify-center h-full">
-            <div className="flex flex-col items-center gap-3">
-              <div className="w-10 h-10 border-2 border-[rgb(115,51,217)] border-t-transparent rounded-full animate-spin" />
-              <span className="text-gray-400 text-sm">
-                Loading food spots...
-              </span>
-            </div>
+          <div className="p-4 space-y-4 overflow-hidden">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="relative rounded-2xl overflow-hidden bg-black/5 aspect-[16/9] shimmer">
+                <div className="absolute bottom-4 left-4 right-4 space-y-2">
+                  <div className="h-5 w-48 rounded bg-black/10" />
+                  <div className="h-4 w-64 rounded bg-black/10" />
+                </div>
+                <div className="absolute top-3 left-3 flex gap-2">
+                  <div className="h-7 w-14 rounded-xl bg-black/10" />
+                  <div className="h-7 w-14 rounded-xl bg-black/10" />
+                </div>
+              </div>
+            ))}
           </div>
         ) : (
           <>
@@ -225,7 +234,6 @@ export default function Home() {
                 onToggleFavorite={handleToggleFavorite}
                 onSelectRestaurant={handleSelectRestaurant}
                 userLocation={userLocation}
-                onRequestLocation={handleRequestLocation}
               />
 
               {/* Search overlay at top of map */}
@@ -258,7 +266,7 @@ export default function Home() {
               <div className="absolute top-4 left-4 z-20" style={showMapSearch ? { visibility: "hidden" } : undefined}>
                 <button
                   onClick={() => { setShowMapFilter((v) => !v); setShowRatingHistogram(false); setShowMapSearch(false); }}
-                  className={`p-3 rounded-full shadow-lg transition-colors ${mapCuisines.size > 0 || mapPrices.size > 0 ? "bg-[rgb(115,51,217)] text-white" : "bg-white/90 text-gray-900 backdrop-blur-sm"}`}
+                  className={`p-3 rounded-full shadow-lg transition-colors ${mapCuisines.size > 0 || mapPrices.size > 0 || mapNeighborhoods.size > 0 ? "bg-[rgb(115,51,217)] text-white" : "bg-white/90 text-gray-900 backdrop-blur-sm"}`}
                 >
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75" />
@@ -296,10 +304,25 @@ export default function Home() {
                         })}
                       </div>
                     </div>
+                    {/* Neighborhood */}
+                    <div>
+                      <p className="text-xs font-semibold text-gray-500 mb-2">Neighborhood</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {NEIGHBORHOODS.map((key) => {
+                          const active = mapNeighborhoods.has(key);
+                          return (
+                            <button key={key} onClick={() => { const n = new Set(mapNeighborhoods); active ? n.delete(key) : n.add(key); setMapNeighborhoods(n); }}
+                              className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-colors ${active ? "bg-[rgb(115,51,217)] text-white" : "bg-black/5 text-gray-600"}`}>
+                              {getNeighborhoodLabel(key)}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
                     {/* Actions */}
                     <div className="flex gap-2 pt-1">
-                      {(mapCuisines.size > 0 || mapPrices.size > 0) && (
-                        <button onClick={() => { setMapCuisines(new Set()); setMapPrices(new Set()); }}
+                      {(mapCuisines.size > 0 || mapPrices.size > 0 || mapNeighborhoods.size > 0) && (
+                        <button onClick={() => { setMapCuisines(new Set()); setMapPrices(new Set()); setMapNeighborhoods(new Set()); }}
                           className="flex-1 py-2 rounded-lg text-xs font-medium text-gray-500 bg-black/5">
                           Reset
                         </button>
@@ -348,78 +371,13 @@ export default function Home() {
               {/* Rating histogram overlay at bottom of map */}
               {showRatingHistogram && (
                 <div className="absolute bottom-4 left-4 right-4 z-20 animate-slide-up">
-                  <div className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl p-5">
-                    {/* Header */}
-                    <div className="flex items-center justify-between mb-4">
-                      <div>
-                        <p className="text-xs font-semibold text-gray-500">Min. Rating</p>
-                        <p className="text-2xl font-black" style={{ color: mapMinRating > 0 ? getRatingColor(mapMinRating) : "rgb(38,38,46)" }}>
-                          {mapMinRating > 0 ? mapMinRating.toFixed(1) : "All"}
-                        </p>
-                      </div>
-                      <button onClick={() => setShowRatingHistogram(false)} className="p-2 rounded-full hover:bg-black/5 text-gray-400">
-                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      </button>
-                    </div>
-
-                    {/* Histogram */}
-                    <div className="space-y-1 mb-4">
-                      {(() => {
-                        const maxCount = Math.max(...ratingBuckets.map((b) => b.count), 1);
-                        return ratingBuckets.map((bucket) => {
-                          const belowMin = mapMinRating > 0 && bucket.rating < mapMinRating;
-                          const barColor = belowMin ? "rgb(209,213,219)" : getRatingColor(bucket.rating);
-                          const widthPct = bucket.count > 0 ? Math.max((bucket.count / maxCount) * 100, 4) : 0;
-                          return (
-                            <div key={bucket.rating} className="flex items-center gap-2">
-                              <span className={`text-[10px] font-semibold w-7 text-right ${belowMin ? "text-gray-300" : "text-gray-500"}`}>
-                                {bucket.rating.toFixed(1)}
-                              </span>
-                              <div className="flex-1 h-4 bg-black/5 rounded-sm overflow-hidden">
-                                {bucket.count > 0 && (
-                                  <div
-                                    className="h-full rounded-sm transition-all"
-                                    style={{ width: `${widthPct}%`, backgroundColor: barColor }}
-                                  />
-                                )}
-                              </div>
-                              <span className={`text-[10px] font-medium w-4 ${belowMin ? "text-gray-300" : "text-gray-500"}`}>
-                                {bucket.count}
-                              </span>
-                            </div>
-                          );
-                        });
-                      })()}
-                    </div>
-
-                    {/* Slider */}
-                    <input
-                      type="range"
-                      min={0}
-                      max={10}
-                      step={0.5}
-                      value={mapMinRating}
-                      onChange={(e) => setMapMinRating(parseFloat(e.target.value))}
-                      className="w-full h-2 rounded-lg appearance-none cursor-pointer accent-[rgb(115,51,217)] bg-black/10"
-                    />
-
-                    {/* Footer */}
-                    <div className="flex items-center justify-between mt-3">
-                      <span className="text-xs font-semibold text-gray-500">
-                        {mapFilteredRestaurants.length} Food Spot{mapFilteredRestaurants.length !== 1 ? "s" : ""}
-                      </span>
-                      {mapMinRating > 0 && (
-                        <button
-                          onClick={() => setMapMinRating(0)}
-                          className="text-xs font-medium text-gray-400 hover:text-gray-600 transition-colors"
-                        >
-                          Reset
-                        </button>
-                      )}
-                    </div>
-                  </div>
+                  <RatingHistogram
+                    buckets={ratingBuckets}
+                    minRating={mapMinRating}
+                    onMinRatingChange={setMapMinRating}
+                    filteredCount={mapFilteredRestaurants.length}
+                    onClose={() => setShowRatingHistogram(false)}
+                  />
                 </div>
               )}
             </div>

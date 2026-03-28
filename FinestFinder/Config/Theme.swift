@@ -19,6 +19,11 @@ extension Color {
         default:                    .ffWeak          // ≤4.5 → rot
         }
     }
+
+    /// Text color for rating badges/pins — white on dark backgrounds, black on lime/amber
+    static func ratingTextColor(for rating: Double) -> Color {
+        rating >= 7 && rating < 9 ? .black : .white
+    }
 }
 
 func applyBrandedNavBarAppearance() {

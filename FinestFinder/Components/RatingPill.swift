@@ -2,14 +2,16 @@ import SwiftUI
 
 enum RatingPillSize {
     case compact  // grid cards
-    case small    // full cards
+    case small    // full cards (community/google)
     case regular  // list view
+    case large    // full cards (personal rating)
 
     var iconSize: CGFloat {
         switch self {
         case .compact: 8
         case .small: 10
         case .regular: 10
+        case .large: 14
         }
     }
 
@@ -18,6 +20,7 @@ enum RatingPillSize {
         case .compact: 12
         case .small: 14
         case .regular: 14
+        case .large: 26
         }
     }
 
@@ -26,6 +29,7 @@ enum RatingPillSize {
         case .compact: .black
         case .small: .bold
         case .regular: .black
+        case .large: .black
         }
     }
 
@@ -34,6 +38,7 @@ enum RatingPillSize {
         case .compact: 6
         case .small: 10
         case .regular: 8
+        case .large: 12
         }
     }
 
@@ -42,6 +47,7 @@ enum RatingPillSize {
         case .compact: 3
         case .small: 5
         case .regular: 4
+        case .large: 6
         }
     }
 
@@ -50,6 +56,7 @@ enum RatingPillSize {
         case .compact: 10
         case .small: 14
         case .regular: nil
+        case .large: nil
         }
     }
 
@@ -65,6 +72,7 @@ enum RatingPillSize {
         case .compact: 2
         case .small: 4
         case .regular: 3
+        case .large: 5
         }
     }
 }

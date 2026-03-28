@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct ContentView: View {
+    @AppStorage("appearanceMode") private var appearanceMode: AppearanceMode = .system
+
     var body: some View {
         TabView {
             Tab("tab.map", systemImage: "map") {
@@ -12,14 +14,11 @@ struct ContentView: View {
             Tab("tab.restaurants", systemImage: "fork.knife") {
                 NavigationStack {
                     RestaurantListView()
-                        .navigationDestination(for: Restaurant.self) { restaurant in
-                            RestaurantDetailView(restaurant: restaurant)
-                        }
                 }
             }
-
         }
         .tint(.ffPrimary)
+        .preferredColorScheme(appearanceMode.colorScheme)
     }
 }
 
@@ -27,4 +26,5 @@ struct ContentView: View {
     ContentView()
         .environment(RestaurantStore())
         .environment(FilterViewModel())
+        .environment(LocationManager())
 }

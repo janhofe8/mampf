@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import Image from "next/image";
 import { RestaurantWithCommunity } from "@/lib/types";
 import {
   getRatingColor,
@@ -11,10 +12,12 @@ import {
   getPriceLabel,
   getNeighborhoodLabel,
   parseOpeningHours,
+  formatRating,
 } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
 import { getDeviceId } from "@/lib/device-id";
 import RatingBar from "./RatingBar";
+import HeartIcon from "./HeartIcon";
 
 interface RestaurantDetailProps {
   restaurant: RestaurantWithCommunity;
@@ -109,10 +112,13 @@ export default function RestaurantDetail({
       {/* Hero Image */}
       <div className="relative h-72 flex-shrink-0">
         {restaurant.image_url ? (
-          <img
+          <Image
             src={restaurant.image_url}
             alt={restaurant.name}
             className="w-full h-full object-cover"
+            fill
+            sizes="100vw"
+            priority
           />
         ) : (
           <div className="w-full h-full bg-gray-50 flex items-center justify-center">
@@ -148,22 +154,7 @@ export default function RestaurantDetail({
           onClick={() => onToggleFavorite(restaurant.id)}
           className="absolute top-12 right-4 p-2 rounded-full bg-black/40 backdrop-blur-sm hover:bg-black/60 transition-colors"
         >
-          <svg
-            className={`w-5 h-5 transition-all duration-300 ${
-              isFavorite
-                ? "text-red-500 fill-red-500"
-                : "text-white fill-transparent"
-            }`}
-            viewBox="0 0 24 24"
-            strokeWidth={2}
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"
-            />
-          </svg>
+          <HeartIcon filled={isFavorite} />
         </button>
 
         {/* Bottom info */}
@@ -172,7 +163,7 @@ export default function RestaurantDetail({
             <span
               className={`${getRatingBgClass(restaurant.personal_rating)} ${getRatingTextClass(restaurant.personal_rating)} px-3 py-1 rounded-xl text-sm font-black`}
             >
-              {restaurant.personal_rating?.toFixed(1) ?? "N/A"}
+              {formatRating(restaurant.personal_rating)}
             </span>
             <span className="text-white/60 text-sm">
               {getCuisineEmoji(restaurant.cuisine_type)}{" "}
@@ -234,12 +225,20 @@ export default function RestaurantDetail({
             <h3 className="text-sm font-bold text-gray-600 uppercase tracking-wider mb-3">
               Your Rating
             </h3>
+            {!hasExistingRating && restaurant.community_rating == null && (
+              <p className="text-sm text-[rgb(115,51,217)] font-medium mb-3 flex items-center gap-1.5">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z" />
+                </svg>
+                Be the first to rate!
+              </p>
+            )}
             <div className="flex items-center gap-4">
               <span
                 className="text-2xl font-black min-w-[3rem] text-center"
                 style={{ color: getRatingColor(userRating) }}
               >
-                {userRating.toFixed(1)}
+                {formatRating(userRating)}
               </span>
               <input
                 type="range"
