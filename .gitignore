@@ -1,4 +1,21 @@
-.vercel
-.claude/tasks/
+# Xcode
 build/
+DerivedData/
+xcuserdata/
+*.xcuserstate
 FinestFinder.xcodeproj/
+
+# macOS
+.DS_Store
+
+# Node (web)
+node_modules/
+
+# Environment
+.env*
+
+# Vercel
+.vercel
+
+# Claude
+.claude/tasks/
