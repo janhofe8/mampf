@@ -1,4 +1,4 @@
--- FinestFinder Seed Data
+-- MAMPF Seed Data
 -- Run this in the Supabase SQL Editor after creating the schema
 
 INSERT INTO restaurants (name, cuisine_type, neighborhood, price_range, address, latitude, longitude, opening_hours, is_closed, personal_rating, google_rating, google_review_count) VALUES

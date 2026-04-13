@@ -60,6 +60,7 @@ export function getNeighborhoodLabel(neighborhood: string): string {
     hafenCity: "HafenCity",
     uhlenhorst: "Uhlenhorst",
     karolinenviertel: "Karolinenviertel",
+    hoheluft: "Hoheluft",
     other: "Other",
   };
   return labels[neighborhood] || neighborhood;
@@ -101,9 +102,63 @@ export function calculateDistance(
   return R * c;
 }
 
+export function formatRating(value: number | null | undefined): string {
+  if (value == null) return "N/A";
+  return Number.isInteger(value) ? value.toString() : value.toFixed(1);
+}
+
 export function formatDistance(km: number): string {
   if (km < 1) return `${Math.round(km * 1000)}m`;
   return `${km.toFixed(1)}km`;
+}
+
+// Shared filter for restaurants — used by both map and list
+export interface RestaurantFilterOptions {
+  search?: string;
+  cuisines?: Set<string> | string[];
+  priceRanges?: Set<string> | string[];
+  neighborhoods?: Set<string> | string[];
+  minRating?: number;
+}
+
+export function filterRestaurants<T extends { name: string; cuisine_type: string; neighborhood: string; price_range: string; personal_rating: number | null }>(
+  restaurants: T[],
+  opts: RestaurantFilterOptions
+): T[] {
+  let result = restaurants;
+
+  if (opts.search?.trim()) {
+    const query = opts.search.toLowerCase();
+    result = result.filter(
+      (r) =>
+        r.name.toLowerCase().includes(query) ||
+        r.cuisine_type.toLowerCase().includes(query) ||
+        r.neighborhood.toLowerCase().includes(query)
+    );
+  }
+
+  const cuisines = opts.cuisines;
+  if (cuisines && (cuisines instanceof Set ? cuisines.size > 0 : cuisines.length > 0)) {
+    result = result.filter((r) => cuisines instanceof Set ? cuisines.has(r.cuisine_type) : cuisines.includes(r.cuisine_type));
+  }
+
+  const prices = opts.priceRanges;
+  if (prices && (prices instanceof Set ? prices.size > 0 : prices.length > 0)) {
+    result = result.filter((r) => prices instanceof Set ? prices.has(r.price_range) : prices.includes(r.price_range));
+  }
+
+  const hoods = opts.neighborhoods;
+  if (hoods && (hoods instanceof Set ? hoods.size > 0 : hoods.length > 0)) {
+    result = result.filter((r) => hoods instanceof Set ? hoods.has(r.neighborhood) : hoods.includes(r.neighborhood));
+  }
+
+  if (opts.minRating && opts.minRating > 0) {
+    result = result.filter(
+      (r) => r.personal_rating != null && r.personal_rating >= opts.minRating!
+    );
+  }
+
+  return result;
 }
 
 const FAVORITES_KEY = "mampf_favorites";

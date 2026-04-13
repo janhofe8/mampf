@@ -1,14 +1,14 @@
 //
-//  FinestFinderTests.swift
-//  FinestFinderTests
+//  MAMPFTests.swift
+//  MAMPFTests
 //
 //  Created by Jan Hoferichter on 19.03.26.
 //
 
 import Testing
-@testable import FinestFinder
+@testable import MAMPF
 
-struct FinestFinderTests {
+struct MAMPFTests {
 
     @Test func example() async throws {
         // Write your test here and use APIs like `#expect(...)` to check expected conditions.

@@ -1,4 +1,4 @@
--- FinestFinder Supabase Schema
+-- MAMPF Supabase Schema
 -- Run this in the Supabase SQL Editor to set up the database
 
 -- Create restaurants table

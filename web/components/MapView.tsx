@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import Image from "next/image";
 import { RestaurantWithCommunity } from "@/lib/types";
 import {
   getRatingColor,
@@ -10,7 +11,9 @@ import {
   getNeighborhoodLabel,
   getRatingBgClass,
   getRatingTextClass,
+  formatRating,
 } from "@/lib/utils";
+import HeartIcon from "./HeartIcon";
 import type L from "leaflet";
 
 const HAMBURG_CENTER: [number, number] = [53.5575, 9.962];
@@ -22,7 +25,6 @@ interface MapViewProps {
   onToggleFavorite: (id: string) => void;
   onSelectRestaurant: (restaurant: RestaurantWithCommunity) => void;
   userLocation: { lat: number; lng: number } | null;
-  onRequestLocation?: () => void;
 }
 
 export default function MapView({
@@ -34,7 +36,7 @@ export default function MapView({
 }: MapViewProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
-  const markersRef = useRef<L.CircleMarker[]>([]);
+  const markersRef = useRef<Map<string, L.CircleMarker>>(new Map());
   const userMarkerRef = useRef<L.CircleMarker | null>(null);
   const [selectedRestaurant, setSelectedRestaurant] =
     useState<RestaurantWithCommunity | null>(null);
@@ -84,21 +86,15 @@ export default function MapView({
     };
   }, []);
 
-  // Add restaurant markers
+  // Add restaurant markers (diff-based: only add/remove changed markers)
   useEffect(() => {
     if (!leafletLoaded || !mapRef.current || !leafletModuleRef.current) return;
     const LLeaflet = leafletModuleRef.current;
     const map = mapRef.current;
 
-    // Remove old markers
-    markersRef.current.forEach((m) => m.remove());
-    markersRef.current = [];
-
-    restaurants.forEach((restaurant) => {
-      if (!restaurant.latitude || !restaurant.longitude) return;
-
+    const createMarker = (restaurant: RestaurantWithCommunity, zoom: number) => {
+      if (!restaurant.latitude || !restaurant.longitude) return null;
       const color = getRatingColor(restaurant.personal_rating);
-      const zoom = map.getZoom();
       const showLabel = zoom >= 14;
 
       const marker = LLeaflet.circleMarker(
@@ -113,9 +109,8 @@ export default function MapView({
         }
       ).addTo(map);
 
-      // Add tooltip with rating number when zoomed in
       if (showLabel && restaurant.personal_rating != null) {
-        marker.bindTooltip(restaurant.personal_rating.toFixed(1), {
+        marker.bindTooltip(formatRating(restaurant.personal_rating), {
           permanent: true,
           direction: "center",
           className: "rating-tooltip",
@@ -126,47 +121,45 @@ export default function MapView({
         setSelectedRestaurant(restaurant);
       });
 
-      markersRef.current.push(marker);
-    });
+      return marker;
+    };
 
-    // Update markers on zoom change
+    // Diff: only add/remove changed markers
+    const currentIds = new Set(restaurants.map((r) => r.id));
+    const zoom = map.getZoom();
+
+    // Remove markers no longer in the list
+    for (const [id, marker] of markersRef.current) {
+      if (!currentIds.has(id)) {
+        marker.remove();
+        markersRef.current.delete(id);
+      }
+    }
+
+    // Add markers for new restaurants
+    for (const restaurant of restaurants) {
+      if (!markersRef.current.has(restaurant.id)) {
+        const marker = createMarker(restaurant, zoom);
+        if (marker) {
+          markersRef.current.set(restaurant.id, marker);
+        }
+      }
+    }
+
+    // Rebuild all on zoom (radius/tooltip changes)
     const onZoom = () => {
       const newZoom = map.getZoom();
-      markersRef.current.forEach((m) => m.remove());
-      markersRef.current = [];
+      for (const [, m] of markersRef.current) {
+        m.remove();
+      }
+      markersRef.current.clear();
 
-      restaurants.forEach((restaurant) => {
-        if (!restaurant.latitude || !restaurant.longitude) return;
-
-        const ratingColor = getRatingColor(restaurant.personal_rating);
-        const showRatingLabel = newZoom >= 14;
-
-        const newMarker = LLeaflet.circleMarker(
-          [restaurant.latitude, restaurant.longitude],
-          {
-            radius: showRatingLabel ? 14 : 8,
-            fillColor: ratingColor,
-            color: "rgba(0,0,0,0.3)",
-            weight: 1,
-            opacity: 1,
-            fillOpacity: 0.9,
-          }
-        ).addTo(map);
-
-        if (showRatingLabel && restaurant.personal_rating != null) {
-          newMarker.bindTooltip(restaurant.personal_rating.toFixed(1), {
-            permanent: true,
-            direction: "center",
-            className: "rating-tooltip",
-          });
+      for (const restaurant of restaurants) {
+        const marker = createMarker(restaurant, newZoom);
+        if (marker) {
+          markersRef.current.set(restaurant.id, marker);
         }
-
-        newMarker.on("click", () => {
-          setSelectedRestaurant(restaurant);
-        });
-
-        markersRef.current.push(newMarker);
-      });
+      }
     };
 
     map.on("zoomend", onZoom);
@@ -242,10 +235,13 @@ export default function MapView({
                 {/* Image */}
                 <div className="w-20 h-20 rounded-xl overflow-hidden flex-shrink-0">
                   {selectedRestaurant.image_url ? (
-                    <img
+                    <Image
                       src={selectedRestaurant.image_url}
                       alt={selectedRestaurant.name}
+                      width={80}
+                      height={80}
                       className="w-full h-full object-cover"
+                      sizes="80px"
                     />
                   ) : (
                     <div className="w-full h-full bg-black/5 flex items-center justify-center">
@@ -265,7 +261,7 @@ export default function MapView({
                     <span
                       className={`${getRatingBgClass(selectedRestaurant.personal_rating)} ${getRatingTextClass(selectedRestaurant.personal_rating)} px-2 py-0.5 rounded-lg text-xs font-black flex-shrink-0`}
                     >
-                      {selectedRestaurant.personal_rating?.toFixed(1) ?? "N/A"}
+                      {formatRating(selectedRestaurant.personal_rating)}
                     </span>
                   </div>
                   <p className="text-xs text-gray-500 mt-0.5">
@@ -276,7 +272,7 @@ export default function MapView({
                   <p className="text-xs text-gray-400 mt-0.5">
                     {getPriceLabel(selectedRestaurant.price_range)}
                     {selectedRestaurant.google_rating != null &&
-                      ` · Google ${selectedRestaurant.google_rating.toFixed(1)}`}
+                      ` · Google ${formatRating(selectedRestaurant.google_rating)}`}
                   </p>
                 </div>
               </div>
@@ -288,22 +284,7 @@ export default function MapView({
                 onClick={() => onToggleFavorite(selectedRestaurant.id)}
                 className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-medium hover:bg-black/5 transition-colors"
               >
-                <svg
-                  className={`w-4 h-4 ${
-                    isFav
-                      ? "text-red-500 fill-red-500"
-                      : "text-gray-400 fill-transparent"
-                  }`}
-                  viewBox="0 0 24 24"
-                  strokeWidth={2}
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"
-                  />
-                </svg>
+                <HeartIcon filled={isFav} className={`w-4 h-4 ${!isFav ? "text-gray-400 fill-transparent" : ""}`} />
                 <span className={isFav ? "text-red-400" : "text-gray-400"}>
                   {isFav ? "Saved" : "Save"}
                 </span>

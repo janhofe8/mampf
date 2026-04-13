@@ -1,13 +1,13 @@
 //
-//  FinestFinderUITests.swift
-//  FinestFinderUITests
+//  MAMPFUITests.swift
+//  MAMPFUITests
 //
 //  Created by Jan Hoferichter on 19.03.26.
 //
 
 import XCTest
 
-final class FinestFinderUITests: XCTestCase {
+final class MAMPFUITests: XCTestCase {
 
     override func setUpWithError() throws {
         // Put setup code here. This method is called before the invocation of each test method in the class.

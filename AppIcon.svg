@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#7C3AED"/>
+      <stop offset="100%" stop-color="#6D28D9"/>
+    </linearGradient>
+    <linearGradient id="limeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#A3E635"/>
+      <stop offset="100%" stop-color="#84CC16"/>
+    </linearGradient>
+    <radialGradient id="sheen" cx="35%" cy="30%" r="60%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.1"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Purple rounded square -->
+  <rect width="1024" height="1024" rx="224" fill="url(#bgGrad)"/>
+  <rect width="1024" height="1024" rx="224" fill="url(#sheen)"/>
+
+  <!-- Bite taken out top-right -->
+  <path d="
+    M 750 0
+    C 725 55, 715 110, 695 155
+    C 670 210, 635 235, 615 270
+    C 590 330, 625 395, 685 382
+    C 735 370, 775 320, 815 290
+    C 865 260, 915 280, 955 240
+    C 1000 195, 1024 125, 1024 60
+    L 1024 0 Z
+  " fill="#F5F5F5"/>
+
+  <!-- Lime bite edge -->
+  <path d="
+    M 750 0
+    C 725 55, 715 110, 695 155
+    C 670 210, 635 235, 615 270
+    C 590 330, 625 395, 685 382
+    C 735 370, 775 320, 815 290
+    C 865 260, 915 280, 955 240
+  " fill="none" stroke="url(#limeGrad)" stroke-width="14" stroke-linecap="round"/>
+
+  <!-- Crumbs -->
+  <circle cx="655" cy="55" r="14" fill="url(#limeGrad)" opacity="0.75"/>
+  <circle cx="705" cy="115" r="9" fill="url(#limeGrad)" opacity="0.55"/>
+  <circle cx="620" cy="115" r="6" fill="url(#limeGrad)" opacity="0.4"/>
+
+  <!-- Clear bold M using simple shapes -->
+  <g transform="translate(512, 512)">
+    <!-- Left vertical bar -->
+    <rect x="-260" y="-200" width="90" height="400" rx="12" fill="white"/>
+    <!-- Right vertical bar -->
+    <rect x="170" y="-200" width="90" height="400" rx="12" fill="white"/>
+    <!-- Left diagonal -->
+    <rect x="-170" y="-200" width="90" height="310" rx="12" fill="white" transform="rotate(16, -125, -45)"/>
+    <!-- Right diagonal -->
+    <rect x="80" y="-200" width="90" height="310" rx="12" fill="white" transform="rotate(-16, 125, -45)"/>
+  </g>
+</svg>

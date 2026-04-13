@@ -1,13 +1,13 @@
 //
-//  FinestFinderUITestsLaunchTests.swift
-//  FinestFinderUITests
+//  MAMPFUITestsLaunchTests.swift
+//  MAMPFUITests
 //
 //  Created by Jan Hoferichter on 19.03.26.
 //
 
 import XCTest
 
-final class FinestFinderUITestsLaunchTests: XCTestCase {
+final class MAMPFUITestsLaunchTests: XCTestCase {
 
     override class var runsForEachTargetApplicationUIConfiguration: Bool {
         true
