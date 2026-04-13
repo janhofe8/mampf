@@ -13,7 +13,6 @@ struct RestaurantListView: View {
 
     @Namespace private var heroNamespace
     @State private var showingFilters = false
-    @State private var showingSettings = false
     @State private var viewMode: ViewMode = .cards
     @State private var showFavoritesOnly = false
 
@@ -97,14 +96,30 @@ struct RestaurantListView: View {
         .scrollDismissesKeyboard(.interactively)
         .searchable(text: $vm.searchText, prompt: Text(String(format: String(localized: "search.restaurants"), store.restaurants.count)))
         .refreshable { await store.refresh() }
-        .navigationTitle("MAMPF")
-        .toolbarTitleDisplayMode(.large)
+        .navigationTitle("")
+        .toolbarTitleDisplayMode(.inline)
         .onAppear { applyBrandedNavBarAppearance() }
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
-                Button { showingSettings = true } label: {
-                    Image(systemName: "gearshape")
-                        .foregroundStyle(.ffPrimary)
+                Menu {
+                    Button {} label: {
+                        Label("Hamburg", systemImage: "checkmark")
+                    }
+                    Section {
+                        Button {} label: {
+                            Label("city.comingSoon", systemImage: "clock")
+                        }
+                        .disabled(true)
+                    }
+                } label: {
+                    HStack(spacing: 4) {
+                        Text("Hamburg")
+                            .font(.system(size: 22, weight: .bold))
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(.secondary)
+                    }
+                    .foregroundStyle(.primary)
                 }
             }
 
@@ -164,9 +179,6 @@ struct RestaurantListView: View {
         }
         .sheet(isPresented: $showingFilters) {
             FilterSheetView()
-        }
-        .sheet(isPresented: $showingSettings) {
-            SettingsView()
         }
         .overlay {
             if filtered.isEmpty && !store.isLoading {
@@ -291,6 +303,11 @@ struct RestaurantListView: View {
                 }
 
                 HStack(spacing: 4) {
+                    if let isOpen = restaurant.isOpenNow {
+                        Circle()
+                            .fill(isOpen ? .green : .red)
+                            .frame(width: 6, height: 6)
+                    }
                     Text("\(restaurant.neighborhood.displayName) · \(restaurant.cuisineType.icon) \(restaurant.cuisineType.displayName) · \(restaurant.priceRange.label)")
                     if let dist = distanceText(to: restaurant) {
                         Text("· \(dist)")

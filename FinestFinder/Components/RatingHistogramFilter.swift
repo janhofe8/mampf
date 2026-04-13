@@ -35,44 +35,55 @@ struct RatingHistogramFilter: View {
         self.histogramData = counts
     }
 
-    private var isFiltering: Bool { minimumRating > lo }
+    private var isFiltering: Bool { minimumRating > 0 }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 12) {
             // Header
-            HStack(spacing: 0) {
+            HStack {
                 Text("ratingFilter.minRating")
-                    .font(.system(.body, design: .rounded, weight: .bold))
+                    .font(.system(.subheadline, design: .rounded, weight: .bold))
                     .foregroundStyle(.secondary)
 
                 Spacer()
 
                 if isFiltering {
                     Text(minimumRating.formattedRating)
-                        .font(.system(size: 44, weight: .black, design: .rounded).monospacedDigit())
+                        .font(.system(size: 32, weight: .black, design: .rounded).monospacedDigit())
                         .foregroundStyle(Color.ratingColor(for: minimumRating))
                         .contentTransition(.numericText())
                 } else {
                     Text("ratingFilter.all")
-                        .font(.system(.title, design: .rounded, weight: .black))
+                        .font(.system(.title2, design: .rounded, weight: .black))
                         .foregroundStyle(.secondary)
                 }
 
                 Spacer()
 
-                Button { onDismiss() } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.title2)
-                        .foregroundStyle(.tertiary)
+                HStack(spacing: 12) {
+                    if isFiltering {
+                        Button {
+                            withAnimation { minimumRating = 0 }
+                        } label: {
+                            Text("ratingFilter.reset")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(.ffPrimary)
+                        }
+                    }
+                    Button { onDismiss() } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.title3)
+                            .foregroundStyle(.tertiary)
+                    }
                 }
             }
 
-            // Histogram bars
+            // Tappable histogram bars
             GeometryReader { geo in
                 let maxCount = max(histogramData.values.max() ?? 1, 1)
                 let spacing: CGFloat = 2.5
                 let barW = (geo.size.width - CGFloat(bucketValues.count - 1) * spacing) / CGFloat(bucketValues.count)
-                let barAreaHeight = geo.size.height - 18
+                let barAreaHeight = geo.size.height
 
                 HStack(alignment: .bottom, spacing: spacing) {
                     ForEach(bucketValues, id: \.self) { bucket in
@@ -80,65 +91,39 @@ struct RatingHistogramFilter: View {
                         let frac = CGFloat(count) / CGFloat(maxCount)
                         let inRange = !isFiltering || bucket >= minimumRating
 
-                        VStack(spacing: 2) {
-                            if count > 0 {
-                                Text("\(count)")
-                                    .font(.system(size: 11, weight: .black).monospacedDigit())
-                                    .foregroundStyle(inRange ? .secondary : .quaternary)
+                        RoundedRectangle(cornerRadius: 3)
+                            .fill(inRange ? Color.ratingColor(for: bucket) : Color.gray.opacity(0.22))
+                            .frame(width: barW, height: max(4, frac * barAreaHeight))
+                            .frame(maxHeight: .infinity, alignment: .bottom)
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                withAnimation(.easeInOut(duration: 0.15)) {
+                                    minimumRating = (minimumRating == bucket) ? 0 : bucket
+                                }
                             }
-
-                            RoundedRectangle(cornerRadius: 3)
-                                .fill(inRange ? Color.ratingColor(for: bucket) : Color.gray.opacity(0.12))
-                                .frame(width: barW, height: max(4, frac * barAreaHeight))
-                        }
                     }
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
             }
-            .frame(height: 85)
+            .frame(height: 70)
+            .sensoryFeedback(.selection, trigger: minimumRating)
 
             // Slider
-            Slider(value: $minimumRating, in: lo...hi, step: step) {
-                EmptyView()
-            } minimumValueLabel: {
-                Text(lo.formattedRating)
-                    .font(.system(size: 12, weight: .bold, design: .rounded).monospacedDigit())
-                    .foregroundStyle(.tertiary)
-            } maximumValueLabel: {
-                Text(hi.formattedRating)
-                    .font(.system(size: 12, weight: .bold, design: .rounded).monospacedDigit())
-                    .foregroundStyle(.tertiary)
-            }
+            Slider(value: $minimumRating, in: lo...hi, step: step)
                 .tint(.ffPrimary)
-                .sensoryFeedback(.selection, trigger: minimumRating)
 
-            // Footer
-            HStack {
-                Text("\(matchCount) \(String(localized: "ratingFilter.restaurants"))")
-                    .font(.body.weight(.bold))
-                    .foregroundStyle(.secondary)
-
-                Spacer()
-
-                if isFiltering {
-                    Button {
-                        withAnimation { minimumRating = lo }
-                    } label: {
-                        Text("ratingFilter.reset")
-                            .font(.body.weight(.bold))
-                            .foregroundStyle(.ffPrimary)
-                    }
-                }
-            }
+            // Match count
+            Text("\(matchCount) \(String(localized: "ratingFilter.restaurants"))")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
         }
-        .padding(20)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20))
+        .padding(16)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
         .shadow(color: .black.opacity(0.15), radius: 10, y: 5)
-        .onAppear {
-            if minimumRating < lo {
+        .onChange(of: minimumRating) {
+            // Clamp slider value to valid range, but allow 0 (= no filter)
+            if minimumRating > 0 && minimumRating < lo {
                 minimumRating = lo
             }
         }
     }
-
 }

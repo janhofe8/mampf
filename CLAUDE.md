@@ -21,7 +21,7 @@ FinestFinder/              ← iOS App
 ├── ViewModels/            RestaurantStore.swift (@Observable), FilterViewModel.swift (debounced search)
 ├── Views/                 List (3 Modi: Cards/Grid/List), Detail, Map, Filter, Settings
 ├── Components/            Cards, Rating-Bars/Pills/Badges, SkeletonLoadingView, RatingHistogramFilter
-├── Services/              SupabaseManager, RestaurantRepository, UserRatingRepository, LocationManager, DeviceID
+├── Services/              SupabaseManager, RestaurantRepository, UserRatingRepository, LocationManager, DeviceID, ImageCache, OpeningHoursParser
 ├── Config/                Secrets.swift (Supabase URL + Anon Key), Theme.swift
 └── Data/                  PreviewSampleData.swift
 
@@ -56,7 +56,11 @@ web/                       ← Web App (Next.js)
 - **Haptic Feedback:** `.sensoryFeedback()` auf Favoriten-Toggle, View-Mode-Wechsel, Slider, Filter-Chips, Map-Controls. `UINotificationFeedbackGenerator` für Rating Submit/Delete.
 - **Skeleton Loading:** Shimmer-Effekt beim App-Start (SkeletonCardView/SkeletonListRow statt ProgressView)
 - **Debounced Search:** `searchText` (sofort im UI) → `activeSearchText` (250ms Debounce für Filter). Map-Suggestions nutzen `searchText` direkt (instant). `localizedCaseInsensitiveContains` für Unicode-Korrektheit.
-- **Filter UX:** Sheet mit Live-Count-Button ("Show X Food Spots"), Chips mit Checkmark-Animation. Aktive Filter als horizontale Capsule-Chips unter Suchleiste (tap to remove). Sort-Indikator als Pill wenn nicht Default.
+- **Filter UX:** Custom Sheet (kein Form) mit Capsule-Chips, X-Button rechts + Gear-Icon links im Header (öffnet Settings). Live-Count-Button ("Show X Food Spots"). Aktive Filter als horizontale Capsule-Chips unter Suchleiste (tap to remove).
+- **Image Caching:** Eigener `ImageCache` (NSCache memory + URLCache disk) statt `AsyncImage`. Bilder laden aus Cache instant, Netzwerk-Bilder mit Fade-In.
+- **Opening Hours:** `OpeningHoursParser` parst Google Places Format (`"Monday: 4:00 – 10:00 PM"`) und einfaches Format (`"Mon-Sun 12:00-22:30"`). Grüner/roter Dot auf Cards/List-Rows, "Open"/"Closed" Label im Detail. `showOpenOnly` Filter.
+- **Share:** `ShareLink` im Detail-Toolbar mit Name, MAMPF-Rating, Cuisine/Stadtteil/Preis, Google Maps URL.
+- **Mini-Map:** Eingebettete Map (150pt) mit Marker im Detail Info-Card, nicht interaktiv.
 - **Keyboard:** `.scrollDismissesKeyboard(.interactively)` auf Listen-ScrollView
 - **Distanz:** Entfernung auf Cards und Listenzeilen wenn Location aktiv
 - **Community-Rating CTA:** "Be the first to rate!" im Detail wenn noch kein Rating vorhanden
@@ -64,8 +68,8 @@ web/                       ← Web App (Next.js)
 ## UI-Struktur
 
 - **Tabs:** Map ("Karte"), Food Spots — Standard iOS TabView
-- **Food Spots-Tab:** 3 View-Modi (Cards → Grid → Liste), Heart-Toggle für Favoriten in Toolbar, View-Mode-Wechsel mit Crossfade-Transition
-- **Map:** Suche via Lupen-Button, Rating-Histogramm-Filter via Stern-Button, Tap auf Karte schließt Overlays
+- **Food Spots-Tab:** Title "Hamburg ˅" (City-Selector Menu, inline title mode). 3 View-Modi (Cards → Grid → Liste). Grid-Cards zeigen Cuisine-Emoji + Stadtteil + Preis. Trailing-Toolbar: Heart, ViewMode, Sort, Filter. Settings erreichbar über Filter-Sheet Header (Gear-Icon).
+- **Map:** Permanente Suchleiste oben, Quick-Filter-Chips darunter (Open Now, Rating, Cuisine, Stadtteil, Preis, Sort). Location-Button unten rechts. Rating-Histogram als Bottom-Overlay (tappable Bars). Suche mit Thumbnail-Ergebnissen (max 5), Tap auf Ergebnis schließt Suche + zoomt Map.
 - **Ratings immer:** MAMPF → Community → Google. Community "–" wenn nicht vorhanden.
 - **Sortierung:** Inkl. "Zufällig" (stabiler Seed, nur bei erneutem Auswählen neu gemischt)
 - **Localization:** EN/DE via `Localizable.strings`, "Food Spots" (EN) / "Foodspots" (DE)
@@ -118,3 +122,5 @@ Schema-Änderungen (ALTER TABLE) müssen im Supabase SQL Editor ausgeführt werd
 - **Storage-Struktur:** `restaurant-images/` Root = Google Places Fotos, `own/` = eigene Fotos. **Niemals Google Places Fotos in `own/` speichern.**
 - `user_ratings` hat vorbereitete `user_id`-Spalte für zukünftigen Email-Login (Supabase Auth aktiviert, aktuell Device-ID)
 - Custom DragGesture-Slider auf Map funktioniert nicht — nativen SwiftUI Slider verwenden
+- `.toolbarTitleMenu` zeigt keinen sichtbaren Chevron im Large-Title-Modus — für City-Selector stattdessen inline Title mit Custom Menu + explizitem chevron.down verwenden
+- Swift 6 Concurrency: `SupabaseManager` muss `Sendable` + `nonisolated static let shared` sein, `DeviceID` Properties müssen `nonisolated` sein, damit `actor UserRatingRepository` darauf zugreifen kann

@@ -1,0 +1,176 @@
+import Foundation
+
+enum OpeningStatus: Equatable {
+    case open, closed, unknown
+}
+
+struct OpeningHoursParser {
+
+    static func status(for openingHours: String, at date: Date = .now) -> OpeningStatus {
+        let trimmed = openingHours.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return .unknown }
+
+        let calendar = Calendar.current
+        let weekday = calendar.component(.weekday, from: date)
+        let hour = calendar.component(.hour, from: date)
+        let minute = calendar.component(.minute, from: date)
+        let currentMinutes = hour * 60 + minute
+
+        let segments = trimmed.components(separatedBy: ";").map {
+            normalizeUnicode($0.trimmingCharacters(in: .whitespaces))
+        }
+
+        for segment in segments {
+            if let result = parseSegment(segment, weekday: weekday, currentMinutes: currentMinutes) {
+                return result
+            }
+        }
+
+        return .unknown
+    }
+
+    // MARK: - Segment Parsing
+
+    private static func parseSegment(_ segment: String, weekday: Int, currentMinutes: Int) -> OpeningStatus? {
+        // Google format: "Monday: 12:00 - 10:00 PM"
+        if let colonIdx = segment.firstIndex(of: ":") {
+            let beforeColon = String(segment[..<colonIdx]).trimmingCharacters(in: .whitespaces)
+            if dayNumber(beforeColon.lowercased()) != nil {
+                guard matchesDay(beforeColon, weekday: weekday) else { return nil }
+                let timePart = String(segment[segment.index(after: colonIdx)...]).trimmingCharacters(in: .whitespaces)
+                return evaluateTimePart(timePart, currentMinutes: currentMinutes)
+            }
+        }
+
+        // Simple format: "Mon-Sun 12:00-22:30" or "Sun closed"
+        if let spaceIdx = segment.firstIndex(of: " ") {
+            let firstWord = String(segment[..<spaceIdx])
+            if firstWord.allSatisfy({ $0.isLetter || $0 == "-" }) {
+                guard matchesDay(firstWord, weekday: weekday) else { return nil }
+                let timePart = String(segment[segment.index(after: spaceIdx)...]).trimmingCharacters(in: .whitespaces)
+                return evaluateTimePart(timePart, currentMinutes: currentMinutes)
+            }
+        }
+
+        return nil
+    }
+
+    private static func evaluateTimePart(_ timePart: String, currentMinutes: Int) -> OpeningStatus {
+        if timePart.lowercased() == "closed" { return .closed }
+        if let (open, close) = parseTimeRange(timePart) {
+            return isTimeInRange(currentMinutes, open: open, close: close) ? .open : .closed
+        }
+        return .unknown
+    }
+
+    // MARK: - Unicode
+
+    private static func normalizeUnicode(_ s: String) -> String {
+        s.replacingOccurrences(of: "\u{2009}", with: " ")
+         .replacingOccurrences(of: "\u{202F}", with: " ")
+         .replacingOccurrences(of: "\u{2013}", with: "-")
+         .replacingOccurrences(of: "\u{00A0}", with: " ")
+    }
+
+    // MARK: - Day Matching
+
+    private static func matchesDay(_ dayStr: String, weekday: Int) -> Bool {
+        let lower = dayStr.lowercased().trimmingCharacters(in: .whitespaces)
+
+        if let day = dayNumber(lower) {
+            return day == weekday
+        }
+
+        let parts = lower.components(separatedBy: "-")
+        if parts.count == 2,
+           let start = dayNumber(parts[0].trimmingCharacters(in: .whitespaces)),
+           let end = dayNumber(parts[1].trimmingCharacters(in: .whitespaces)) {
+            if start <= end {
+                return weekday >= start && weekday <= end
+            } else {
+                return weekday >= start || weekday <= end
+            }
+        }
+
+        return false
+    }
+
+    private static func dayNumber(_ s: String) -> Int? {
+        switch s {
+        case "sunday", "sun": 1
+        case "monday", "mon": 2
+        case "tuesday", "tue", "tues": 3
+        case "wednesday", "wed": 4
+        case "thursday", "thu", "thur", "thurs": 5
+        case "friday", "fri": 6
+        case "saturday", "sat": 7
+        default: nil
+        }
+    }
+
+    // MARK: - Time Parsing
+
+    private static func parseTimeRange(_ s: String) -> (Int, Int)? {
+        let parts = s.components(separatedBy: "-").map { $0.trimmingCharacters(in: .whitespaces) }
+        guard parts.count == 2 else { return nil }
+
+        let closePM = parts[1].lowercased().contains("pm")
+        guard let open = parseTime(parts[0], hintPM: closePM),
+              let close = parseTime(parts[1]) else { return nil }
+
+        return (open, close)
+    }
+
+    private static func parseTime(_ s: String, hintPM: Bool = false) -> Int? {
+        let lower = s.lowercased().trimmingCharacters(in: .whitespaces)
+        let isPM = lower.hasSuffix("pm")
+        let isAM = lower.hasSuffix("am")
+
+        let timeStr = lower
+            .replacingOccurrences(of: "am", with: "")
+            .replacingOccurrences(of: "pm", with: "")
+            .trimmingCharacters(in: .whitespaces)
+
+        let components = timeStr.components(separatedBy: ":")
+        guard components.count == 2,
+              var hour = Int(components[0]),
+              let minute = Int(components[1]) else { return nil }
+
+        if isPM {
+            if hour != 12 { hour += 12 }
+        } else if isAM {
+            if hour == 12 { hour = 0 }
+        } else if hintPM && hour < 12 {
+            hour += 12
+        }
+
+        if hour >= 24 { hour -= 24 }
+
+        return hour * 60 + minute
+    }
+
+    private static func isTimeInRange(_ current: Int, open: Int, close: Int) -> Bool {
+        if close > open {
+            return current >= open && current < close
+        } else {
+            return current >= open || current < close
+        }
+    }
+}
+
+// MARK: - Restaurant Extension
+
+extension Restaurant {
+    var openingStatus: OpeningStatus {
+        if isClosed { return .closed }
+        return OpeningHoursParser.status(for: openingHours)
+    }
+
+    var isOpenNow: Bool? {
+        switch openingStatus {
+        case .open: true
+        case .closed: false
+        case .unknown: nil
+        }
+    }
+}

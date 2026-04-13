@@ -73,6 +73,7 @@ final class FilterViewModel {
     var selectedPriceRanges: Set<PriceRange> = []
     var minimumRating: Double = 0
     var maximumRating: Double = 10
+    var showOpenOnly: Bool = false
     var sortField: SortField = .mampfRating
     var sortAscending: Bool = false
     /// Stable seed for random sort — only changes when user re-selects random
@@ -110,6 +111,7 @@ final class FilterViewModel {
             || !selectedPriceRanges.isEmpty
             || minimumRating > 0
             || maximumRating < 10
+            || showOpenOnly
     }
 
     func apply(
@@ -153,6 +155,10 @@ final class FilterViewModel {
                 let rating = $0.personalRating ?? 0
                 return rating >= minimumRating && rating <= maximumRating
             }
+        }
+
+        if showOpenOnly {
+            result = result.filter { $0.openingStatus == .open }
         }
 
         return result
@@ -204,5 +210,6 @@ final class FilterViewModel {
         selectedPriceRanges = []
         minimumRating = 0
         maximumRating = 10
+        showOpenOnly = false
     }
 }

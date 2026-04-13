@@ -5,65 +5,103 @@ struct FilterSheetView: View {
     @Environment(RestaurantStore.self) private var store
     @Environment(LocationManager.self) private var locationManager
     @Environment(\.dismiss) private var dismiss
+    @State private var showingSettings = false
 
     private var filteredCount: Int {
         filterVM.apply(to: store.restaurants, userLocation: locationManager.lastLocation, communityRatings: store.communityRatings).count
     }
 
     var body: some View {
-        @Bindable var vm = filterVM
-
-        NavigationStack {
-            Form {
-                FilterSection(title: "filter.cuisine", columns: 3, items: CuisineType.allCases, selection: filterVM.selectedCuisines) { cuisine in
-                    "\(cuisine.icon) \(cuisine.displayName)"
-                } onToggle: { cuisine in
-                    filterVM.selectedCuisines.toggle(cuisine)
-                }
-
-                FilterSection(title: "filter.neighborhood", columns: 3, items: Neighborhood.allCases, selection: filterVM.selectedNeighborhoods) { hood in
-                    hood.displayName
-                } onToggle: { hood in
-                    filterVM.selectedNeighborhoods.toggle(hood)
-                }
-
-                FilterSection(title: "filter.priceRange", columns: 4, items: PriceRange.allCases, selection: filterVM.selectedPriceRanges) { price in
-                    price.label
-                } onToggle: { price in
-                    filterVM.selectedPriceRanges.toggle(price)
+        VStack(spacing: 0) {
+            // Header
+            ZStack {
+                Text("nav.filters")
+                    .font(.title3.bold())
+                HStack {
+                    Button { showingSettings = true } label: {
+                        Image(systemName: "gearshape")
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                            .frame(width: 32, height: 32)
+                            .background(Color(.tertiarySystemFill), in: Circle())
+                    }
+                    Spacer()
+                    Button { dismiss() } label: {
+                        Image(systemName: "xmark")
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                            .frame(width: 32, height: 32)
+                            .background(Color(.tertiarySystemFill), in: Circle())
+                    }
                 }
             }
-            .navigationTitle("nav.filters")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button("nav.reset") {
+            .padding(.horizontal, 20)
+            .padding(.top, 16)
+            .padding(.bottom, 12)
+
+            // Content
+            ScrollView {
+                VStack(alignment: .leading, spacing: 28) {
+                    FilterSection(title: "filter.cuisine", columns: 3, items: CuisineType.allCases, selection: filterVM.selectedCuisines) { cuisine in
+                        "\(cuisine.icon) \(cuisine.displayName)"
+                    } onToggle: { cuisine in
+                        filterVM.selectedCuisines.toggle(cuisine)
+                    }
+
+                    FilterSection(title: "filter.neighborhood", columns: 3, items: Neighborhood.allCases, selection: filterVM.selectedNeighborhoods) { hood in
+                        hood.displayName
+                    } onToggle: { hood in
+                        filterVM.selectedNeighborhoods.toggle(hood)
+                    }
+
+                    FilterSection(title: "filter.priceRange", columns: 4, items: PriceRange.allCases, selection: filterVM.selectedPriceRanges) { price in
+                        price.label
+                    } onToggle: { price in
+                        filterVM.selectedPriceRanges.toggle(price)
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 4)
+                .padding(.bottom, 100)
+            }
+            .scrollDismissesKeyboard(.interactively)
+
+            Spacer(minLength: 0)
+
+            // Bottom bar
+            VStack(spacing: 0) {
+                Divider()
+                HStack {
+                    Button {
                         withAnimation(.easeInOut(duration: 0.2)) {
                             filterVM.clearFilters()
                         }
+                    } label: {
+                        Text("nav.reset")
+                            .font(.body)
+                            .foregroundStyle(filterVM.hasActiveFilters ? .ffPrimary : .secondary)
                     }
-                    .foregroundStyle(.ffPrimary)
                     .disabled(!filterVM.hasActiveFilters)
-                }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("nav.done") { dismiss() }
-                        .foregroundStyle(.ffPrimary)
-                }
-            }
-            .safeAreaInset(edge: .bottom) {
-                Button { dismiss() } label: {
-                    Text(String(format: String(localized: "filter.showResults"), filteredCount))
-                        .font(.system(.body, design: .rounded, weight: .bold))
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(Color.ffPrimary, in: RoundedRectangle(cornerRadius: 14))
+
+                    Spacer()
+
+                    Button { dismiss() } label: {
+                        Text(String(format: String(localized: "filter.showResults"), filteredCount))
+                            .font(.system(.body, design: .rounded, weight: .bold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 28)
+                            .padding(.vertical, 14)
+                            .background(Color.ffPrimary, in: Capsule())
+                    }
+                    .sensoryFeedback(.impact(weight: .medium), trigger: filteredCount)
                 }
                 .padding(.horizontal, 20)
-                .padding(.bottom, 8)
-                .background(.bar)
-                .sensoryFeedback(.impact(weight: .medium), trigger: filteredCount)
+                .padding(.vertical, 12)
             }
+            .background(.bar)
+        }
+        .sheet(isPresented: $showingSettings) {
+            SettingsView()
         }
     }
 }
@@ -77,7 +115,10 @@ private struct FilterSection<Item: Identifiable & Hashable>: View {
     let onToggle: (Item) -> Void
 
     var body: some View {
-        Section(title) {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(title)
+                .font(.headline)
+
             let cols = Array(repeating: GridItem(.flexible(), spacing: 8), count: columns)
             LazyVGrid(columns: cols, spacing: 8) {
                 ForEach(items) { item in
@@ -89,7 +130,6 @@ private struct FilterSection<Item: Identifiable & Hashable>: View {
                     }
                 }
             }
-            .padding(.vertical, 4)
         }
         .sensoryFeedback(.selection, trigger: selection)
     }
@@ -112,12 +152,12 @@ private struct FilterChip: View {
                 }
                 Text(label)
                     .lineLimit(1)
-                    .minimumScaleFactor(0.8)
+                    .minimumScaleFactor(0.75)
             }
-            .font(.caption)
+            .font(.subheadline)
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 8)
-            .background(isSelected ? Color.ffPrimary : Color(.tertiarySystemFill), in: RoundedRectangle(cornerRadius: 8))
+            .padding(.vertical, 10)
+            .background(isSelected ? Color.ffPrimary : Color(.tertiarySystemFill), in: Capsule())
             .foregroundStyle(isSelected ? .white : .primary)
         }
         .buttonStyle(.plain)

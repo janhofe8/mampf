@@ -1,9 +1,9 @@
 import Foundation
 
 enum DeviceID {
-    private static let key = "finestfinder_device_id"
+    nonisolated private static let key = "finestfinder_device_id"
 
-    static var current: String {
+    nonisolated static var current: String {
         if let existing = UserDefaults.standard.string(forKey: key) {
             return existing
         }
@@ -13,7 +13,7 @@ enum DeviceID {
     }
 
     /// Reset the device ID (generates a new one on next access)
-    static func reset() {
+    nonisolated static func reset() {
         UserDefaults.standard.removeObject(forKey: key)
     }
 }

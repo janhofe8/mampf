@@ -61,8 +61,24 @@ struct RestaurantCardView: View {
                         .foregroundStyle(.white)
                         .lineLimit(compact ? 1 : 2)
 
-                    if !compact {
+                    if compact {
+                        HStack(spacing: 3) {
+                            Text(restaurant.cuisineType.icon)
+                                .font(.system(size: 10))
+                            Text(restaurant.neighborhood.displayName)
+                            Text("·")
+                            Text(restaurant.priceRange.label)
+                        }
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.8))
+                        .lineLimit(1)
+                    } else {
                         HStack(spacing: 8) {
+                            if let isOpen = restaurant.isOpenNow {
+                                Circle()
+                                    .fill(isOpen ? .green : .red)
+                                    .frame(width: 6, height: 6)
+                            }
                             Label(restaurant.neighborhood.displayName, systemImage: "mappin")
                             Text("·")
                             HStack(spacing: 2) {

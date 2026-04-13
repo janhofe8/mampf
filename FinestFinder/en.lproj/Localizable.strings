@@ -45,6 +45,17 @@
 /* Card / Row */
 "card.closed" = "Closed";
 
+/* Opening Status */
+"status.open" = "Open";
+"status.closed" = "Closed";
+"filter.openNow" = "Open Now";
+
+/* Share */
+"share.subject" = "Check out %@ on MAMPF";
+
+/* City */
+"city.comingSoon" = "More cities coming soon";
+
 /* Ratings */
 "ratings.title" = "Ratings";
 

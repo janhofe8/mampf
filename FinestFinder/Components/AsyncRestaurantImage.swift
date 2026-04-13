@@ -7,22 +7,30 @@ struct AsyncRestaurantImage: View {
     var showProgress: Bool = false
     var gradient: Bool = false
 
+    @State private var image: UIImage?
+    @State private var failed = false
+
     var body: some View {
         if let url {
-            AsyncImage(url: url) { phase in
-                switch phase {
-                case .success(let image):
-                    image
+            Group {
+                if let image {
+                    Image(uiImage: image)
                         .resizable()
                         .aspectRatio(contentMode: .fill)
-                case .failure:
+                        .transition(.opacity.animation(.easeIn(duration: 0.15)))
+                } else if failed {
                     placeholder
-                default:
-                    if showProgress {
-                        placeholder.overlay { ProgressView().tint(.white) }
-                    } else {
-                        RoundedRectangle(cornerRadius: cornerRadius).fill(.quaternary)
-                    }
+                } else if showProgress {
+                    placeholder.overlay { ProgressView().tint(.white) }
+                } else {
+                    RoundedRectangle(cornerRadius: cornerRadius).fill(.quaternary)
+                }
+            }
+            .task(id: url) {
+                if let loaded = await ImageCache.shared.image(for: url) {
+                    image = loaded
+                } else {
+                    failed = true
                 }
             }
         } else {

@@ -19,15 +19,23 @@ struct RestaurantDetailView: View {
         .toolbarBackground(.hidden, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    store.toggleFavorite(restaurant)
-                } label: {
-                    Image(systemName: store.isFavorite(restaurant) ? "heart.fill" : "heart")
-                        .foregroundStyle(store.isFavorite(restaurant) ? .red : .white)
-                        .frame(width: 36, height: 36)
-                        .background(.ultraThinMaterial, in: Circle())
+                HStack(spacing: 8) {
+                    ShareLink(item: shareText) {
+                        Image(systemName: "square.and.arrow.up")
+                            .foregroundStyle(.white)
+                            .frame(width: 36, height: 36)
+                            .background(.ultraThinMaterial, in: Circle())
+                    }
+                    Button {
+                        store.toggleFavorite(restaurant)
+                    } label: {
+                        Image(systemName: store.isFavorite(restaurant) ? "heart.fill" : "heart")
+                            .foregroundStyle(store.isFavorite(restaurant) ? .red : .white)
+                            .frame(width: 36, height: 36)
+                            .background(.ultraThinMaterial, in: Circle())
+                    }
+                    .sensoryFeedback(.impact(weight: .medium), trigger: store.isFavorite(restaurant))
                 }
-                .sensoryFeedback(.impact(weight: .medium), trigger: store.isFavorite(restaurant))
             }
         }
     }
@@ -186,6 +194,18 @@ struct RestaurantDetailView: View {
             Text("detail.info")
                 .font(.headline)
 
+            // Mini-Map
+            Map(initialPosition: .region(MKCoordinateRegion(
+                center: restaurant.coordinate,
+                span: MKCoordinateSpan(latitudeDelta: 0.005, longitudeDelta: 0.005)
+            ))) {
+                Marker(restaurant.name, coordinate: restaurant.coordinate)
+                    .tint(.ffPrimary)
+            }
+            .frame(height: 150)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .allowsHitTesting(false)
+
             infoRow(icon: "mappin.circle.fill", label: restaurant.address)
             openingHoursView
             infoRow(icon: "map.fill", label: restaurant.neighborhood.displayName)
@@ -231,6 +251,11 @@ struct RestaurantDetailView: View {
                 .frame(width: 24)
                 .padding(.top, 2)
             VStack(alignment: .leading, spacing: 4) {
+                if let isOpen = restaurant.isOpenNow {
+                    Text(isOpen ? "status.open" : "status.closed")
+                        .font(.subheadline.bold())
+                        .foregroundStyle(isOpen ? .green : .red)
+                }
                 let days = restaurant.openingHours
                     .components(separatedBy: "; ")
                     .map { $0.trimmingCharacters(in: .whitespaces) }
@@ -240,6 +265,18 @@ struct RestaurantDetailView: View {
                 }
             }
         }
+    }
+
+    private var shareText: String {
+        var text = restaurant.name
+        if let rating = restaurant.personalRating {
+            text += " — MAMPF Rating: \(rating.formattedRating)/10"
+        }
+        text += "\n\(restaurant.cuisineType.icon) \(restaurant.cuisineType.displayName) · \(restaurant.neighborhood.displayName) · \(restaurant.priceRange.label)"
+        if let url = restaurant.googleMapsUrl {
+            text += "\n\(url)"
+        }
+        return text
     }
 
     private func infoRow(icon: String, label: String) -> some View {
