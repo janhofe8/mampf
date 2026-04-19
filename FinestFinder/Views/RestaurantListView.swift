@@ -12,6 +12,7 @@ struct RestaurantListView: View {
     }
 
     @Namespace private var heroNamespace
+    @State private var searchText = ""
     @State private var showingFilters = false
     @State private var viewMode: ViewMode = .cards
     @State private var showFavoritesOnly = false
@@ -24,8 +25,6 @@ struct RestaurantListView: View {
     // MARK: - Body
 
     var body: some View {
-        @Bindable var vm = filterVM
-
         ScrollView {
             if store.isLoading && store.restaurants.isEmpty {
                 skeletonContent
@@ -94,7 +93,15 @@ struct RestaurantListView: View {
             }
         }
         .scrollDismissesKeyboard(.interactively)
-        .searchable(text: $vm.searchText, prompt: Text(String(format: String(localized: "search.restaurants"), store.restaurants.count)))
+        .searchable(text: $searchText, prompt: Text(String(format: String(localized: "search.restaurants"), store.restaurants.count)))
+        .task(id: searchText) {
+            if searchText.isEmpty {
+                filterVM.activeSearchText = ""
+                return
+            }
+            try? await Task.sleep(for: .milliseconds(250))
+            filterVM.activeSearchText = searchText
+        }
         .refreshable { await store.refresh() }
         .navigationTitle("")
         .toolbarTitleDisplayMode(.inline)
@@ -132,6 +139,7 @@ struct RestaurantListView: View {
                     Image(systemName: showFavoritesOnly ? "heart.fill" : "heart")
                         .foregroundStyle(showFavoritesOnly ? .red : .ffPrimary)
                 }
+                .accessibilityLabel(showFavoritesOnly ? "Show all" : "Show favorites")
             }
 
             ToolbarItem(placement: .topBarTrailing) {
@@ -143,6 +151,7 @@ struct RestaurantListView: View {
                     Image(systemName: viewModeIcon)
                         .foregroundStyle(.ffPrimary)
                 }
+                .accessibilityLabel("Change view mode")
             }
 
             ToolbarItem(placement: .topBarTrailing) {
@@ -182,7 +191,7 @@ struct RestaurantListView: View {
         }
         .overlay {
             if filtered.isEmpty && !store.isLoading {
-                ContentUnavailableView.search(text: filterVM.searchText)
+                ContentUnavailableView.search(text: searchText)
             }
         }
         .navigationDestination(for: Restaurant.self) { restaurant in
@@ -303,7 +312,12 @@ struct RestaurantListView: View {
                 }
 
                 HStack(spacing: 4) {
-                    if let isOpen = restaurant.isOpenNow {
+                    if restaurant.closingSoon, let min = restaurant.minutesUntilClosing {
+                        Circle().fill(.orange).frame(width: 6, height: 6)
+                        Text(String(format: String(localized: "status.closingSoon"), min))
+                            .foregroundStyle(.orange)
+                            .fontWeight(.semibold)
+                    } else if let isOpen = restaurant.isOpenNow {
                         Circle()
                             .fill(isOpen ? .green : .red)
                             .frame(width: 6, height: 6)
@@ -321,6 +335,16 @@ struct RestaurantListView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(listRowAccessibilityLabel(for: restaurant))
+        .accessibilityAddTraits(.isButton)
+    }
+
+    private func listRowAccessibilityLabel(for restaurant: Restaurant) -> String {
+        var parts = [restaurant.name, restaurant.cuisineType.displayName, restaurant.neighborhood.displayName]
+        if let rating = restaurant.personalRating { parts.append("MAMPF \(rating.formattedRating)") }
+        if let isOpen = restaurant.isOpenNow { parts.append(isOpen ? String(localized: "status.open") : String(localized: "status.closed")) }
+        return parts.joined(separator: ", ")
     }
 
     // MARK: - Distance (#11)

@@ -156,6 +156,63 @@ struct OpeningHoursParser {
             return current >= open || current < close
         }
     }
+
+    /// Returns minutes until closing for the current day segment, or nil if unknown/closed.
+    static func minutesUntilClosing(for openingHours: String, at date: Date = .now) -> Int? {
+        let trimmed = openingHours.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return nil }
+
+        let calendar = Calendar.current
+        let weekday = calendar.component(.weekday, from: date)
+        let hour = calendar.component(.hour, from: date)
+        let minute = calendar.component(.minute, from: date)
+        let currentMinutes = hour * 60 + minute
+
+        let segments = trimmed.components(separatedBy: ";").map {
+            normalizeUnicode($0.trimmingCharacters(in: .whitespaces))
+        }
+
+        for segment in segments {
+            if let close = parseSegmentClosingTime(segment, weekday: weekday, currentMinutes: currentMinutes) {
+                if close > currentMinutes {
+                    return close - currentMinutes
+                } else if close < currentMinutes {
+                    // Wraps past midnight
+                    return (24 * 60 - currentMinutes) + close
+                }
+            }
+        }
+        return nil
+    }
+
+    /// Returns the closing time (in minutes) if the segment matches today and we're currently open.
+    private static func parseSegmentClosingTime(_ segment: String, weekday: Int, currentMinutes: Int) -> Int? {
+        // Google format
+        if let colonIdx = segment.firstIndex(of: ":") {
+            let beforeColon = String(segment[..<colonIdx]).trimmingCharacters(in: .whitespaces)
+            if dayNumber(beforeColon.lowercased()) != nil {
+                guard matchesDay(beforeColon, weekday: weekday) else { return nil }
+                let timePart = String(segment[segment.index(after: colonIdx)...]).trimmingCharacters(in: .whitespaces)
+                return closingTimeIfOpen(timePart, currentMinutes: currentMinutes)
+            }
+        }
+        // Simple format
+        if let spaceIdx = segment.firstIndex(of: " ") {
+            let firstWord = String(segment[..<spaceIdx])
+            if firstWord.allSatisfy({ $0.isLetter || $0 == "-" }) {
+                guard matchesDay(firstWord, weekday: weekday) else { return nil }
+                let timePart = String(segment[segment.index(after: spaceIdx)...]).trimmingCharacters(in: .whitespaces)
+                return closingTimeIfOpen(timePart, currentMinutes: currentMinutes)
+            }
+        }
+        return nil
+    }
+
+    private static func closingTimeIfOpen(_ timePart: String, currentMinutes: Int) -> Int? {
+        guard let (open, close) = parseTimeRange(timePart),
+              isTimeInRange(currentMinutes, open: open, close: close) else { return nil }
+        return close
+    }
 }
 
 // MARK: - Restaurant Extension
@@ -172,5 +229,17 @@ extension Restaurant {
         case .closed: false
         case .unknown: nil
         }
+    }
+
+    /// Minutes until closing, or nil if closed/unknown.
+    var minutesUntilClosing: Int? {
+        guard !isClosed else { return nil }
+        return OpeningHoursParser.minutesUntilClosing(for: openingHours)
+    }
+
+    /// True if open and closing within 30 minutes.
+    var closingSoon: Bool {
+        guard let minutes = minutesUntilClosing else { return false }
+        return minutes > 0 && minutes <= 30
     }
 }

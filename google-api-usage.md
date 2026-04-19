@@ -37,3 +37,19 @@
 | Place Details | ~243 | 5.000 | ~4.757 |
 | Place Photo | ~247 | 1.000 | ~753 |
 | **Gesamt** | **~936** | | |
+
+## April 2026
+
+### 2026-04-19
+| SKU | Calls | Kontext |
+|-----|-------|---------|
+| Text Search | 2 | Vienna, Pizzeria Michele Ottensen |
+
+**Neue Spots:** Vienna (Karolinenviertel, 🥨 German, €€€, MAMPF 8.0), L'Antica Pizzeria da Michele (Ottensen, 🍕 Pizza, €€, MAMPF 6.5)
+
+### Monats-Summe April
+| SKU | Verbraucht | Gratis-Limit | Rest |
+|-----|-----------|--------------|------|
+| Text Search | 2 | 5.000 | 4.998 |
+| Place Details | 0 | 5.000 | 5.000 |
+| Place Photo | 0 | 1.000 | 1.000 |

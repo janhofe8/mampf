@@ -6,6 +6,9 @@ struct RestaurantDetailView: View {
     @Environment(RestaurantStore.self) private var store
     @State private var userRating: Double = 0
     @State private var hasSubmitted = false
+    @State private var isSubmitting = false
+    @State private var showError = false
+    @State private var errorMessage = ""
 
     var body: some View {
         ScrollView {
@@ -35,6 +38,7 @@ struct RestaurantDetailView: View {
                             .background(.ultraThinMaterial, in: Circle())
                     }
                     .sensoryFeedback(.impact(weight: .medium), trigger: store.isFavorite(restaurant))
+                .accessibilityLabel(store.isFavorite(restaurant) ? "Remove from favorites" : "Add to favorites")
                 }
             }
         }
@@ -142,6 +146,8 @@ struct RestaurantDetailView: View {
                 Slider(value: $userRating, in: 1...10, step: 0.5)
                     .tint(RatingSource.community.color)
                     .sensoryFeedback(.selection, trigger: userRating)
+                    .accessibilityLabel("Rating")
+                    .accessibilityValue("\(userRating.formattedRating) of 10")
 
                 Text("detail.outOf10")
                     .font(.subheadline)
@@ -150,28 +156,56 @@ struct RestaurantDetailView: View {
 
             HStack(spacing: 10) {
                 Button {
+                    guard validatedRating != nil else { return }
                     Task {
+                        isSubmitting = true
+                        let previousRating = store.myRating(for: restaurant)
+                        let previousHasSubmitted = hasSubmitted
                         await store.submitRating(for: restaurant, rating: userRating)
-                        hasSubmitted = true
-                        UINotificationFeedbackGenerator().notificationOccurred(.success)
+                        if store.error != nil {
+                            // Revert optimistic state on failure
+                            if !previousHasSubmitted { hasSubmitted = false }
+                            errorMessage = String(localized: "error.ratingFailed")
+                            showError = true
+                            UINotificationFeedbackGenerator().notificationOccurred(.error)
+                        } else {
+                            hasSubmitted = true
+                            UINotificationFeedbackGenerator().notificationOccurred(.success)
+                        }
+                        isSubmitting = false
                     }
                 } label: {
-                    Text(hasSubmitted ? String(localized: "detail.update") : String(localized: "detail.rate"))
-                        .font(.subheadline.weight(.semibold))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 10)
-                        .background(userRating > 0 ? Color.ffPrimary : Color.gray.opacity(0.3), in: RoundedRectangle(cornerRadius: 10))
-                        .foregroundStyle(.white)
+                    Group {
+                        if isSubmitting {
+                            ProgressView()
+                                .tint(.white)
+                        } else {
+                            Text(hasSubmitted ? String(localized: "detail.update") : String(localized: "detail.rate"))
+                        }
+                    }
+                    .font(.subheadline.weight(.semibold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .background(validatedRating != nil ? Color.ffPrimary : Color.gray.opacity(0.3), in: RoundedRectangle(cornerRadius: 10))
+                    .foregroundStyle(.white)
                 }
-                .disabled(userRating == 0)
+                .disabled(validatedRating == nil || isSubmitting)
 
                 if hasSubmitted {
                     Button {
                         Task {
+                            isSubmitting = true
                             await store.deleteRating(for: restaurant)
-                            userRating = 0
-                            hasSubmitted = false
-                            UINotificationFeedbackGenerator().notificationOccurred(.warning)
+                            if store.error != nil {
+                                errorMessage = String(localized: "error.deleteFailed")
+                                showError = true
+                                UINotificationFeedbackGenerator().notificationOccurred(.error)
+                            } else {
+                                userRating = 0
+                                hasSubmitted = false
+                                UINotificationFeedbackGenerator().notificationOccurred(.warning)
+                            }
+                            isSubmitting = false
                         }
                     } label: {
                         Image(systemName: "trash")
@@ -181,7 +215,13 @@ struct RestaurantDetailView: View {
                             .background(Color.gray.opacity(0.15), in: RoundedRectangle(cornerRadius: 10))
                             .foregroundStyle(.red)
                     }
+                    .disabled(isSubmitting)
                 }
+            }
+            .alert(String(localized: "error.title"), isPresented: $showError) {
+                Button("OK") {}
+            } message: {
+                Text(errorMessage)
             }
         }
         .padding()
@@ -265,6 +305,14 @@ struct RestaurantDetailView: View {
                 }
             }
         }
+    }
+
+    /// Returns the rating if valid (1-10, 0.5 steps), nil otherwise.
+    private var validatedRating: Double? {
+        guard userRating >= 1, userRating <= 10 else { return nil }
+        let rounded = (userRating * 2).rounded() / 2
+        guard rounded == userRating else { return nil }
+        return userRating
     }
 
     private var shareText: String {

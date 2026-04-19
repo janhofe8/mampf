@@ -12,14 +12,14 @@ struct MapTabView: View {
             span: MKCoordinateSpan(latitudeDelta: 0.06, longitudeDelta: 0.06)
         )
     )
+    @State private var searchText = ""
     @State private var isZoomedIn = false
+    @State private var currentSpan: Double = 0.06
     @State private var showRatingFilter = false
     @FocusState private var searchFocused: Bool
-    @State private var pulseAnimation = false
-
-    private var filtered: [Restaurant] {
-        filterVM.apply(to: store.restaurants, userLocation: locationManager.lastLocation, communityRatings: store.communityRatings)
-    }
+    // Cached results — updated only when inputs change
+    @State private var cachedFiltered: [Restaurant] = []
+    @State private var cachedAnnotations: [MapCluster] = []
 
     // MARK: - Body
 
@@ -29,42 +29,30 @@ struct MapTabView: View {
         Map(position: $position) {
             if let location = locationManager.lastLocation {
                 Annotation(String(localized: "map.myLocation"), coordinate: location) {
-                    ZStack {
-                        Circle()
-                            .fill(.blue.opacity(0.15))
-                            .frame(width: 36, height: 36)
-                            .scaleEffect(pulseAnimation ? 1.4 : 1.0)
-                            .opacity(pulseAnimation ? 0.0 : 0.15)
-                            .animation(.easeInOut(duration: 2.5).repeatForever(autoreverses: false), value: pulseAnimation)
-                        Circle()
-                            .fill(.blue)
-                            .frame(width: 14, height: 14)
-                            .overlay(Circle().stroke(.white, lineWidth: 2.5))
-                            .shadow(color: .blue.opacity(0.4), radius: 4)
-                    }
-                    .onAppear { pulseAnimation = true }
+                    Circle()
+                        .fill(.blue)
+                        .frame(width: 14, height: 14)
+                        .overlay(Circle().strokeBorder(.white, lineWidth: 2.5))
                 }
             }
 
-            ForEach(filtered) { restaurant in
-                Annotation(restaurant.name, coordinate: restaurant.coordinate) {
-                    mapPin(for: restaurant)
-                        .onTapGesture {
-                            selectedRestaurant = restaurant
-                        }
+            ForEach(cachedAnnotations) { cluster in
+                Annotation(cluster.label, coordinate: cluster.coordinate) {
+                    annotationContent(for: cluster)
                 }
             }
         }
         .onMapCameraChange { context in
-            let zoomed = context.region.span.latitudeDelta < 0.03
+            let span = context.region.span.latitudeDelta
+            currentSpan = span
+            let zoomed = span < 0.03
             if zoomed != isZoomedIn {
                 withAnimation(.easeInOut(duration: 0.2)) {
                     isZoomedIn = zoomed
                 }
             }
-        }
-        .onTapGesture {
-            searchFocused = false
+            // Dismiss keyboard/filter on map interaction instead of .onTapGesture
+            if searchFocused { searchFocused = false }
             if showRatingFilter {
                 withAnimation { showRatingFilter = false }
             }
@@ -79,7 +67,7 @@ struct MapTabView: View {
                 RatingHistogramFilter(
                     restaurants: store.restaurants,
                     minimumRating: $vm.minimumRating,
-                    matchCount: filtered.count,
+                    matchCount: cachedFiltered.count,
                     onDismiss: { withAnimation { showRatingFilter = false } }
                 )
                 .padding(.horizontal, 12)
@@ -89,118 +77,212 @@ struct MapTabView: View {
         }
         // Bottom-right: location
         .overlay(alignment: .bottomTrailing) {
-            MapControlButton(icon: "location.fill") {
-                if locationManager.authorizationStatus == .notDetermined {
-                    locationManager.requestPermission()
-                } else if let location = locationManager.lastLocation {
-                    withAnimation {
-                        position = .region(MKCoordinateRegion(
-                            center: location,
-                            span: MKCoordinateSpan(latitudeDelta: 0.02, longitudeDelta: 0.02)
-                        ))
-                    }
-                }
-            }
-            .padding(.trailing, 12)
-            .padding(.bottom, 16)
+            locationButton
         }
+        .task(id: searchText) {
+            if searchText.isEmpty {
+                filterVM.activeSearchText = ""
+                return
+            }
+            try? await Task.sleep(for: .milliseconds(250))
+            filterVM.activeSearchText = searchText
+        }
+        .task { refreshAnnotations() }
+        .onChange(of: filterInputsToken) { refreshAnnotations() }
+        .onChange(of: isZoomedIn) { refreshAnnotations() }
         .toolbar(.hidden, for: .navigationBar)
         .sensoryFeedback(.selection, trigger: selectedRestaurant)
         .sensoryFeedback(.impact(weight: .light), trigger: showRatingFilter)
         .sheet(item: $selectedRestaurant) { restaurant in
-            NavigationStack {
-                RestaurantDetailView(restaurant: restaurant)
-                    .toolbar {
-                        ToolbarItem(placement: .topBarLeading) {
-                            Button("nav.done") { selectedRestaurant = nil }
-                                .foregroundStyle(.ffPrimary)
-                        }
-                    }
-            }
-            .presentationDetents([.medium, .large])
+            detailSheet(for: restaurant)
         }
+    }
+
+    /// Hash of all filter/data inputs — single onChange instead of 12 separate ones
+    private var filterInputsToken: Int {
+        var h = Hasher()
+        h.combine(store.restaurants.count)
+        h.combine(filterVM.activeSearchText)
+        h.combine(filterVM.selectedCuisines)
+        h.combine(filterVM.selectedNeighborhoods)
+        h.combine(filterVM.selectedPriceRanges)
+        h.combine(filterVM.minimumRating)
+        h.combine(filterVM.maximumRating)
+        h.combine(filterVM.showOpenOnly)
+        h.combine(filterVM.sortField)
+        h.combine(filterVM.sortAscending)
+        return h.finalize()
+    }
+
+    private func detailSheet(for restaurant: Restaurant) -> some View {
+        NavigationStack {
+            RestaurantDetailView(restaurant: restaurant)
+                .toolbar {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button("nav.done") { selectedRestaurant = nil }
+                            .foregroundStyle(.ffPrimary)
+                    }
+                }
+        }
+        .presentationDetents([.medium, .large])
+    }
+
+    // MARK: - Location Button
+
+    private var locationButton: some View {
+        MapControlButton(icon: "location.fill") {
+            if locationManager.authorizationStatus == .notDetermined {
+                locationManager.requestPermission()
+            } else if let location = locationManager.lastLocation {
+                withAnimation {
+                    position = .region(MKCoordinateRegion(
+                        center: location,
+                        span: MKCoordinateSpan(latitudeDelta: 0.02, longitudeDelta: 0.02)
+                    ))
+                }
+            }
+        }
+        .padding(.trailing, 12)
+        .padding(.bottom, 16)
     }
 
     // MARK: - Top Overlay
 
     @ViewBuilder
     private var topOverlay: some View {
-        @Bindable var vm = filterVM
-        let showingSuggestions = !filterVM.searchText.isEmpty
+        let showingDropdown = searchFocused || !searchText.isEmpty
 
         VStack(spacing: 8) {
             // Search card
             VStack(spacing: 0) {
-                HStack(spacing: 8) {
-                    Image(systemName: "magnifyingglass")
-                        .font(.system(size: 15, weight: .medium))
-                        .foregroundStyle(.secondary)
-                    TextField(
-                        String(format: String(localized: "search.restaurants"), store.restaurants.count),
-                        text: $vm.searchText
-                    )
-                    .focused($searchFocused)
-                    .textFieldStyle(.plain)
-                    .font(.subheadline)
-                    .onSubmit {
-                        if let first = searchSuggestions.first {
-                            selectSearchResult(first)
-                        }
-                    }
-                    if showingSuggestions {
-                        Button {
-                            withAnimation(.easeOut(duration: 0.2)) {
-                                searchFocused = false
-                                filterVM.searchText = ""
-                            }
-                        } label: {
-                            Image(systemName: "xmark.circle.fill")
-                                .font(.system(size: 16))
-                                .foregroundStyle(.tertiary)
-                        }
-                    }
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 10)
-
-                if showingSuggestions {
+                searchBarRow
+                if showingDropdown {
                     Divider().padding(.horizontal, 12)
-                    let capped = Array(searchSuggestions.prefix(5))
-                    if capped.isEmpty {
-                        VStack(spacing: 6) {
-                            Image(systemName: "magnifyingglass")
-                                .font(.title3)
-                                .foregroundStyle(.tertiary)
-                            Text("search.noResults")
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                        }
-                        .padding(.vertical, 16)
-                        .frame(maxWidth: .infinity)
-                    } else {
-                        VStack(spacing: 0) {
-                            ForEach(Array(capped.enumerated()), id: \.element.id) { index, restaurant in
-                                searchSuggestionRow(for: restaurant)
-                                if index < capped.count - 1 {
-                                    Divider().padding(.leading, 52)
-                                }
-                            }
-                        }
-                    }
+                    searchDropdownContent
                 }
             }
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
-            .shadow(color: .black.opacity(0.1), radius: 8, y: 2)
+            .background(Color(.systemBackground), in: RoundedRectangle(cornerRadius: 14))
+            .shadow(color: .black.opacity(0.08), radius: 6, y: 2)
 
-            // Chip bar (hide when showing suggestions)
-            if !showingSuggestions {
+            // Chip bar (hide when dropdown open)
+            if !showingDropdown {
                 chipBar
                     .transition(.opacity)
             }
         }
         .padding(.horizontal, 12)
         .padding(.top, 8)
-        .animation(.easeInOut(duration: 0.2), value: showingSuggestions)
+        .animation(.easeInOut(duration: 0.2), value: showingDropdown)
+    }
+
+    private var searchBarRow: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 18, weight: .medium))
+                .foregroundStyle(.secondary)
+            TextField(
+                String(format: String(localized: "search.restaurants"), store.restaurants.count),
+                text: $searchText
+            )
+            .focused($searchFocused)
+            .textFieldStyle(.plain)
+            .font(.system(size: 17))
+            .onSubmit {
+                if let first = searchSuggestions.first {
+                    selectSearchResult(first)
+                }
+            }
+            if searchFocused || !searchText.isEmpty {
+                Button {
+                    withAnimation(.easeOut(duration: 0.2)) {
+                        searchFocused = false
+                        searchText = ""
+                        filterVM.activeSearchText = ""
+                    }
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 20))
+                        .foregroundStyle(.tertiary)
+                }
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 16)
+    }
+
+    @ViewBuilder
+    private var searchDropdownContent: some View {
+        if searchText.isEmpty {
+            // Category suggestions when focused but empty
+            categorySuggestions
+        } else {
+            // Restaurant results when typing
+            let capped = Array(searchSuggestions.prefix(8))
+            if capped.isEmpty {
+                VStack(spacing: 6) {
+                    Image(systemName: "magnifyingglass")
+                        .font(.title3)
+                        .foregroundStyle(.tertiary)
+                    Text("search.noResults")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.vertical, 16)
+                .frame(maxWidth: .infinity)
+            } else {
+                ScrollView {
+                    VStack(spacing: 0) {
+                        ForEach(Array(capped.enumerated()), id: \.element.id) { index, restaurant in
+                            searchSuggestionRow(for: restaurant)
+                            if index < capped.count - 1 {
+                                Divider().padding(.leading, 52)
+                            }
+                        }
+                    }
+                }
+                .frame(maxHeight: 380)
+            }
+        }
+    }
+
+    /// Popular categories sorted by restaurant count
+    private var categorySuggestions: some View {
+        let counts = Dictionary(grouping: store.restaurants, by: \.cuisineType)
+            .mapValues(\.count)
+        let sorted = counts.sorted { $0.value > $1.value }.prefix(8)
+
+        return ScrollView {
+            VStack(spacing: 0) {
+                ForEach(Array(sorted.enumerated()), id: \.element.key) { index, entry in
+                    Button {
+                        withAnimation(.easeOut(duration: 0.15)) {
+                            searchText = entry.key.displayName
+                        }
+                    } label: {
+                        HStack(spacing: 14) {
+                            Text(entry.key.icon)
+                                .font(.system(size: 22))
+                                .frame(width: 36)
+                            Text(entry.key.displayName)
+                                .font(.system(size: 16, weight: .medium))
+                                .foregroundStyle(.primary)
+                            Spacer()
+                            Text("\(entry.value)")
+                                .font(.subheadline)
+                                .foregroundStyle(.tertiary)
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    if index < sorted.count - 1 {
+                        Divider().padding(.leading, 66)
+                    }
+                }
+            }
+        }
+        .frame(maxHeight: 380)
     }
 
     // MARK: - Chip Bar
@@ -428,19 +510,22 @@ struct MapTabView: View {
     }
 
     private var searchSuggestions: [Restaurant] {
-        guard !filterVM.searchText.isEmpty else { return [] }
-        let query = filterVM.searchText
-        return store.restaurants.filter {
-            $0.name.localizedCaseInsensitiveContains(query)
-                || $0.cuisineType.displayName.localizedCaseInsensitiveContains(query)
-                || $0.neighborhood.displayName.localizedCaseInsensitiveContains(query)
-        }
+        guard !searchText.isEmpty else { return [] }
+        let query = searchText.lowercased()
+        return store.restaurants
+            .filter {
+                $0.name.lowercased().contains(query)
+                    || $0.cuisineType.displayName.lowercased().contains(query)
+                    || $0.neighborhood.displayName.lowercased().contains(query)
+            }
+            .sorted { ($0.personalRating ?? 0) > ($1.personalRating ?? 0) }
     }
 
     private func selectSearchResult(_ restaurant: Restaurant) {
         withAnimation(.easeOut(duration: 0.2)) {
             searchFocused = false
-            filterVM.searchText = ""
+            searchText = ""
+            filterVM.activeSearchText = ""
         }
         withAnimation {
             position = .region(MKCoordinateRegion(
@@ -451,6 +536,72 @@ struct MapTabView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
             selectedRestaurant = restaurant
         }
+    }
+
+    // MARK: - Annotation Content
+
+    @ViewBuilder
+    private func annotationContent(for cluster: MapCluster) -> some View {
+        if cluster.isCluster {
+            clusterPin(count: cluster.count, topRating: cluster.topRating)
+                .onTapGesture {
+                    withAnimation(.easeInOut(duration: 0.4)) {
+                        position = .region(MKCoordinateRegion(
+                            center: cluster.coordinate,
+                            span: MKCoordinateSpan(latitudeDelta: currentSpan * 0.4, longitudeDelta: currentSpan * 0.4)
+                        ))
+                    }
+                }
+        } else if let restaurant = cluster.restaurants.first {
+            mapPin(for: restaurant)
+                .accessibilityLabel("\(restaurant.name), \(restaurant.cuisineType.displayName)")
+                .accessibilityAddTraits(.isButton)
+                .onTapGesture {
+                    selectedRestaurant = restaurant
+                }
+        }
+    }
+
+    // MARK: - Clustering
+
+    /// Fixed grid size (~600m) so cluster IDs stay stable across zoom changes
+    private static let clusterGridSize: Double = 0.008
+
+    private func refreshAnnotations() {
+        let filtered = filterVM.apply(to: store.restaurants, userLocation: locationManager.lastLocation, communityRatings: store.communityRatings)
+        cachedFiltered = filtered
+
+        guard !isZoomedIn else {
+            cachedAnnotations = filtered.map { MapCluster(id: $0.id.uuidString, restaurants: [$0]) }
+            return
+        }
+        let gs = Self.clusterGridSize
+        var grid: [String: [Restaurant]] = [:]
+        for r in filtered {
+            let gx = Int((r.longitude / gs).rounded(.down))
+            let gy = Int((r.latitude / gs).rounded(.down))
+            grid["c\(gx),\(gy)", default: []].append(r)
+        }
+        cachedAnnotations = grid.map { key, restaurants in
+            let id = restaurants.count == 1 ? restaurants[0].id.uuidString : key
+            return MapCluster(id: id, restaurants: restaurants)
+        }
+    }
+
+    @ViewBuilder
+    private func clusterPin(count: Int, topRating: Double?) -> some View {
+        let color: Color = topRating.map { .ratingColor(for: $0) } ?? .ffMuted
+        Circle()
+            .fill(color)
+            .frame(width: 32, height: 32)
+            .overlay {
+                Text("\(count)")
+                    .font(.system(size: 13, weight: .black).monospacedDigit())
+                    .foregroundStyle(.white)
+            }
+            .overlay {
+                Circle().strokeBorder(.white, lineWidth: 2.5)
+            }
     }
 
     // MARK: - Map Pins
@@ -464,18 +615,40 @@ struct MapTabView: View {
                 .foregroundStyle(Color.ratingTextColor(for: rating))
                 .frame(minWidth: 28, minHeight: 28)
                 .background(color, in: Circle())
-                .shadow(color: color.opacity(0.5), radius: 4)
+                .overlay { Circle().strokeBorder(.white, lineWidth: 1.5) }
         } else {
             Circle()
                 .fill(color)
                 .frame(width: 14, height: 14)
-                .shadow(color: color.opacity(0.4), radius: 4)
+                .overlay { Circle().strokeBorder(.white, lineWidth: 1.5) }
         }
     }
 
     private func annotationColor(for restaurant: Restaurant) -> Color {
         guard let rating = restaurant.personalRating else { return .ffMuted }
         return .ratingColor(for: rating)
+    }
+}
+
+// MARK: - Clustering Model
+
+private struct MapCluster: Identifiable {
+    /// Stable ID: single restaurant uses its UUID, clusters use grid key
+    let id: String
+    let restaurants: [Restaurant]
+
+    var count: Int { restaurants.count }
+    var isCluster: Bool { count > 1 }
+    var label: String { isCluster ? "" : (restaurants.first?.name ?? "") }
+
+    var coordinate: CLLocationCoordinate2D {
+        let lat = restaurants.map(\.latitude).reduce(0, +) / Double(restaurants.count)
+        let lon = restaurants.map(\.longitude).reduce(0, +) / Double(restaurants.count)
+        return CLLocationCoordinate2D(latitude: lat, longitude: lon)
+    }
+
+    var topRating: Double? {
+        restaurants.compactMap(\.personalRating).max()
     }
 }
 

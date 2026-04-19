@@ -11,6 +11,7 @@
 "search.restaurants" = "Search %d food spots…";
 "search.cancel" = "Cancel";
 "search.noResults" = "No results";
+"search.popularCategories" = "Popular categories";
 
 /* Map */
 "map.myLocation" = "My Location";
@@ -90,3 +91,11 @@
 "settings.appearance.light" = "Light";
 "settings.appearance.dark" = "Dark";
 "settings.dataDeleted" = "All data deleted";
+
+/* Errors */
+"error.title" = "Error";
+"error.ratingFailed" = "Could not submit your rating. Please try again.";
+"error.deleteFailed" = "Could not delete your rating. Please try again.";
+
+/* Opening Status Extended */
+"status.closingSoon" = "Closes in %d min";

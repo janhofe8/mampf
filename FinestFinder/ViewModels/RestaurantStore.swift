@@ -60,6 +60,7 @@ final class RestaurantStore {
     }
 
     func deleteRating(for restaurant: Restaurant) async {
+        error = nil
         do {
             try await userRatingRepo.deleteRating(restaurantId: restaurant.id)
             myRatings.removeValue(forKey: restaurant.id)
@@ -72,6 +73,7 @@ final class RestaurantStore {
     }
 
     func submitRating(for restaurant: Restaurant, rating: Double) async {
+        error = nil
         do {
             try await userRatingRepo.submitRating(restaurantId: restaurant.id, rating: rating)
             myRatings[restaurant.id] = rating

@@ -74,7 +74,14 @@ struct RestaurantCardView: View {
                         .lineLimit(1)
                     } else {
                         HStack(spacing: 8) {
-                            if let isOpen = restaurant.isOpenNow {
+                            if restaurant.closingSoon, let min = restaurant.minutesUntilClosing {
+                                HStack(spacing: 3) {
+                                    Circle().fill(.orange).frame(width: 6, height: 6)
+                                    Text(String(format: String(localized: "status.closingSoon"), min))
+                                        .font(.caption2.bold())
+                                }
+                                .foregroundStyle(.orange)
+                            } else if let isOpen = restaurant.isOpenNow {
                                 Circle()
                                     .fill(isOpen ? .green : .red)
                                     .frame(width: 6, height: 6)
@@ -119,6 +126,23 @@ struct RestaurantCardView: View {
         .frame(height: compact ? 120 : 280)
         .clipShape(RoundedRectangle(cornerRadius: compact ? 12 : 20))
         .shadow(color: .black.opacity(0.15), radius: compact ? 5 : 10, y: compact ? 2 : 5)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(cardAccessibilityLabel)
+        .accessibilityAddTraits(.isButton)
+    }
+
+    private var cardAccessibilityLabel: String {
+        var parts = [restaurant.name, restaurant.cuisineType.displayName, restaurant.neighborhood.displayName, restaurant.priceRange.label]
+        if let rating = restaurant.personalRating {
+            parts.append("MAMPF \(rating.formattedRating)")
+        }
+        if restaurant.closingSoon, let min = restaurant.minutesUntilClosing {
+            parts.append(String(format: String(localized: "status.closingSoon"), min))
+        } else if let isOpen = restaurant.isOpenNow {
+            parts.append(isOpen ? String(localized: "status.open") : String(localized: "status.closed"))
+        }
+        if isFavorite { parts.append("Favorite") }
+        return parts.joined(separator: ", ")
     }
 
     private var cardImage: some View {

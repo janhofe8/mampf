@@ -11,6 +11,7 @@
 "search.restaurants" = "%d Foodspots durchsuchen…";
 "search.cancel" = "Abbrechen";
 "search.noResults" = "Keine Ergebnisse";
+"search.popularCategories" = "Beliebte Kategorien";
 
 /* Map */
 "map.myLocation" = "Mein Standort";
@@ -90,3 +91,11 @@
 "settings.appearance.light" = "Hell";
 "settings.appearance.dark" = "Dunkel";
 "settings.dataDeleted" = "Alle Daten gelöscht";
+
+/* Errors */
+"error.title" = "Fehler";
+"error.ratingFailed" = "Bewertung konnte nicht gespeichert werden. Bitte versuche es erneut.";
+"error.deleteFailed" = "Bewertung konnte nicht gelöscht werden. Bitte versuche es erneut.";
+
+/* Opening Status Extended */
+"status.closingSoon" = "Schließt in %d Min";

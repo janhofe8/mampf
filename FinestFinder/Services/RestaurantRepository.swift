@@ -7,10 +7,12 @@ actor RestaurantRepository {
         return dir.appendingPathComponent("restaurants_cache.json")
     }()
 
+    private static let columns = "id,name,cuisine_type,neighborhood,price_range,address,latitude,longitude,opening_hours,is_closed,notes,image_url,personal_rating,google_rating,google_review_count,google_place_id,google_maps_url,created_at"
+
     func fetchRestaurants() async throws -> [Restaurant] {
         let restaurants: [Restaurant] = try await SupabaseManager.shared.client
             .from("restaurants")
-            .select()
+            .select(Self.columns)
             .execute()
             .value
         cacheRestaurants(restaurants)

@@ -97,6 +97,8 @@ struct RatingPill: View {
         .padding(.horizontal, size.horizontalPadding)
         .padding(.vertical, size.verticalPadding)
         .background(color, in: Capsule())
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(value)")
     }
 }
 

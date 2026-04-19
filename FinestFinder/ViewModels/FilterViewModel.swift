@@ -63,11 +63,7 @@ extension Set {
 
 @Observable
 final class FilterViewModel {
-    var searchText = "" {
-        didSet { debounceSearch() }
-    }
-    private(set) var activeSearchText = ""
-    private var searchTask: Task<Void, Never>?
+    var activeSearchText = ""
     var selectedCuisines: Set<CuisineType> = []
     var selectedNeighborhoods: Set<Neighborhood> = []
     var selectedPriceRanges: Set<PriceRange> = []
@@ -89,19 +85,6 @@ final class FilterViewModel {
             if field == .random {
                 randomSeed = UUID()
             }
-        }
-    }
-
-    private func debounceSearch() {
-        searchTask?.cancel()
-        if searchText.isEmpty {
-            activeSearchText = ""
-            return
-        }
-        searchTask = Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(250))
-            guard !Task.isCancelled else { return }
-            activeSearchText = searchText
         }
     }
 
