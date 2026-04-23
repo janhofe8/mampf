@@ -100,7 +100,7 @@ struct Restaurant: Identifiable, Hashable, Codable {
     let googleReviewCount: Int?
     let googlePlaceId: String?
     let googleMapsUrl: String?
-    let createdAt: String?
+    let createdAt: Date?
 
     var coordinate: CLLocationCoordinate2D {
         CLLocationCoordinate2D(latitude: latitude, longitude: longitude)

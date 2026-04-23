@@ -22,13 +22,25 @@ actor RestaurantRepository {
     /// Offline fallback only
     func loadCachedRestaurants() -> [Restaurant] {
         guard let data = try? Data(contentsOf: cacheURL),
-              let restaurants = try? JSONDecoder().decode([Restaurant].self, from: data)
+              let restaurants = try? Self.decoder.decode([Restaurant].self, from: data)
         else { return [] }
         return restaurants
     }
 
     private func cacheRestaurants(_ restaurants: [Restaurant]) {
-        guard let data = try? JSONEncoder().encode(restaurants) else { return }
+        guard let data = try? Self.encoder.encode(restaurants) else { return }
         try? data.write(to: cacheURL)
     }
+
+    private static let decoder: JSONDecoder = {
+        let d = JSONDecoder()
+        d.dateDecodingStrategy = .iso8601
+        return d
+    }()
+
+    private static let encoder: JSONEncoder = {
+        let e = JSONEncoder()
+        e.dateEncodingStrategy = .iso8601
+        return e
+    }()
 }

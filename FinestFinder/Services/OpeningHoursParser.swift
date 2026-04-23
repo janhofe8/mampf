@@ -31,33 +31,30 @@ struct OpeningHoursParser {
 
     // MARK: - Segment Parsing
 
-    private static func parseSegment(_ segment: String, weekday: Int, currentMinutes: Int) -> OpeningStatus? {
-        // Google format: "Monday: 12:00 - 10:00 PM"
+    /// Extracts the time portion if segment's day-part matches `weekday`. Returns nil if segment doesn't match today.
+    /// Supports Google format ("Monday: 12:00 - 10:00 PM") and simple format ("Mon-Sun 12:00-22:30" / "Sun closed").
+    private static func timePart(for segment: String, weekday: Int) -> String? {
         if let colonIdx = segment.firstIndex(of: ":") {
             let beforeColon = String(segment[..<colonIdx]).trimmingCharacters(in: .whitespaces)
             if dayNumber(beforeColon.lowercased()) != nil {
                 guard matchesDay(beforeColon, weekday: weekday) else { return nil }
-                let timePart = String(segment[segment.index(after: colonIdx)...]).trimmingCharacters(in: .whitespaces)
-                return evaluateTimePart(timePart, currentMinutes: currentMinutes)
+                return String(segment[segment.index(after: colonIdx)...]).trimmingCharacters(in: .whitespaces)
             }
         }
-
-        // Simple format: "Mon-Sun 12:00-22:30" or "Sun closed"
         if let spaceIdx = segment.firstIndex(of: " ") {
             let firstWord = String(segment[..<spaceIdx])
             if firstWord.allSatisfy({ $0.isLetter || $0 == "-" }) {
                 guard matchesDay(firstWord, weekday: weekday) else { return nil }
-                let timePart = String(segment[segment.index(after: spaceIdx)...]).trimmingCharacters(in: .whitespaces)
-                return evaluateTimePart(timePart, currentMinutes: currentMinutes)
+                return String(segment[segment.index(after: spaceIdx)...]).trimmingCharacters(in: .whitespaces)
             }
         }
-
         return nil
     }
 
-    private static func evaluateTimePart(_ timePart: String, currentMinutes: Int) -> OpeningStatus {
-        if timePart.lowercased() == "closed" { return .closed }
-        if let (open, close) = parseTimeRange(timePart) {
+    private static func parseSegment(_ segment: String, weekday: Int, currentMinutes: Int) -> OpeningStatus? {
+        guard let part = timePart(for: segment, weekday: weekday) else { return nil }
+        if part.lowercased() == "closed" { return .closed }
+        if let (open, close) = parseTimeRange(part) {
             return isTimeInRange(currentMinutes, open: open, close: close) ? .open : .closed
         }
         return .unknown
@@ -187,29 +184,8 @@ struct OpeningHoursParser {
 
     /// Returns the closing time (in minutes) if the segment matches today and we're currently open.
     private static func parseSegmentClosingTime(_ segment: String, weekday: Int, currentMinutes: Int) -> Int? {
-        // Google format
-        if let colonIdx = segment.firstIndex(of: ":") {
-            let beforeColon = String(segment[..<colonIdx]).trimmingCharacters(in: .whitespaces)
-            if dayNumber(beforeColon.lowercased()) != nil {
-                guard matchesDay(beforeColon, weekday: weekday) else { return nil }
-                let timePart = String(segment[segment.index(after: colonIdx)...]).trimmingCharacters(in: .whitespaces)
-                return closingTimeIfOpen(timePart, currentMinutes: currentMinutes)
-            }
-        }
-        // Simple format
-        if let spaceIdx = segment.firstIndex(of: " ") {
-            let firstWord = String(segment[..<spaceIdx])
-            if firstWord.allSatisfy({ $0.isLetter || $0 == "-" }) {
-                guard matchesDay(firstWord, weekday: weekday) else { return nil }
-                let timePart = String(segment[segment.index(after: spaceIdx)...]).trimmingCharacters(in: .whitespaces)
-                return closingTimeIfOpen(timePart, currentMinutes: currentMinutes)
-            }
-        }
-        return nil
-    }
-
-    private static func closingTimeIfOpen(_ timePart: String, currentMinutes: Int) -> Int? {
-        guard let (open, close) = parseTimeRange(timePart),
+        guard let part = timePart(for: segment, weekday: weekday),
+              let (open, close) = parseTimeRange(part),
               isTimeInRange(currentMinutes, open: open, close: close) else { return nil }
         return close
     }

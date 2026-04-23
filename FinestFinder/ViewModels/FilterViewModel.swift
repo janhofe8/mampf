@@ -68,7 +68,6 @@ final class FilterViewModel {
     var selectedNeighborhoods: Set<Neighborhood> = []
     var selectedPriceRanges: Set<PriceRange> = []
     var minimumRating: Double = 0
-    var maximumRating: Double = 10
     var showOpenOnly: Bool = false
     var sortField: SortField = .mampfRating
     var sortAscending: Bool = false
@@ -93,7 +92,6 @@ final class FilterViewModel {
             || !selectedNeighborhoods.isEmpty
             || !selectedPriceRanges.isEmpty
             || minimumRating > 0
-            || maximumRating < 10
             || showOpenOnly
     }
 
@@ -133,11 +131,8 @@ final class FilterViewModel {
             result = result.filter { selectedPriceRanges.contains($0.priceRange) }
         }
 
-        if minimumRating > 0 || maximumRating < 10 {
-            result = result.filter {
-                let rating = $0.personalRating ?? 0
-                return rating >= minimumRating && rating <= maximumRating
-            }
+        if minimumRating > 0 {
+            result = result.filter { ($0.personalRating ?? 0) >= minimumRating }
         }
 
         if showOpenOnly {
@@ -152,31 +147,23 @@ final class FilterViewModel {
         userLocation: CLLocationCoordinate2D?,
         communityRatings: [UUID: (average: Double, count: Int)]
     ) {
-        let asc = sortAscending
         switch sortField {
         case .mampfRating:
-            result.sort { asc ? ($0.personalRating ?? 0) < ($1.personalRating ?? 0)
-                              : ($0.personalRating ?? 0) > ($1.personalRating ?? 0) }
+            sortBy(&result) { $0.personalRating ?? 0 }
         case .googleRating:
-            result.sort { asc ? ($0.googleRating ?? 0) < ($1.googleRating ?? 0)
-                              : ($0.googleRating ?? 0) > ($1.googleRating ?? 0) }
+            sortBy(&result) { $0.googleRating ?? 0 }
         case .communityRating:
-            result.sort { asc ? (communityRatings[$0.id]?.average ?? 0) < (communityRatings[$1.id]?.average ?? 0)
-                              : (communityRatings[$0.id]?.average ?? 0) > (communityRatings[$1.id]?.average ?? 0) }
+            sortBy(&result) { communityRatings[$0.id]?.average ?? 0 }
         case .recentlyAdded:
-            result.sort { ($0.createdAt ?? "") > ($1.createdAt ?? "") }
+            result.sort { ($0.createdAt ?? .distantPast) > ($1.createdAt ?? .distantPast) }
         case .distance:
-            if let loc = userLocation {
-                let userCL = CLLocation(latitude: loc.latitude, longitude: loc.longitude)
-                result.sort {
-                    let d0 = userCL.distance(from: CLLocation(latitude: $0.latitude, longitude: $0.longitude))
-                    let d1 = userCL.distance(from: CLLocation(latitude: $1.latitude, longitude: $1.longitude))
-                    return asc ? d0 < d1 : d0 > d1
-                }
+            guard let loc = userLocation else { return }
+            let userCL = CLLocation(latitude: loc.latitude, longitude: loc.longitude)
+            sortBy(&result) {
+                userCL.distance(from: CLLocation(latitude: $0.latitude, longitude: $0.longitude))
             }
         case .name:
-            result.sort { asc ? $0.name.localizedCompare($1.name) == .orderedAscending
-                              : $0.name.localizedCompare($1.name) == .orderedDescending }
+            sortBy(&result) { $0.name }
         case .random:
             let seed = randomSeed
             result.sort { a, b in
@@ -187,12 +174,16 @@ final class FilterViewModel {
         }
     }
 
+    /// Sort in-place by a Comparable key, honoring `sortAscending`.
+    private func sortBy<T: Comparable>(_ result: inout [Restaurant], key: (Restaurant) -> T) {
+        result.sort { sortAscending ? key($0) < key($1) : key($0) > key($1) }
+    }
+
     func clearFilters() {
         selectedCuisines = []
         selectedNeighborhoods = []
         selectedPriceRanges = []
         minimumRating = 0
-        maximumRating = 10
         showOpenOnly = false
     }
 }

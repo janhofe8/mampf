@@ -6,9 +6,25 @@ struct FilterSheetView: View {
     @Environment(LocationManager.self) private var locationManager
     @Environment(\.dismiss) private var dismiss
     @State private var showingSettings = false
+    @State private var filteredCount = 0
 
-    private var filteredCount: Int {
-        filterVM.apply(to: store.restaurants, userLocation: locationManager.lastLocation, communityRatings: store.communityRatings).count
+    private var filterToken: Int {
+        var h = Hasher()
+        h.combine(store.restaurants.count)
+        h.combine(filterVM.selectedCuisines)
+        h.combine(filterVM.selectedNeighborhoods)
+        h.combine(filterVM.selectedPriceRanges)
+        h.combine(filterVM.minimumRating)
+        h.combine(filterVM.showOpenOnly)
+        return h.finalize()
+    }
+
+    private func refreshCount() {
+        filteredCount = filterVM.apply(
+            to: store.restaurants,
+            userLocation: locationManager.lastLocation,
+            communityRatings: store.communityRatings
+        ).count
     }
 
     var body: some View {
@@ -103,6 +119,8 @@ struct FilterSheetView: View {
         .sheet(isPresented: $showingSettings) {
             SettingsView()
         }
+        .task { refreshCount() }
+        .onChange(of: filterToken) { refreshCount() }
     }
 }
 

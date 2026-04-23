@@ -141,7 +141,7 @@ struct RestaurantCardView: View {
         } else if let isOpen = restaurant.isOpenNow {
             parts.append(isOpen ? String(localized: "status.open") : String(localized: "status.closed"))
         }
-        if isFavorite { parts.append("Favorite") }
+        if isFavorite { parts.append(String(localized: "a11y.favorite")) }
         return parts.joined(separator: ", ")
     }
 

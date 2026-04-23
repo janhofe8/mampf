@@ -9,6 +9,7 @@ struct RestaurantDetailView: View {
     @State private var isSubmitting = false
     @State private var showError = false
     @State private var errorMessage = ""
+    private let notificationFeedback = UINotificationFeedbackGenerator()
 
     var body: some View {
         ScrollView {
@@ -38,7 +39,9 @@ struct RestaurantDetailView: View {
                             .background(.ultraThinMaterial, in: Circle())
                     }
                     .sensoryFeedback(.impact(weight: .medium), trigger: store.isFavorite(restaurant))
-                .accessibilityLabel(store.isFavorite(restaurant) ? "Remove from favorites" : "Add to favorites")
+                    .accessibilityLabel(store.isFavorite(restaurant)
+                        ? String(localized: "a11y.removeFavorite")
+                        : String(localized: "a11y.addFavorite"))
                 }
             }
         }
@@ -146,8 +149,8 @@ struct RestaurantDetailView: View {
                 Slider(value: $userRating, in: 1...10, step: 0.5)
                     .tint(RatingSource.community.color)
                     .sensoryFeedback(.selection, trigger: userRating)
-                    .accessibilityLabel("Rating")
-                    .accessibilityValue("\(userRating.formattedRating) of 10")
+                    .accessibilityLabel(String(localized: "a11y.rating"))
+                    .accessibilityValue(String(format: String(localized: "a11y.ratingValue"), userRating.formattedRating))
 
                 Text("detail.outOf10")
                     .font(.subheadline)
@@ -159,18 +162,14 @@ struct RestaurantDetailView: View {
                     guard validatedRating != nil else { return }
                     Task {
                         isSubmitting = true
-                        let previousRating = store.myRating(for: restaurant)
-                        let previousHasSubmitted = hasSubmitted
                         await store.submitRating(for: restaurant, rating: userRating)
                         if store.error != nil {
-                            // Revert optimistic state on failure
-                            if !previousHasSubmitted { hasSubmitted = false }
                             errorMessage = String(localized: "error.ratingFailed")
                             showError = true
-                            UINotificationFeedbackGenerator().notificationOccurred(.error)
+                            notificationFeedback.notificationOccurred(.error)
                         } else {
                             hasSubmitted = true
-                            UINotificationFeedbackGenerator().notificationOccurred(.success)
+                            notificationFeedback.notificationOccurred(.success)
                         }
                         isSubmitting = false
                     }
@@ -199,11 +198,11 @@ struct RestaurantDetailView: View {
                             if store.error != nil {
                                 errorMessage = String(localized: "error.deleteFailed")
                                 showError = true
-                                UINotificationFeedbackGenerator().notificationOccurred(.error)
+                                notificationFeedback.notificationOccurred(.error)
                             } else {
                                 userRating = 0
                                 hasSubmitted = false
-                                UINotificationFeedbackGenerator().notificationOccurred(.warning)
+                                notificationFeedback.notificationOccurred(.warning)
                             }
                             isSubmitting = false
                         }

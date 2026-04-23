@@ -6,16 +6,37 @@ struct RestaurantListView: View {
     @Environment(RestaurantStore.self) private var store
     @Environment(LocationManager.self) private var locationManager
 
-    private var filtered: [Restaurant] {
-        let base = showFavoritesOnly ? store.favorites : store.restaurants
-        return filterVM.apply(to: base, userLocation: locationManager.lastLocation, communityRatings: store.communityRatings)
-    }
-
     @Namespace private var heroNamespace
     @State private var searchText = ""
     @State private var showingFilters = false
     @State private var viewMode: ViewMode = .cards
     @State private var showFavoritesOnly = false
+    @State private var filtered: [Restaurant] = []
+    @FocusState private var searchFocused: Bool
+
+    private var showingDropdown: Bool { searchFocused || !searchText.isEmpty }
+
+    /// Hash of all inputs that affect `filtered` — single onChange instead of many
+    private var filterInputsToken: Int {
+        var h = Hasher()
+        h.combine(store.restaurants.count)
+        h.combine(store.communityRatings.count)
+        h.combine(showFavoritesOnly)
+        h.combine(filterVM.activeSearchText)
+        h.combine(filterVM.selectedCuisines)
+        h.combine(filterVM.selectedNeighborhoods)
+        h.combine(filterVM.selectedPriceRanges)
+        h.combine(filterVM.minimumRating)
+        h.combine(filterVM.showOpenOnly)
+        h.combine(filterVM.sortField)
+        h.combine(filterVM.sortAscending)
+        return h.finalize()
+    }
+
+    private func refreshFiltered() {
+        let base = showFavoritesOnly ? store.favorites : store.restaurants
+        filtered = filterVM.apply(to: base, userLocation: locationManager.lastLocation, communityRatings: store.communityRatings)
+    }
 
     private let compactColumns = [
         GridItem(.flexible(), spacing: 10),
@@ -25,12 +46,322 @@ struct RestaurantListView: View {
     // MARK: - Body
 
     var body: some View {
+        VStack(spacing: 0) {
+            searchHeader
+            if !showingDropdown {
+                activeFiltersBar
+                scrollContent
+            } else {
+                Spacer(minLength: 0)
+            }
+        }
+        .task(id: searchText) {
+            if searchText.isEmpty {
+                filterVM.activeSearchText = ""
+                return
+            }
+            try? await Task.sleep(for: .milliseconds(250))
+            filterVM.activeSearchText = searchText
+        }
+        .task { refreshFiltered() }
+        .onChange(of: filterInputsToken) { refreshFiltered() }
+        .navigationTitle("")
+        .toolbarTitleDisplayMode(.inline)
+        .onAppear { applyBrandedNavBarAppearance() }
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Menu {
+                    Button {} label: {
+                        Label("Hamburg", systemImage: "checkmark")
+                    }
+                    Section {
+                        Button {} label: {
+                            Label("city.comingSoon", systemImage: "clock")
+                        }
+                        .disabled(true)
+                    }
+                } label: {
+                    HStack(spacing: 4) {
+                        Text("Hamburg")
+                            .font(.system(size: 22, weight: .bold))
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(.secondary)
+                    }
+                    .foregroundStyle(.primary)
+                }
+            }
+
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        showFavoritesOnly.toggle()
+                    }
+                } label: {
+                    Image(systemName: showFavoritesOnly ? "heart.fill" : "heart")
+                        .foregroundStyle(showFavoritesOnly ? .red : .ffPrimary)
+                }
+                .accessibilityLabel(String(localized: showFavoritesOnly ? "a11y.showAll" : "a11y.showFavorites"))
+            }
+
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        viewMode = viewMode.next
+                    }
+                } label: {
+                    Image(systemName: viewModeIcon)
+                        .font(.system(size: 17))
+                        .frame(width: 22)
+                        .foregroundStyle(.ffPrimary)
+                }
+                .accessibilityLabel(String(localized: "a11y.changeViewMode"))
+            }
+
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu {
+                    ForEach(SortField.allCases) { field in
+                        Button {
+                            filterVM.selectSort(field)
+                        } label: {
+                            Label {
+                                Text(field.displayName)
+                            } icon: {
+                                if filterVM.sortField == field {
+                                    Image(systemName: field.supportsDirection
+                                          ? (filterVM.sortAscending ? "chevron.up" : "chevron.down")
+                                          : "checkmark")
+                                }
+                            }
+                        }
+                    }
+                } label: {
+                    Image(systemName: "arrow.up.arrow.down")
+                        .foregroundStyle(.ffPrimary)
+                }
+            }
+
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    showingFilters = true
+                } label: {
+                    Image(systemName: filterVM.hasActiveFilters ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
+                        .foregroundStyle(.ffPrimary)
+                }
+            }
+        }
+        .sheet(isPresented: $showingFilters) {
+            FilterSheetView()
+        }
+        .overlay {
+            if filtered.isEmpty && !store.isLoading {
+                ContentUnavailableView.search(text: searchText)
+            }
+        }
+        .navigationDestination(for: Restaurant.self) { restaurant in
+            RestaurantDetailView(restaurant: restaurant)
+                .navigationTransition(.zoom(sourceID: restaurant.id, in: heroNamespace))
+        }
+        .sensoryFeedback(.selection, trigger: viewMode)
+        .sensoryFeedback(.impact(weight: .medium), trigger: showFavoritesOnly)
+    }
+
+    // MARK: - Search Header
+
+    @ViewBuilder
+    private var searchHeader: some View {
+        VStack(spacing: 0) {
+            searchBarRow
+            if showingDropdown {
+                Divider().padding(.horizontal, 12)
+                searchDropdownContent
+            }
+        }
+        .background(Color(.systemBackground), in: RoundedRectangle(cornerRadius: 14))
+        .shadow(color: .black.opacity(0.08), radius: 6, y: 2)
+        .padding(.horizontal, 12)
+        .padding(.top, 8)
+        .padding(.bottom, 4)
+        .animation(.easeInOut(duration: 0.2), value: showingDropdown)
+    }
+
+    private var searchBarRow: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 18, weight: .medium))
+                .foregroundStyle(.secondary)
+            TextField(
+                String(format: String(localized: "search.restaurants"), store.restaurants.count),
+                text: $searchText
+            )
+            .focused($searchFocused)
+            .textFieldStyle(.plain)
+            .font(.system(size: 17))
+            .onSubmit {
+                if let first = searchSuggestions.first {
+                    openSuggestion(first)
+                }
+            }
+            if searchFocused || !searchText.isEmpty {
+                Button {
+                    withAnimation(.easeOut(duration: 0.2)) {
+                        searchFocused = false
+                        searchText = ""
+                        filterVM.activeSearchText = ""
+                    }
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 20))
+                        .foregroundStyle(.tertiary)
+                }
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+    }
+
+    @ViewBuilder
+    private var searchDropdownContent: some View {
+        if searchText.isEmpty {
+            categorySuggestions
+        } else {
+            let capped = Array(searchSuggestions.prefix(8))
+            if capped.isEmpty {
+                VStack(spacing: 6) {
+                    Image(systemName: "magnifyingglass")
+                        .font(.title3)
+                        .foregroundStyle(.tertiary)
+                    Text("search.noResults")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.vertical, 16)
+                .frame(maxWidth: .infinity)
+            } else {
+                ScrollView {
+                    VStack(spacing: 0) {
+                        ForEach(Array(capped.enumerated()), id: \.element.id) { index, restaurant in
+                            searchSuggestionRow(for: restaurant)
+                            if index < capped.count - 1 {
+                                Divider().padding(.leading, 52)
+                            }
+                        }
+                    }
+                }
+                .frame(maxHeight: 380)
+            }
+        }
+    }
+
+    private var categorySuggestions: some View {
+        let counts = Dictionary(grouping: store.restaurants, by: \.cuisineType)
+            .mapValues(\.count)
+        let sorted = counts.sorted { $0.value > $1.value }.prefix(8)
+
+        return ScrollView {
+            VStack(spacing: 0) {
+                ForEach(Array(sorted.enumerated()), id: \.element.key) { index, entry in
+                    Button {
+                        withAnimation(.easeOut(duration: 0.15)) {
+                            searchText = entry.key.displayName
+                        }
+                    } label: {
+                        HStack(spacing: 14) {
+                            Text(entry.key.icon)
+                                .font(.system(size: 22))
+                                .frame(width: 36)
+                            Text(entry.key.displayName)
+                                .font(.system(size: 16, weight: .medium))
+                                .foregroundStyle(.primary)
+                            Spacer()
+                            Text("\(entry.value)")
+                                .font(.subheadline)
+                                .foregroundStyle(.tertiary)
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    if index < sorted.count - 1 {
+                        Divider().padding(.leading, 66)
+                    }
+                }
+            }
+        }
+        .frame(maxHeight: 380)
+    }
+
+    private func searchSuggestionRow(for restaurant: Restaurant) -> some View {
+        NavigationLink(value: restaurant) {
+            HStack(spacing: 10) {
+                AsyncRestaurantImage(url: restaurant.imageUrl.flatMap(URL.init), cuisineIcon: restaurant.cuisineType.icon)
+                    .frame(width: 36, height: 36)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(restaurant.name)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+                    HStack(spacing: 4) {
+                        Text(restaurant.cuisineType.icon).font(.system(size: 11))
+                        Text(restaurant.neighborhood.displayName)
+                            .font(.caption).foregroundStyle(.secondary)
+                        Text("·").font(.caption).foregroundStyle(.tertiary)
+                        Text(restaurant.priceRange.label)
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+
+                Spacer()
+
+                if let rating = restaurant.personalRating {
+                    RatingPill(icon: "star.fill", value: rating.formattedRating, color: RatingSource.personal.color, textColor: .white, size: .compact)
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .simultaneousGesture(TapGesture().onEnded { clearSearch() })
+    }
+
+    private var searchSuggestions: [Restaurant] {
+        guard !searchText.isEmpty else { return [] }
+        let query = searchText.lowercased()
+        return store.restaurants
+            .filter {
+                $0.name.lowercased().contains(query)
+                    || $0.cuisineType.displayName.lowercased().contains(query)
+                    || $0.neighborhood.displayName.lowercased().contains(query)
+            }
+            .sorted { ($0.personalRating ?? 0) > ($1.personalRating ?? 0) }
+    }
+
+    private func openSuggestion(_ restaurant: Restaurant) {
+        // Onsubmit keyboard path — rely on NavigationLink in dropdown for push.
+        // Here we just close search; user taps the row to navigate.
+        clearSearch()
+    }
+
+    private func clearSearch() {
+        withAnimation(.easeOut(duration: 0.2)) {
+            searchFocused = false
+            searchText = ""
+            filterVM.activeSearchText = ""
+        }
+    }
+
+    // MARK: - Scroll Content
+
+    @ViewBuilder
+    private var scrollContent: some View {
         ScrollView {
             if store.isLoading && store.restaurants.isEmpty {
                 skeletonContent
             } else {
-                activeFiltersBar
-
                 switch viewMode {
                 case .grid:
                     LazyVGrid(columns: compactColumns, spacing: 14) {
@@ -93,116 +424,10 @@ struct RestaurantListView: View {
             }
         }
         .scrollDismissesKeyboard(.interactively)
-        .searchable(text: $searchText, prompt: Text(String(format: String(localized: "search.restaurants"), store.restaurants.count)))
-        .task(id: searchText) {
-            if searchText.isEmpty {
-                filterVM.activeSearchText = ""
-                return
-            }
-            try? await Task.sleep(for: .milliseconds(250))
-            filterVM.activeSearchText = searchText
-        }
         .refreshable { await store.refresh() }
-        .navigationTitle("")
-        .toolbarTitleDisplayMode(.inline)
-        .onAppear { applyBrandedNavBarAppearance() }
-        .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                Menu {
-                    Button {} label: {
-                        Label("Hamburg", systemImage: "checkmark")
-                    }
-                    Section {
-                        Button {} label: {
-                            Label("city.comingSoon", systemImage: "clock")
-                        }
-                        .disabled(true)
-                    }
-                } label: {
-                    HStack(spacing: 4) {
-                        Text("Hamburg")
-                            .font(.system(size: 22, weight: .bold))
-                        Image(systemName: "chevron.down")
-                            .font(.system(size: 10, weight: .bold))
-                            .foregroundStyle(.secondary)
-                    }
-                    .foregroundStyle(.primary)
-                }
-            }
-
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    withAnimation(.easeInOut(duration: 0.25)) {
-                        showFavoritesOnly.toggle()
-                    }
-                } label: {
-                    Image(systemName: showFavoritesOnly ? "heart.fill" : "heart")
-                        .foregroundStyle(showFavoritesOnly ? .red : .ffPrimary)
-                }
-                .accessibilityLabel(showFavoritesOnly ? "Show all" : "Show favorites")
-            }
-
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    withAnimation(.easeInOut(duration: 0.25)) {
-                        viewMode = viewMode.next
-                    }
-                } label: {
-                    Image(systemName: viewModeIcon)
-                        .foregroundStyle(.ffPrimary)
-                }
-                .accessibilityLabel("Change view mode")
-            }
-
-            ToolbarItem(placement: .topBarTrailing) {
-                Menu {
-                    ForEach(SortField.allCases) { field in
-                        Button {
-                            filterVM.selectSort(field)
-                        } label: {
-                            Label {
-                                Text(field.displayName)
-                            } icon: {
-                                if filterVM.sortField == field {
-                                    Image(systemName: field.supportsDirection
-                                          ? (filterVM.sortAscending ? "chevron.up" : "chevron.down")
-                                          : "checkmark")
-                                }
-                            }
-                        }
-                    }
-                } label: {
-                    Image(systemName: "arrow.up.arrow.down")
-                        .foregroundStyle(.ffPrimary)
-                }
-            }
-
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    showingFilters = true
-                } label: {
-                    Image(systemName: filterVM.hasActiveFilters ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
-                        .foregroundStyle(.ffPrimary)
-                }
-            }
-        }
-        .sheet(isPresented: $showingFilters) {
-            FilterSheetView()
-        }
-        .overlay {
-            if filtered.isEmpty && !store.isLoading {
-                ContentUnavailableView.search(text: searchText)
-            }
-        }
-        .navigationDestination(for: Restaurant.self) { restaurant in
-            RestaurantDetailView(restaurant: restaurant)
-                .navigationTransition(.zoom(sourceID: restaurant.id, in: heroNamespace))
-        }
-        .sensoryFeedback(.selection, trigger: viewMode)
-        .sensoryFeedback(.impact(weight: .medium), trigger: showFavoritesOnly)
     }
 
-    // MARK: - Active Filters Bar (#4 + #5)
+    // MARK: - Active Filters Bar
 
     @ViewBuilder
     private var activeFiltersBar: some View {
@@ -260,7 +485,6 @@ struct RestaurantListView: View {
                 if let suffix {
                     Image(systemName: suffix).font(.system(size: 9, weight: .bold))
                 }
-                Image(systemName: "xmark").font(.system(size: 9, weight: .bold))
             }
             .font(.caption)
             .padding(.horizontal, 10)
@@ -268,20 +492,19 @@ struct RestaurantListView: View {
             .background(tinted ? Color.ffPrimary.opacity(0.12) : Color(.tertiarySystemFill), in: Capsule())
             .foregroundStyle(tinted ? .ffPrimary : .primary)
         }
+        .buttonStyle(.borderless)
     }
 
     private func removableChip(label: String, onRemove: @escaping () -> Void) -> some View {
         Button(action: onRemove) {
-            HStack(spacing: 4) {
-                Text(label)
-                Image(systemName: "xmark").font(.system(size: 9, weight: .bold))
-            }
-            .font(.caption)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
-            .background(Color(.tertiarySystemFill), in: Capsule())
-            .foregroundStyle(.primary)
+            Text(label)
+                .font(.caption)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(Color.ffPrimary.opacity(0.12), in: Capsule())
+                .foregroundStyle(.ffPrimary)
         }
+        .buttonStyle(.borderless)
     }
 
     // MARK: - List Row
@@ -335,6 +558,7 @@ struct RestaurantListView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
+        .contentShape(Rectangle())
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(listRowAccessibilityLabel(for: restaurant))
         .accessibilityAddTraits(.isButton)

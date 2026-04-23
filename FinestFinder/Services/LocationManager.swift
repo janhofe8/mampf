@@ -14,10 +14,12 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
         super.init()
         manager.delegate = self
         manager.desiredAccuracy = kCLLocationAccuracyHundredMeters
-        // If already authorized, start updates immediately
-        if manager.authorizationStatus == .authorizedWhenInUse || manager.authorizationStatus == .authorizedAlways {
-            manager.startUpdatingLocation()
-        }
+        if isAuthorized { manager.requestLocation() }
+    }
+
+    private var isAuthorized: Bool {
+        let s = manager.authorizationStatus
+        return s == .authorizedWhenInUse || s == .authorizedAlways
     }
 
     /// Request location permission — call only from user-initiated action
@@ -25,13 +27,20 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
         manager.requestWhenInUseAuthorization()
     }
 
+    /// One-shot location refresh — e.g., when user taps the map's locate button
+    func refreshLocation() {
+        if isAuthorized { manager.requestLocation() }
+    }
+
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         lastLocation = locations.last?.coordinate
     }
 
+    func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+        // Silently ignore transient location errors — distance is a nice-to-have
+    }
+
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
-        if manager.authorizationStatus == .authorizedWhenInUse || manager.authorizationStatus == .authorizedAlways {
-            manager.startUpdatingLocation()
-        }
+        if isAuthorized { manager.requestLocation() }
     }
 }

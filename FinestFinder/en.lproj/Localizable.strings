@@ -99,3 +99,16 @@
 
 /* Opening Status Extended */
 "status.closingSoon" = "Closes in %d min";
+
+/* Filter */
+"filter.rating" = "Rating";
+
+/* Accessibility */
+"a11y.addFavorite" = "Add to favorites";
+"a11y.removeFavorite" = "Remove from favorites";
+"a11y.favorite" = "Favorite";
+"a11y.rating" = "Rating";
+"a11y.ratingValue" = "%@ of 10";
+"a11y.showAll" = "Show all";
+"a11y.showFavorites" = "Show favorites";
+"a11y.changeViewMode" = "Change view mode";

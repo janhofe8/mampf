@@ -107,10 +107,7 @@ struct MapTabView: View {
         h.combine(filterVM.selectedNeighborhoods)
         h.combine(filterVM.selectedPriceRanges)
         h.combine(filterVM.minimumRating)
-        h.combine(filterVM.maximumRating)
         h.combine(filterVM.showOpenOnly)
-        h.combine(filterVM.sortField)
-        h.combine(filterVM.sortAscending)
         return h.finalize()
     }
 
@@ -133,12 +130,15 @@ struct MapTabView: View {
         MapControlButton(icon: "location.fill") {
             if locationManager.authorizationStatus == .notDetermined {
                 locationManager.requestPermission()
-            } else if let location = locationManager.lastLocation {
-                withAnimation {
-                    position = .region(MKCoordinateRegion(
-                        center: location,
-                        span: MKCoordinateSpan(latitudeDelta: 0.02, longitudeDelta: 0.02)
-                    ))
+            } else {
+                locationManager.refreshLocation()
+                if let location = locationManager.lastLocation {
+                    withAnimation {
+                        position = .region(MKCoordinateRegion(
+                            center: location,
+                            span: MKCoordinateSpan(latitudeDelta: 0.02, longitudeDelta: 0.02)
+                        ))
+                    }
                 }
             }
         }
@@ -293,9 +293,7 @@ struct MapTabView: View {
                 openNowChip
                 ratingChip
                 cuisineChip
-                neighborhoodChip
                 priceChip
-                sortChip
 
                 if filterVM.hasActiveFilters {
                     Button {
@@ -346,7 +344,7 @@ struct MapTabView: View {
         } label: {
             MapChip(
                 icon: "star.fill",
-                text: active ? "≥ \(filterVM.minimumRating.formattedRating)" : "Rating",
+                text: active ? "≥ \(filterVM.minimumRating.formattedRating)" : String(localized: "filter.rating"),
                 isActive: active || showRatingFilter,
                 showChevron: false
             )
@@ -383,35 +381,6 @@ struct MapTabView: View {
         }
     }
 
-    private var neighborhoodChip: some View {
-        let count = filterVM.selectedNeighborhoods.count
-        let active = count > 0
-        let label: String
-        if count == 1, let n = filterVM.selectedNeighborhoods.first {
-            label = n.displayName
-        } else if active {
-            label = String(localized: "filter.neighborhood") + " · \(count)"
-        } else {
-            label = String(localized: "filter.neighborhood")
-        }
-
-        return Menu {
-            ForEach(Neighborhood.allCases) { hood in
-                Button {
-                    withAnimation { filterVM.selectedNeighborhoods.toggle(hood) }
-                } label: {
-                    if filterVM.selectedNeighborhoods.contains(hood) {
-                        Label(hood.displayName, systemImage: "checkmark")
-                    } else {
-                        Text(hood.displayName)
-                    }
-                }
-            }
-        } label: {
-            MapChip(icon: "mappin", text: label, isActive: active)
-        }
-    }
-
     private var priceChip: some View {
         let count = filterVM.selectedPriceRanges.count
         let active = count > 0
@@ -438,30 +407,6 @@ struct MapTabView: View {
             }
         } label: {
             MapChip(icon: "eurosign", text: label, isActive: active)
-        }
-    }
-
-    private var sortChip: some View {
-        let isNonDefault = filterVM.sortField != .mampfRating || filterVM.sortAscending
-
-        return Menu {
-            ForEach(SortField.allCases) { field in
-                Button {
-                    filterVM.selectSort(field)
-                } label: {
-                    Label {
-                        Text(field.displayName)
-                    } icon: {
-                        if filterVM.sortField == field {
-                            Image(systemName: field.supportsDirection
-                                  ? (filterVM.sortAscending ? "chevron.up" : "chevron.down")
-                                  : "checkmark")
-                        }
-                    }
-                }
-            }
-        } label: {
-            MapChip(icon: "arrow.up.arrow.down", text: filterVM.sortField.displayName, isActive: isNonDefault)
         }
     }
 
@@ -533,7 +478,8 @@ struct MapTabView: View {
                 span: MKCoordinateSpan(latitudeDelta: 0.005, longitudeDelta: 0.005)
             ))
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+        Task {
+            try? await Task.sleep(for: .milliseconds(500))
             selectedRestaurant = restaurant
         }
     }
