@@ -12,9 +12,12 @@ struct RestaurantListView: View {
     @State private var viewMode: ViewMode = .cards
     @State private var showFavoritesOnly = false
     @State private var filtered: [Restaurant] = []
+    @State private var isHeaderVisible: Bool = true
+    @State private var scrollAccumulator: CGFloat = 0
     @FocusState private var searchFocused: Bool
 
     private var showingDropdown: Bool { searchFocused || !searchText.isEmpty }
+    private var headerVisible: Bool { isHeaderVisible || showingDropdown }
 
     /// Hash of all inputs that affect `filtered` — single onChange instead of many
     private var filterInputsToken: Int {
@@ -46,13 +49,24 @@ struct RestaurantListView: View {
     // MARK: - Body
 
     var body: some View {
-        VStack(spacing: 0) {
-            searchHeader
-            if !showingDropdown {
-                activeFiltersBar
-                scrollContent
+        Group {
+            if showingDropdown {
+                VStack(spacing: 0) {
+                    searchHeader
+                    Spacer(minLength: 0)
+                }
             } else {
-                Spacer(minLength: 0)
+                scrollContent
+                    .safeAreaInset(edge: .top, spacing: 0) {
+                        if headerVisible {
+                            VStack(spacing: 0) {
+                                searchHeader
+                                activeFiltersBar
+                            }
+                            .background(Color(.systemBackground))
+                            .transition(.move(edge: .top).combined(with: .opacity))
+                        }
+                    }
             }
         }
         .task(id: searchText) {
@@ -425,6 +439,37 @@ struct RestaurantListView: View {
         }
         .scrollDismissesKeyboard(.interactively)
         .refreshable { await store.refresh() }
+        .onScrollGeometryChange(for: CGFloat.self) { geo in
+            geo.contentOffset.y
+        } action: { oldValue, newValue in
+            handleScrollChange(from: oldValue, to: newValue)
+        }
+    }
+
+    private func handleScrollChange(from oldValue: CGFloat, to newValue: CGFloat) {
+        // Always show near the top
+        if newValue < 20 {
+            if !isHeaderVisible {
+                withAnimation(.easeOut(duration: 0.22)) { isHeaderVisible = true }
+            }
+            scrollAccumulator = 0
+            return
+        }
+
+        let delta = newValue - oldValue
+        // Reset accumulator on direction change
+        if (delta > 0) != (scrollAccumulator > 0) {
+            scrollAccumulator = 0
+        }
+        scrollAccumulator += delta
+
+        if scrollAccumulator > 40, isHeaderVisible {
+            withAnimation(.easeOut(duration: 0.22)) { isHeaderVisible = false }
+            scrollAccumulator = 0
+        } else if scrollAccumulator < -30, !isHeaderVisible {
+            withAnimation(.easeOut(duration: 0.22)) { isHeaderVisible = true }
+            scrollAccumulator = 0
+        }
     }
 
     // MARK: - Active Filters Bar
