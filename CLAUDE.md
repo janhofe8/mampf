@@ -55,8 +55,11 @@ web/                       ← Web App (Next.js)
 - **Hero-Animation:** `.matchedTransitionSource` + `.navigationTransition(.zoom)` für Liste→Detail
 - **Haptic Feedback:** `.sensoryFeedback()` auf Favoriten-Toggle, View-Mode-Wechsel, Slider, Filter-Chips, Map-Controls. `UINotificationFeedbackGenerator` für Rating Submit/Delete.
 - **Skeleton Loading:** Shimmer-Effekt beim App-Start (SkeletonCardView/SkeletonListRow statt ProgressView)
-- **Debounced Search:** `searchText` (sofort im UI) → `activeSearchText` (250ms Debounce für Filter). Map-Suggestions nutzen `searchText` direkt (instant). `localizedCaseInsensitiveContains` für Unicode-Korrektheit.
-- **Filter UX:** Custom Sheet (kein Form) mit Capsule-Chips, X-Button rechts + Gear-Icon links im Header (öffnet Settings). Live-Count-Button ("Show X Food Spots"). Aktive Filter als horizontale Capsule-Chips unter Suchleiste (tap to remove).
+- **Suche:** Custom Suchbalken (weiße Card mit Shadow, rounded) in Liste UND Map — identisches Pattern. Instant-Suggestions-Dropdown: leer+fokussiert → populäre Küchen, mit Query → Restaurants (Thumbnail+Name+Meta+Rating). Debouncing: `searchText` instant für UI/Suggestions → `activeSearchText` (250ms) für Liste-Filter. `localizedCaseInsensitiveContains` für Unicode-Korrektheit.
+- **Filter UX:**
+  - **Filter-Sheet:** Custom Sheet (kein Form) mit Capsule-Chips im Grid. Header: Gear-Icon links (öffnet Settings), X rechts (schließt). Live-Count-Button ("Show X Food Spots") im Bottom-Bar.
+  - **Active-Filter-Bar (Liste):** Purple-tinted Capsule-Chips unter Suche. **Kein X-Icon** — Tap auf Chip entfernt Filter direkt. Bar liegt AUSSERHALB der ScrollView (sticky Header), sonst Gesture-Konflikt mit NavigationLinks.
+  - **Map-Chip-Bar:** Open Now, Rating, Cuisine, Preis (keine Sort/Stadtteil — Pan erfüllt's).
 - **Image Caching:** Eigener `ImageCache` (NSCache memory + URLCache disk) statt `AsyncImage`. Bilder laden aus Cache instant, Netzwerk-Bilder mit Fade-In.
 - **Opening Hours:** `OpeningHoursParser` parst Google Places Format (`"Monday: 4:00 – 10:00 PM"`) und einfaches Format (`"Mon-Sun 12:00-22:30"`). Grüner/roter Dot auf Cards/List-Rows, "Open"/"Closed" Label im Detail. `showOpenOnly` Filter.
 - **Share:** `ShareLink` im Detail-Toolbar mit Name, MAMPF-Rating, Cuisine/Stadtteil/Preis, Google Maps URL.
@@ -68,8 +71,8 @@ web/                       ← Web App (Next.js)
 ## UI-Struktur
 
 - **Tabs:** Map ("Karte"), Food Spots — Standard iOS TabView
-- **Food Spots-Tab:** Title "Hamburg ˅" (City-Selector Menu, inline title mode). 3 View-Modi (Cards → Grid → Liste). Grid-Cards zeigen Cuisine-Emoji + Stadtteil + Preis. Trailing-Toolbar: Heart, ViewMode, Sort, Filter. Settings erreichbar über Filter-Sheet Header (Gear-Icon).
-- **Map:** Permanente Suchleiste oben, Quick-Filter-Chips darunter (Open Now, Rating, Cuisine, Stadtteil, Preis, Sort). Location-Button unten rechts. Rating-Histogram als Bottom-Overlay (tappable Bars). Suche mit Thumbnail-Ergebnissen (max 5), Tap auf Ergebnis schließt Suche + zoomt Map.
+- **Food Spots-Tab:** Title "Hamburg ˅" (City-Selector Menu, inline title mode). Custom Suchbalken darunter (sticky, mit Instant-Suggestions — Tap auf Restaurant pusht auf Detail). Active-Filter-Bar darunter (nur wenn Filter aktiv). Dann Content: 3 View-Modi (Cards → Grid → Liste), Grid-Cards zeigen Cuisine-Emoji + Stadtteil + Preis. Trailing-Toolbar: Heart, ViewMode, Sort, Filter. Settings erreichbar über Filter-Sheet Header (Gear-Icon).
+- **Map:** Custom Suchbalken oben (identisch zur Liste), Quick-Filter-Chips darunter (Open Now, Rating, Cuisine, Preis). Location-Button unten rechts. Rating-Histogram als Bottom-Overlay (tappable Bars). Tap auf Such-Ergebnis schließt Suche + zoomt Map + öffnet Detail-Sheet.
 - **Ratings immer:** MAMPF → Community → Google. Community "–" wenn nicht vorhanden.
 - **Sortierung:** Inkl. "Zufällig" (stabiler Seed, nur bei erneutem Auswählen neu gemischt)
 - **Localization:** EN/DE via `Localizable.strings`, "Food Spots" (EN) / "Foodspots" (DE)
@@ -110,7 +113,7 @@ Schema-Änderungen (ALTER TABLE) müssen im Supabase SQL Editor ausgeführt werd
 
 ### Enums
 
-**Cuisine Types:** burger, pizza, italian, korean, vietnamese, japanese, chinese, thai, turkish, greek, mexican, german, indian, portuguese, oriental, seafood, poke, brunch, steak, peruvian, persian, asian
+**Cuisine Types:** burger, pizza, italian, korean, vietnamese, japanese, chinese, thai, turkish, greek, mexican, german, indian, portuguese, oriental, seafood, poke, brunch, steak, peruvian, persian, asian, chicken
 
 **Neighborhoods:** altona, ottensen, stPauli, sternschanze, eimsbüttel, neustadt, altstadt, winterhude, eppendorf, barmbek, stGeorg, hafenCity, uhlenhorst, karolinenviertel, hoheluft, other
 
@@ -124,3 +127,5 @@ Schema-Änderungen (ALTER TABLE) müssen im Supabase SQL Editor ausgeführt werd
 - Custom DragGesture-Slider auf Map funktioniert nicht — nativen SwiftUI Slider verwenden
 - `.toolbarTitleMenu` zeigt keinen sichtbaren Chevron im Large-Title-Modus — für City-Selector stattdessen inline Title mit Custom Menu + explizitem chevron.down verwenden
 - Swift 6 Concurrency: `SupabaseManager` muss `Sendable` + `nonisolated static let shared` sein, `DeviceID` Properties müssen `nonisolated` sein, damit `actor UserRatingRepository` darauf zugreifen kann
+- **Tap-Through bei ScrollView + NavigationLinks:** Ein `Button` oder `onTapGesture` im gleichen ScrollView-Scope wie NavigationLinks kann Taps an das erste NavigationLink durchreichen (erstes Card öffnet sich statt Button-Action zu feuern). Fix: Ziel-View strukturell außerhalb der ScrollView platzieren (sticky Header via VStack über der ScrollView), nicht via Button-Style oder Gesture-Priority tricksen. Passiert typischerweise bei Header-Bars (Filter-Chips etc.).
+- **SourceKit-Warnings beim Editieren** ("Cannot find type 'Restaurant' in scope" etc.) sind meist stale Cross-File-Warnings wegen `PBXFileSystemSynchronizedRootGroup` — Index ist kurz nicht aktuell. Ignorieren solange `xcodebuild` sauber baut.
