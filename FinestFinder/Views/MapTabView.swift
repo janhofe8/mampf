@@ -16,6 +16,7 @@ struct MapTabView: View {
     @State private var isZoomedIn = false
     @State private var currentSpan: Double = 0.06
     @State private var showRatingFilter = false
+    @State private var mapDragged = false
     @FocusState private var searchFocused: Bool
     // Cached results — updated only when inputs change
     @State private var cachedFiltered: [Restaurant] = []
@@ -42,6 +43,10 @@ struct MapTabView: View {
                 }
             }
         }
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 10)
+                .onChanged { _ in mapDragged = true }
+        )
         .onMapCameraChange { context in
             let span = context.region.span.latitudeDelta
             currentSpan = span
@@ -51,10 +56,13 @@ struct MapTabView: View {
                     isZoomedIn = zoomed
                 }
             }
-            // Dismiss keyboard/filter on map interaction instead of .onTapGesture
-            if searchFocused { searchFocused = false }
-            if showRatingFilter {
-                withAnimation { showRatingFilter = false }
+            // Only dismiss UI on genuine user drag — avoids keyboard-induced layout changes killing focus
+            if mapDragged {
+                if searchFocused { searchFocused = false }
+                if showRatingFilter {
+                    withAnimation { showRatingFilter = false }
+                }
+                mapDragged = false
             }
         }
         // Top: search + chips

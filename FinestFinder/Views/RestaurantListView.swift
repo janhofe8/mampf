@@ -16,7 +16,7 @@ struct RestaurantListView: View {
     @State private var scrollAccumulator: CGFloat = 0
     @FocusState private var searchFocused: Bool
 
-    private var showingDropdown: Bool { searchFocused || !searchText.isEmpty }
+    private var showingDropdown: Bool { !searchText.isEmpty }
     private var headerVisible: Bool { isHeaderVisible || showingDropdown }
 
     /// Hash of all inputs that affect `filtered` — single onChange instead of many
@@ -49,24 +49,22 @@ struct RestaurantListView: View {
     // MARK: - Body
 
     var body: some View {
-        Group {
-            if showingDropdown {
+        VStack(spacing: 0) {
+            if headerVisible || showingDropdown {
                 VStack(spacing: 0) {
                     searchHeader
-                    Spacer(minLength: 0)
+                    if !showingDropdown {
+                        activeFiltersBar
+                    }
                 }
+                .background(Color(.systemBackground))
+                .transition(.move(edge: .top).combined(with: .opacity))
+            }
+
+            if showingDropdown {
+                Spacer(minLength: 0)
             } else {
                 scrollContent
-                    .safeAreaInset(edge: .top, spacing: 0) {
-                        if headerVisible {
-                            VStack(spacing: 0) {
-                                searchHeader
-                                activeFiltersBar
-                            }
-                            .background(Color(.systemBackground))
-                            .transition(.move(edge: .top).combined(with: .opacity))
-                        }
-                    }
             }
         }
         .task(id: searchText) {
@@ -236,74 +234,31 @@ struct RestaurantListView: View {
 
     @ViewBuilder
     private var searchDropdownContent: some View {
-        if searchText.isEmpty {
-            categorySuggestions
+        let capped = Array(searchSuggestions.prefix(8))
+        if capped.isEmpty {
+            VStack(spacing: 6) {
+                Image(systemName: "magnifyingglass")
+                    .font(.title3)
+                    .foregroundStyle(.tertiary)
+                Text("search.noResults")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.vertical, 16)
+            .frame(maxWidth: .infinity)
         } else {
-            let capped = Array(searchSuggestions.prefix(8))
-            if capped.isEmpty {
-                VStack(spacing: 6) {
-                    Image(systemName: "magnifyingglass")
-                        .font(.title3)
-                        .foregroundStyle(.tertiary)
-                    Text("search.noResults")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-                .padding(.vertical, 16)
-                .frame(maxWidth: .infinity)
-            } else {
-                ScrollView {
-                    VStack(spacing: 0) {
-                        ForEach(Array(capped.enumerated()), id: \.element.id) { index, restaurant in
-                            searchSuggestionRow(for: restaurant)
-                            if index < capped.count - 1 {
-                                Divider().padding(.leading, 52)
-                            }
+            ScrollView {
+                VStack(spacing: 0) {
+                    ForEach(Array(capped.enumerated()), id: \.element.id) { index, restaurant in
+                        searchSuggestionRow(for: restaurant)
+                        if index < capped.count - 1 {
+                            Divider().padding(.leading, 52)
                         }
-                    }
-                }
-                .frame(maxHeight: 380)
-            }
-        }
-    }
-
-    private var categorySuggestions: some View {
-        let counts = Dictionary(grouping: store.restaurants, by: \.cuisineType)
-            .mapValues(\.count)
-        let sorted = counts.sorted { $0.value > $1.value }.prefix(8)
-
-        return ScrollView {
-            VStack(spacing: 0) {
-                ForEach(Array(sorted.enumerated()), id: \.element.key) { index, entry in
-                    Button {
-                        withAnimation(.easeOut(duration: 0.15)) {
-                            searchText = entry.key.displayName
-                        }
-                    } label: {
-                        HStack(spacing: 14) {
-                            Text(entry.key.icon)
-                                .font(.system(size: 22))
-                                .frame(width: 36)
-                            Text(entry.key.displayName)
-                                .font(.system(size: 16, weight: .medium))
-                                .foregroundStyle(.primary)
-                            Spacer()
-                            Text("\(entry.value)")
-                                .font(.subheadline)
-                                .foregroundStyle(.tertiary)
-                        }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 12)
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    if index < sorted.count - 1 {
-                        Divider().padding(.leading, 66)
                     }
                 }
             }
+            .frame(maxHeight: 380)
         }
-        .frame(maxHeight: 380)
     }
 
     private func searchSuggestionRow(for restaurant: Restaurant) -> some View {
