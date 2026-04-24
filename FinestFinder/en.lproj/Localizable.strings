@@ -112,3 +112,57 @@
 "a11y.showAll" = "Show all";
 "a11y.showFavorites" = "Show favorites";
 "a11y.changeViewMode" = "Change view mode";
+
+/* Profile Tab */
+"tab.profile" = "Profile";
+"profile.signedOutTitle" = "Save your MAMPF across devices";
+"profile.signedOutSubtitle" = "Sign in to sync your ratings and favorites everywhere.";
+"profile.signIn" = "Sign in";
+"profile.signOut" = "Sign out";
+"profile.signedIn" = "Signed in";
+"profile.yourRatings" = "Your Ratings";
+"profile.wantToTry" = "Want to Try";
+"profile.stats.rated" = "Rated";
+"profile.stats.avg" = "Average";
+"profile.stats.favorite" = "Favorite cuisine";
+"profile.empty.ratings" = "You haven't rated any spots yet.";
+"profile.empty.wantToTry" = "Tap the heart on spots you want to try.";
+
+/* Login */
+"login.title" = "Sign in";
+"login.titleSignup" = "Create account";
+"login.email" = "Email";
+"login.password" = "Password";
+"login.submit.signIn" = "Sign in";
+"login.submit.signUp" = "Create account";
+"login.toggle.toSignup" = "Don't have an account? Create one";
+"login.toggle.toSignin" = "Have an account? Sign in";
+"nav.cancel" = "Cancel";
+"login.emailHeader" = "What's your email?";
+"login.emailSubtitle" = "We'll use it to sign you in or create your account.";
+"login.passwordHeader" = "Welcome back";
+"login.passwordHeaderSignup" = "Create your account";
+"login.continue" = "Continue";
+"login.error.emailInvalid" = "Please enter a valid email address.";
+"nav.back" = "Back";
+
+/* Name Step */
+"login.nameHeader" = "How should we call you?";
+"login.nameSubtitle" = "We'll use this to greet you — nothing more.";
+"login.namePlaceholder" = "Your name";
+
+/* Edit Profile */
+"editProfile.title" = "Edit Profile";
+"editProfile.save" = "Save";
+"editProfile.nameSection" = "Name";
+"editProfile.emailSection" = "Email";
+"editProfile.emailNote" = "Changing your email requires confirmation via a link sent to your new address.";
+"editProfile.emailConfirmationSent" = "Confirmation email sent. Click the link to finish the change.";
+"login.welcomeBackNamed" = "Welcome back, %@!";
+
+/* Account Deletion */
+"settings.deleteAccount" = "Delete My Account";
+"settings.deleteAccountInfo" = "Permanently deletes your account, ratings, favorites, and resets your device ID.";
+"settings.deleteAccountConfirmTitle" = "Delete Your Account?";
+"settings.deleteAccountConfirmMessage" = "Your account, ratings, and favorites will be permanently deleted. This cannot be undone.";
+"settings.deleteAccountConfirmButton" = "Delete Account";

@@ -3,6 +3,7 @@ import SwiftUI
 struct ContentView: View {
     @AppStorage("appearanceMode") private var appearanceMode: AppearanceMode = .system
     @Environment(RestaurantStore.self) private var store
+    @Environment(AuthService.self) private var auth
     @State private var visibleError: String?
 
     var body: some View {
@@ -18,9 +19,18 @@ struct ContentView: View {
                     RestaurantListView()
                 }
             }
+
+            Tab("tab.profile", systemImage: "person.crop.circle") {
+                NavigationStack {
+                    ProfileTabView()
+                }
+            }
         }
         .tint(.ffPrimary)
         .preferredColorScheme(appearanceMode.colorScheme)
+        .task(id: auth.currentUserId) {
+            await store.setCurrentUser(auth.currentUserId)
+        }
         .overlay(alignment: .top) {
             if let message = visibleError {
                 ErrorToast(message: message)

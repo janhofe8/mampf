@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SettingsView: View {
     @Environment(RestaurantStore.self) private var store
+    @Environment(AuthService.self) private var auth
     @Environment(\.dismiss) private var dismiss
     @AppStorage("appearanceMode") private var appearanceMode: AppearanceMode = .system
     @State private var showDeleteConfirm = false
@@ -25,20 +26,33 @@ struct SettingsView: View {
                     Text("settings.dataCollectionInfo")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
+                    Link(destination: URL(string: "https://mampf-nine.vercel.app/privacy")!) {
+                        HStack {
+                            Text("settings.privacyPolicy")
+                                .foregroundStyle(.primary)
+                            Spacer()
+                            Image(systemName: "arrow.up.right.square")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
                 } header: {
                     Text("settings.dataCollection")
                 }
 
                 Section {
-                    Button(role: .destructive) {
-                        showDeleteConfirm = true
-                    } label: {
-                        Label("settings.deleteData", systemImage: "trash")
-                    }
-
-                    Text("settings.deleteDataInfo")
+                    Text(auth.isSignedIn ? "settings.deleteAccountInfo" : "settings.deleteDataInfo")
                         .font(.caption)
                         .foregroundStyle(.secondary)
+
+                    Button {
+                        showDeleteConfirm = true
+                    } label: {
+                        Text(auth.isSignedIn ? "settings.deleteAccount" : "settings.deleteData")
+                            .font(.subheadline)
+                            .foregroundStyle(.red)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                    }
                 } header: {
                     Text("settings.privacy")
                 }
@@ -51,10 +65,21 @@ struct SettingsView: View {
                         .foregroundStyle(.ffPrimary)
                 }
             }
-            .confirmationDialog("settings.deleteConfirmTitle", isPresented: $showDeleteConfirm, titleVisibility: .visible) {
-                Button("settings.deleteConfirmButton", role: .destructive) {
+            .confirmationDialog(
+                auth.isSignedIn ? "settings.deleteAccountConfirmTitle" : "settings.deleteConfirmTitle",
+                isPresented: $showDeleteConfirm,
+                titleVisibility: .visible
+            ) {
+                Button(
+                    auth.isSignedIn ? "settings.deleteAccountConfirmButton" : "settings.deleteConfirmButton",
+                    role: .destructive
+                ) {
                     Task {
                         await store.deleteAllData()
+                        if auth.isSignedIn {
+                            try? await auth.deleteAccount()
+                            try? await auth.signOut()
+                        }
                         showDeletedBanner = true
                         try? await Task.sleep(for: .seconds(1.5))
                         dismiss()
@@ -62,7 +87,7 @@ struct SettingsView: View {
                 }
                 Button("settings.cancel", role: .cancel) {}
             } message: {
-                Text("settings.deleteConfirmMessage")
+                Text(auth.isSignedIn ? "settings.deleteAccountConfirmMessage" : "settings.deleteConfirmMessage")
             }
             .overlay(alignment: .bottom) {
                 if showDeletedBanner {

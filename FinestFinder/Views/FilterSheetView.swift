@@ -5,7 +5,6 @@ struct FilterSheetView: View {
     @Environment(RestaurantStore.self) private var store
     @Environment(LocationManager.self) private var locationManager
     @Environment(\.dismiss) private var dismiss
-    @State private var showingSettings = false
     @State private var filteredCount = 0
 
     private var filterToken: Int {
@@ -34,13 +33,6 @@ struct FilterSheetView: View {
                 Text("nav.filters")
                     .font(.title3.bold())
                 HStack {
-                    Button { showingSettings = true } label: {
-                        Image(systemName: "gearshape")
-                            .font(.body.weight(.semibold))
-                            .foregroundStyle(.secondary)
-                            .frame(width: 32, height: 32)
-                            .background(Color(.tertiarySystemFill), in: Circle())
-                    }
                     Spacer()
                     Button { dismiss() } label: {
                         Image(systemName: "xmark")
@@ -115,9 +107,6 @@ struct FilterSheetView: View {
                 .padding(.vertical, 12)
             }
             .background(.bar)
-        }
-        .sheet(isPresented: $showingSettings) {
-            SettingsView()
         }
         .task { refreshCount() }
         .onChange(of: filterToken) { refreshCount() }

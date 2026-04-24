@@ -47,9 +47,15 @@
 
 **Neue Spots:** Vienna (Karolinenviertel, 🥨 German, €€€, MAMPF 8.0), L'Antica Pizzeria da Michele (Ottensen, 🍕 Pizza, €€, MAMPF 6.5)
 
+### 2026-04-24
+| SKU | Calls | Kontext |
+|-----|-------|---------|
+| Place Details | 157 | Bulk-Refresh aller Restaurants: rating, review_count, opening_hours, business_status. 155 erfolgreich, 2 fehlgeschlagen (ungültige Place IDs). |
+| Text Search | 2 | Place-ID-Fix für „New York Bagel Bar Gänsemarkt" + „Nord Coast Coffee Roastery". |
+
 ### Monats-Summe April
 | SKU | Verbraucht | Gratis-Limit | Rest |
 |-----|-----------|--------------|------|
-| Text Search | 2 | 5.000 | 4.998 |
-| Place Details | 0 | 5.000 | 5.000 |
+| Text Search | 4 | 5.000 | 4.996 |
+| Place Details | 157 | 5.000 | 4.843 |
 | Place Photo | 0 | 1.000 | 1.000 |

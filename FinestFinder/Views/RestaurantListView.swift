@@ -49,22 +49,21 @@ struct RestaurantListView: View {
     // MARK: - Body
 
     var body: some View {
-        VStack(spacing: 0) {
-            if headerVisible || showingDropdown {
-                VStack(spacing: 0) {
-                    searchHeader
-                    if !showingDropdown {
-                        activeFiltersBar
-                    }
-                }
-                .background(Color(.systemBackground))
-                .transition(.move(edge: .top).combined(with: .opacity))
-            }
-
+        Group {
             if showingDropdown {
-                Spacer(minLength: 0)
+                VStack(spacing: 0) {
+                    headerContent
+                    Spacer(minLength: 0)
+                }
             } else {
                 scrollContent
+                    .safeAreaInset(edge: .top, spacing: 0) {
+                        headerContent
+                            .frame(height: headerVisible ? nil : 0, alignment: .top)
+                            .opacity(headerVisible ? 1 : 0)
+                            .clipped()
+                            .animation(.easeOut(duration: 0.22), value: headerVisible)
+                    }
             }
         }
         .task(id: searchText) {
@@ -95,7 +94,7 @@ struct RestaurantListView: View {
                 } label: {
                     HStack(spacing: 4) {
                         Text("Hamburg")
-                            .font(.system(size: 22, weight: .bold))
+                            .font(.system(size: 22, weight: .bold, design: .rounded))
                         Image(systemName: "chevron.down")
                             .font(.system(size: 10, weight: .bold))
                             .foregroundStyle(.secondary)
@@ -181,6 +180,17 @@ struct RestaurantListView: View {
     // MARK: - Search Header
 
     @ViewBuilder
+    private var headerContent: some View {
+        VStack(spacing: 0) {
+            searchHeader
+            if !showingDropdown {
+                activeFiltersBar
+            }
+        }
+        .background(Color(.systemBackground))
+    }
+
+    @ViewBuilder
     private var searchHeader: some View {
         VStack(spacing: 0) {
             searchBarRow
@@ -189,7 +199,7 @@ struct RestaurantListView: View {
                 searchDropdownContent
             }
         }
-        .background(Color(.systemBackground), in: RoundedRectangle(cornerRadius: 14))
+        .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 14))
         .shadow(color: .black.opacity(0.08), radius: 6, y: 2)
         .padding(.horizontal, 12)
         .padding(.top, 8)

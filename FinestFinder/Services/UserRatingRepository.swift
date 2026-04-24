@@ -7,6 +7,7 @@ actor UserRatingRepository {
         let id: UUID?
         let restaurantId: UUID
         let deviceId: String
+        let userId: UUID?
         let rating: Double
         let createdAt: Date?
         let updatedAt: Date?
@@ -15,6 +16,7 @@ actor UserRatingRepository {
             case id
             case restaurantId = "restaurant_id"
             case deviceId = "device_id"
+            case userId = "user_id"
             case rating
             case createdAt = "created_at"
             case updatedAt = "updated_at"
@@ -50,49 +52,149 @@ actor UserRatingRepository {
         return result
     }
 
-    /// Fetch the current device's rating for a specific restaurant
-    func fetchMyRating(restaurantId: UUID) async throws -> Double? {
-        let rows: [UserRatingRow] = try await client
+    /// Fetch the caller's rating for a specific restaurant.
+    /// If `userId` is provided, queries by user_id; otherwise falls back to device_id (anon).
+    func fetchMyRating(restaurantId: UUID, userId: UUID?) async throws -> Double? {
+        let base = client
             .from("user_ratings")
             .select()
             .eq("restaurant_id", value: restaurantId.uuidString)
-            .eq("device_id", value: DeviceID.current)
-            .execute()
-            .value
 
+        let rows: [UserRatingRow]
+        if let userId {
+            rows = try await base
+                .eq("user_id", value: userId.uuidString)
+                .execute()
+                .value
+        } else {
+            rows = try await base
+                .eq("device_id", value: DeviceID.current)
+                .is("user_id", value: nil)
+                .execute()
+                .value
+        }
         return rows.first?.rating
     }
 
-    /// Delete the current device's rating
-    func deleteRating(restaurantId: UUID) async throws {
-        try await client
+    /// Fetch all of the caller's ratings (used for Profile tab).
+    func fetchAllMyRatings(userId: UUID?) async throws -> [UserRatingRow] {
+        let base = client.from("user_ratings").select()
+        if let userId {
+            return try await base
+                .eq("user_id", value: userId.uuidString)
+                .execute()
+                .value
+        } else {
+            return try await base
+                .eq("device_id", value: DeviceID.current)
+                .is("user_id", value: nil)
+                .execute()
+                .value
+        }
+    }
+
+    /// Delete the caller's rating for a restaurant.
+    func deleteRating(restaurantId: UUID, userId: UUID?) async throws {
+        let base = client
             .from("user_ratings")
             .delete()
             .eq("restaurant_id", value: restaurantId.uuidString)
-            .eq("device_id", value: DeviceID.current)
-            .execute()
+
+        if let userId {
+            try await base.eq("user_id", value: userId.uuidString).execute()
+        } else {
+            try await base
+                .eq("device_id", value: DeviceID.current)
+                .is("user_id", value: nil)
+                .execute()
+        }
     }
 
-    /// Delete ALL ratings for the current device
-    func deleteAllRatings() async throws {
-        try await client
-            .from("user_ratings")
-            .delete()
-            .eq("device_id", value: DeviceID.current)
-            .execute()
+    /// Delete ALL of the caller's ratings.
+    func deleteAllRatings(userId: UUID?) async throws {
+        let base = client.from("user_ratings").delete()
+        if let userId {
+            try await base.eq("user_id", value: userId.uuidString).execute()
+        } else {
+            try await base
+                .eq("device_id", value: DeviceID.current)
+                .is("user_id", value: nil)
+                .execute()
+        }
     }
 
-    /// Submit or update the current device's rating
-    func submitRating(restaurantId: UUID, rating: Double) async throws {
-        let row: [String: String] = [
+    /// Submit or update the caller's rating.
+    func submitRating(restaurantId: UUID, rating: Double, userId: UUID?) async throws {
+        var row: [String: String] = [
             "restaurant_id": restaurantId.uuidString,
             "device_id": DeviceID.current,
             "rating": String(rating)
         ]
-
+        let conflictKey: String
+        if let userId {
+            row["user_id"] = userId.uuidString
+            conflictKey = "restaurant_id,user_id"
+        } else {
+            conflictKey = "restaurant_id,device_id"
+        }
         try await client
             .from("user_ratings")
-            .upsert(row, onConflict: "restaurant_id,device_id")
+            .upsert(row, onConflict: conflictKey)
             .execute()
+    }
+
+    /// Claim this device's anonymous ratings for the given user.
+    /// Conflict rule: for restaurants rated both anonymously on this device and already under the user account,
+    /// the row with the newer `updated_at` wins; the loser is deleted.
+    func migrateDeviceRatingsToUser(userId: UUID) async throws {
+        let deviceRows: [UserRatingRow] = try await client
+            .from("user_ratings")
+            .select()
+            .eq("device_id", value: DeviceID.current)
+            .is("user_id", value: nil)
+            .execute()
+            .value
+
+        guard !deviceRows.isEmpty else { return }
+
+        let userRows: [UserRatingRow] = try await client
+            .from("user_ratings")
+            .select()
+            .eq("user_id", value: userId.uuidString)
+            .execute()
+            .value
+
+        let userByRestaurant = Dictionary(uniqueKeysWithValues: userRows.map { ($0.restaurantId, $0) })
+
+        for deviceRow in deviceRows {
+            guard let deviceRowId = deviceRow.id else { continue }
+
+            if let userRow = userByRestaurant[deviceRow.restaurantId], let userRowId = userRow.id {
+                let deviceNewer = (deviceRow.updatedAt ?? .distantPast) > (userRow.updatedAt ?? .distantPast)
+                if deviceNewer {
+                    // User's row loses — delete it, then claim device row
+                    try await client.from("user_ratings")
+                        .delete()
+                        .eq("id", value: userRowId.uuidString)
+                        .execute()
+                    try await client.from("user_ratings")
+                        .update(["user_id": userId.uuidString])
+                        .eq("id", value: deviceRowId.uuidString)
+                        .execute()
+                } else {
+                    // User's row wins — delete the anon device duplicate
+                    try await client.from("user_ratings")
+                        .delete()
+                        .eq("id", value: deviceRowId.uuidString)
+                        .execute()
+                }
+            } else {
+                // No conflict — claim the device row
+                try await client.from("user_ratings")
+                    .update(["user_id": userId.uuidString])
+                    .eq("id", value: deviceRowId.uuidString)
+                    .execute()
+            }
+        }
     }
 }

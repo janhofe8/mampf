@@ -112,3 +112,57 @@
 "a11y.showAll" = "Alle anzeigen";
 "a11y.showFavorites" = "Favoriten anzeigen";
 "a11y.changeViewMode" = "Ansicht ändern";
+
+/* Profile Tab */
+"tab.profile" = "Profil";
+"profile.signedOutTitle" = "Dein MAMPF auf allen Geräten";
+"profile.signedOutSubtitle" = "Melde dich an, um Bewertungen und Favoriten überall zu synchronisieren.";
+"profile.signIn" = "Anmelden";
+"profile.signOut" = "Abmelden";
+"profile.signedIn" = "Angemeldet";
+"profile.yourRatings" = "Deine Bewertungen";
+"profile.wantToTry" = "Will ich probieren";
+"profile.stats.rated" = "Bewertet";
+"profile.stats.avg" = "Durchschnitt";
+"profile.stats.favorite" = "Lieblingsküche";
+"profile.empty.ratings" = "Du hast noch nichts bewertet.";
+"profile.empty.wantToTry" = "Tippe auf das Herz bei Spots, die du noch probieren willst.";
+
+/* Login */
+"login.title" = "Anmelden";
+"login.titleSignup" = "Konto erstellen";
+"login.email" = "E-Mail";
+"login.password" = "Passwort";
+"login.submit.signIn" = "Anmelden";
+"login.submit.signUp" = "Konto erstellen";
+"login.toggle.toSignup" = "Noch kein Konto? Jetzt erstellen";
+"login.toggle.toSignin" = "Konto vorhanden? Anmelden";
+"nav.cancel" = "Abbrechen";
+"login.emailHeader" = "Was ist deine Email?";
+"login.emailSubtitle" = "Wir nutzen sie zum Anmelden oder um dein Konto zu erstellen.";
+"login.passwordHeader" = "Willkommen zurück";
+"login.passwordHeaderSignup" = "Konto erstellen";
+"login.continue" = "Weiter";
+"login.error.emailInvalid" = "Bitte gib eine gültige Email-Adresse ein.";
+"nav.back" = "Zurück";
+
+/* Name Step */
+"login.nameHeader" = "Wie dürfen wir dich nennen?";
+"login.nameSubtitle" = "Damit begrüßen wir dich persönlich — mehr nicht.";
+"login.namePlaceholder" = "Dein Name";
+
+/* Edit Profile */
+"editProfile.title" = "Profil bearbeiten";
+"editProfile.save" = "Speichern";
+"editProfile.nameSection" = "Name";
+"editProfile.emailSection" = "E-Mail";
+"editProfile.emailNote" = "Eine Email-Änderung musst du über einen Bestätigungs-Link an die neue Adresse bestätigen.";
+"editProfile.emailConfirmationSent" = "Bestätigungs-Mail versendet. Klicke den Link, um die Änderung abzuschließen.";
+"login.welcomeBackNamed" = "Willkommen zurück, %@!";
+
+/* Account Deletion */
+"settings.deleteAccount" = "Konto löschen";
+"settings.deleteAccountInfo" = "Löscht dein Konto, Bewertungen, Favoriten und setzt die Geräte-ID zurück — unwiderruflich.";
+"settings.deleteAccountConfirmTitle" = "Konto wirklich löschen?";
+"settings.deleteAccountConfirmMessage" = "Konto, Bewertungen und Favoriten werden unwiderruflich gelöscht.";
+"settings.deleteAccountConfirmButton" = "Konto löschen";

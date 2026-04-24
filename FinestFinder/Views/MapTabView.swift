@@ -169,7 +169,7 @@ struct MapTabView: View {
                     searchDropdownContent
                 }
             }
-            .background(Color(.systemBackground), in: RoundedRectangle(cornerRadius: 14))
+            .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 14))
             .shadow(color: .black.opacity(0.08), radius: 6, y: 2)
 
             // Chip bar (hide when dropdown open)
@@ -347,7 +347,13 @@ struct MapTabView: View {
 
         return Button {
             withAnimation(.easeInOut(duration: 0.25)) {
-                showRatingFilter.toggle()
+                if active {
+                    // Active chip → tap clears the filter (no histogram step needed)
+                    filterVM.minimumRating = 0
+                    showRatingFilter = false
+                } else {
+                    showRatingFilter.toggle()
+                }
             }
         } label: {
             MapChip(
@@ -358,6 +364,7 @@ struct MapTabView: View {
             )
         }
         .sensoryFeedback(.impact(weight: .light), trigger: showRatingFilter)
+        .sensoryFeedback(.selection, trigger: filterVM.minimumRating)
     }
 
     private var cuisineChip: some View {
