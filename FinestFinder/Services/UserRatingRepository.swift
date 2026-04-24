@@ -37,6 +37,11 @@ actor UserRatingRepository {
 
     private var client: SupabaseClient { SupabaseManager.shared.client }
 
+    private let communityCacheURL: URL = {
+        let dir = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+        return dir.appendingPathComponent("community_ratings_cache.json")
+    }()
+
     /// Fetch community averages for all restaurants
     func fetchCommunityRatings() async throws -> [UUID: (average: Double, count: Int)] {
         let rows: [CommunityRating] = try await client
@@ -45,6 +50,24 @@ actor UserRatingRepository {
             .execute()
             .value
 
+        cacheCommunityRatings(rows)
+        return Self.mapCommunityRows(rows)
+    }
+
+    /// Offline fallback — community averages from the last successful fetch.
+    func loadCachedCommunityRatings() -> [UUID: (average: Double, count: Int)] {
+        guard let data = try? Data(contentsOf: communityCacheURL),
+              let rows = try? JSONDecoder().decode([CommunityRating].self, from: data)
+        else { return [:] }
+        return Self.mapCommunityRows(rows)
+    }
+
+    private func cacheCommunityRatings(_ rows: [CommunityRating]) {
+        guard let data = try? JSONEncoder().encode(rows) else { return }
+        try? data.write(to: communityCacheURL)
+    }
+
+    private static func mapCommunityRows(_ rows: [CommunityRating]) -> [UUID: (average: Double, count: Int)] {
         var result: [UUID: (average: Double, count: Int)] = [:]
         for row in rows {
             result[row.restaurantId] = (row.communityRating, row.communityRatingCount)

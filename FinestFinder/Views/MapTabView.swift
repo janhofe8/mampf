@@ -81,6 +81,14 @@ struct MapTabView: View {
         .overlay(alignment: .bottomTrailing) {
             locationButton
         }
+        // Empty-state banner when filters produce zero matches
+        .overlay(alignment: .center) {
+            if cachedFiltered.isEmpty && !store.restaurants.isEmpty && !searchFocused {
+                emptyBanner
+                    .transition(.opacity.combined(with: .scale(scale: 0.95)))
+            }
+        }
+        .animation(.easeInOut(duration: 0.2), value: cachedFiltered.isEmpty)
         .task(id: searchText) {
             if searchText.isEmpty {
                 filterVM.activeSearchText = ""
@@ -145,6 +153,43 @@ struct MapTabView: View {
         }
         .padding(.trailing, 12)
         .padding(.bottom, 16)
+    }
+
+    // MARK: - Empty Banner
+
+    private var emptyBanner: some View {
+        VStack(spacing: 10) {
+            Image(systemName: "map")
+                .font(.system(size: 32))
+                .foregroundStyle(Color.ffPrimary.opacity(0.7))
+            Text("empty.mapNoMatches.title")
+                .font(.system(.subheadline, design: .rounded).weight(.semibold))
+            Text("empty.mapNoMatches.message")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+            if filterVM.hasActiveFilters {
+                Button {
+                    withAnimation {
+                        filterVM.clearFilters()
+                        showRatingFilter = false
+                    }
+                } label: {
+                    Text("empty.noResults.cta")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 7)
+                        .background(Color.ffPrimary, in: Capsule())
+                }
+                .padding(.top, 2)
+            }
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 18)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+        .shadow(color: .black.opacity(0.1), radius: 8, y: 3)
+        .padding(.horizontal, 40)
     }
 
     // MARK: - Top Overlay

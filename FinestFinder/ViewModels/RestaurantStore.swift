@@ -156,9 +156,14 @@ final class RestaurantStore {
 
     func load() async {
         // Show cached data immediately while fetching
-        let cached = await repository.loadCachedRestaurants()
+        async let cachedRestaurants = repository.loadCachedRestaurants()
+        async let cachedCommunity = userRatingRepo.loadCachedCommunityRatings()
+        let (cached, cachedRatings) = await (cachedRestaurants, cachedCommunity)
         if !cached.isEmpty {
             restaurants = cached
+        }
+        if !cachedRatings.isEmpty {
+            communityRatings = cachedRatings
         }
 
         // Always fetch fresh data from Supabase
@@ -168,14 +173,16 @@ final class RestaurantStore {
     func refresh() async {
         isLoading = true
         error = nil
+        let hadCachedData = !restaurants.isEmpty
         do {
             async let fetchedRestaurants = repository.fetchRestaurants()
             async let fetchedCommunity = userRatingRepo.fetchCommunityRatings()
 
             restaurants = try await fetchedRestaurants
-            communityRatings = (try? await fetchedCommunity) ?? [:]
+            communityRatings = (try? await fetchedCommunity) ?? communityRatings
         } catch {
-            if !error.isCancellation {
+            // If we have cached data, treat network failure as silently offline — no scary toast.
+            if !error.isCancellation && !hadCachedData {
                 self.error = error
             }
         }

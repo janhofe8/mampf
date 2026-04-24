@@ -221,7 +221,13 @@ struct ProfileTabView: View {
             sectionHeader("profile.yourRatings", count: ratedEntriesWithRestaurants.count)
 
             if ratedEntriesWithRestaurants.isEmpty {
-                emptyHint("profile.empty.ratings")
+                EmptyStateView(
+                    icon: "star.bubble",
+                    title: "empty.ratings.title",
+                    message: "empty.ratings.message",
+                    compact: true
+                )
+                .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 14))
             } else {
                 VStack(spacing: 0) {
                     ForEach(Array(ratedEntriesWithRestaurants.enumerated()), id: \.element.0.id) { index, pair in
@@ -245,7 +251,13 @@ struct ProfileTabView: View {
             sectionHeader("profile.wantToTry", count: wantToTry.count)
 
             if wantToTry.isEmpty {
-                emptyHint("profile.empty.wantToTry")
+                EmptyStateView(
+                    icon: "heart.circle",
+                    title: "empty.wantToTry.title",
+                    message: "empty.wantToTry.message",
+                    compact: true
+                )
+                .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 14))
             } else {
                 VStack(spacing: 0) {
                     ForEach(Array(wantToTry.enumerated()), id: \.element.id) { index, restaurant in
@@ -274,16 +286,6 @@ struct ProfileTabView: View {
             }
             Spacer()
         }
-    }
-
-    private func emptyHint(_ textKey: LocalizedStringKey) -> some View {
-        Text(textKey)
-            .font(.subheadline)
-            .foregroundStyle(.secondary)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.vertical, 16)
-            .padding(.horizontal, 14)
-            .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 14))
     }
 
     private func ratingRow(restaurant: Restaurant, rating: Double) -> some View {

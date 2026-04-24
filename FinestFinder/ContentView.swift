@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ContentView: View {
     @AppStorage("appearanceMode") private var appearanceMode: AppearanceMode = .system
+    @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
     @Environment(RestaurantStore.self) private var store
     @Environment(AuthService.self) private var auth
     @State private var visibleError: String?
@@ -38,6 +39,12 @@ struct ContentView: View {
                     .padding(.top, 50)
                     .zIndex(100)
             }
+        }
+        .fullScreenCover(isPresented: Binding(
+            get: { !hasCompletedOnboarding },
+            set: { if !$0 { hasCompletedOnboarding = true } }
+        )) {
+            OnboardingView()
         }
         .onChange(of: store.error?.localizedDescription) { _, newValue in
             guard let desc = newValue else { return }

@@ -114,6 +114,36 @@
 "a11y.showFavorites" = "Show favorites";
 "a11y.changeViewMode" = "Change view mode";
 
+/* Onboarding */
+"onboarding.welcome.title" = "Welcome to MAMPF";
+"onboarding.welcome.subtitle" = "Jan's curated food spots in Hamburg — with his honest rating out of 10.";
+"onboarding.rating.title" = "The MAMPF Rating";
+"onboarding.rating.subtitle" = "Jan rates every spot from 1 to 10. Colors tell you at a glance how good it is.";
+"onboarding.rating.legend.great" = "Great · 9+";
+"onboarding.rating.legend.good" = "Good · 8";
+"onboarding.rating.legend.ok" = "OK · 7";
+"onboarding.rating.legend.meh" = "Meh · ≤6";
+"onboarding.location.title" = "Find spots near you";
+"onboarding.location.subtitle" = "Enable location so MAMPF can show distances and what's around you on the map.";
+"onboarding.location.allow" = "Enable location";
+"onboarding.location.skip" = "Not now";
+"onboarding.next" = "Next";
+"onboarding.getStarted" = "Let's eat";
+
+/* Empty States */
+"empty.noResults.title" = "No food spots";
+"empty.noResults.message" = "Try a different search term or clear your filters.";
+"empty.noResults.cta" = "Reset filters";
+"empty.favorites.title" = "No favorites yet";
+"empty.favorites.message" = "Tap the heart on any spot to keep it here.";
+"empty.favorites.cta" = "Show all spots";
+"empty.mapNoMatches.title" = "Nothing in view";
+"empty.mapNoMatches.message" = "No spots match these filters.";
+"empty.ratings.title" = "No ratings yet";
+"empty.ratings.message" = "Rate a spot to see it here.";
+"empty.wantToTry.title" = "Nothing on your list";
+"empty.wantToTry.message" = "Tap the heart on spots you want to visit.";
+
 /* Profile Tab */
 "tab.profile" = "Profile";
 "profile.signedOutTitle" = "Save your MAMPF across devices";

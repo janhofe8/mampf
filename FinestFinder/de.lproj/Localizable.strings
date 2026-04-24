@@ -114,6 +114,36 @@
 "a11y.showFavorites" = "Favoriten anzeigen";
 "a11y.changeViewMode" = "Ansicht ändern";
 
+/* Onboarding */
+"onboarding.welcome.title" = "Willkommen bei MAMPF";
+"onboarding.welcome.subtitle" = "Jans kuratierte Foodspots in Hamburg — mit seiner ehrlichen Bewertung von 1 bis 10.";
+"onboarding.rating.title" = "Das MAMPF-Rating";
+"onboarding.rating.subtitle" = "Jan bewertet jeden Spot von 1 bis 10. Die Farben zeigen sofort, wie gut's ist.";
+"onboarding.rating.legend.great" = "Top · 9+";
+"onboarding.rating.legend.good" = "Gut · 8";
+"onboarding.rating.legend.ok" = "OK · 7";
+"onboarding.rating.legend.meh" = "Meh · ≤6";
+"onboarding.location.title" = "Finde Spots in deiner Nähe";
+"onboarding.location.subtitle" = "Mit Standort zeigt MAMPF Entfernungen und was gerade um dich herum ist.";
+"onboarding.location.allow" = "Standort aktivieren";
+"onboarding.location.skip" = "Jetzt nicht";
+"onboarding.next" = "Weiter";
+"onboarding.getStarted" = "Los geht's";
+
+/* Empty States */
+"empty.noResults.title" = "Keine Foodspots";
+"empty.noResults.message" = "Versuche einen anderen Suchbegriff oder setze deine Filter zurück.";
+"empty.noResults.cta" = "Filter zurücksetzen";
+"empty.favorites.title" = "Noch keine Favoriten";
+"empty.favorites.message" = "Tippe auf das Herz bei einem Spot, um ihn hier zu sammeln.";
+"empty.favorites.cta" = "Alle Spots anzeigen";
+"empty.mapNoMatches.title" = "Nichts in Sicht";
+"empty.mapNoMatches.message" = "Keine Spots passen zu diesen Filtern.";
+"empty.ratings.title" = "Noch nichts bewertet";
+"empty.ratings.message" = "Bewerte einen Spot, damit er hier erscheint.";
+"empty.wantToTry.title" = "Deine Liste ist leer";
+"empty.wantToTry.message" = "Tippe auf das Herz bei Spots, die du probieren willst.";
+
 /* Profile Tab */
 "tab.profile" = "Profil";
 "profile.signedOutTitle" = "Dein MAMPF auf allen Geräten";

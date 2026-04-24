@@ -165,8 +165,8 @@ struct RestaurantListView: View {
             FilterSheetView()
         }
         .overlay {
-            if filtered.isEmpty && !store.isLoading {
-                ContentUnavailableView.search(text: searchText)
+            if filtered.isEmpty && !store.isLoading && !store.restaurants.isEmpty {
+                emptyStateOverlay
             }
         }
         .navigationDestination(for: Restaurant.self) { restaurant in
@@ -175,6 +175,41 @@ struct RestaurantListView: View {
         }
         .sensoryFeedback(.selection, trigger: viewMode)
         .sensoryFeedback(.impact(weight: .medium), trigger: showFavoritesOnly)
+    }
+
+    // MARK: - Empty State
+
+    @ViewBuilder
+    private var emptyStateOverlay: some View {
+        if showFavoritesOnly && store.favorites.isEmpty {
+            EmptyStateView(
+                icon: "heart",
+                title: "empty.favorites.title",
+                message: "empty.favorites.message",
+                actionTitle: "empty.favorites.cta",
+                action: {
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        showFavoritesOnly = false
+                    }
+                }
+            )
+        } else if !searchText.isEmpty {
+            EmptyStateView(
+                icon: "magnifyingglass",
+                title: "empty.noResults.title",
+                message: "empty.noResults.message"
+            )
+        } else if filterVM.hasActiveFilters {
+            EmptyStateView(
+                icon: "line.3.horizontal.decrease.circle",
+                title: "empty.noResults.title",
+                message: "empty.noResults.message",
+                actionTitle: "empty.noResults.cta",
+                action: {
+                    withAnimation { filterVM.clearFilters() }
+                }
+            )
+        }
     }
 
     // MARK: - Search Header

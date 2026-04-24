@@ -9,6 +9,9 @@ struct RestaurantDetailView: View {
     @State private var isSubmitting = false
     @State private var showError = false
     @State private var errorMessage = ""
+    @State private var showConfetti = false
+    @State private var submitButtonBounce = false
+    @AppStorage("hasEverRated") private var hasEverRated = false
     private let notificationFeedback = UINotificationFeedbackGenerator()
 
     var body: some View {
@@ -19,6 +22,11 @@ struct RestaurantDetailView: View {
             }
         }
         .ignoresSafeArea(edges: .top)
+        .overlay {
+            ConfettiView(isActive: $showConfetti)
+                .ignoresSafeArea()
+                .allowsHitTesting(false)
+        }
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(.hidden, for: .navigationBar)
         .toolbar {
@@ -170,6 +178,7 @@ struct RestaurantDetailView: View {
                         } else {
                             hasSubmitted = true
                             notificationFeedback.notificationOccurred(.success)
+                            celebrateSubmission(rating: userRating)
                         }
                         isSubmitting = false
                     }
@@ -187,6 +196,7 @@ struct RestaurantDetailView: View {
                     .padding(.vertical, 10)
                     .background(validatedRating != nil ? Color.ffPrimary : Color.gray.opacity(0.3), in: RoundedRectangle(cornerRadius: 10))
                     .foregroundStyle(.white)
+                    .scaleEffect(submitButtonBounce ? 1.06 : 1.0)
                 }
                 .disabled(validatedRating == nil || isSubmitting)
 
@@ -303,6 +313,26 @@ struct RestaurantDetailView: View {
                         .font(.subheadline)
                 }
             }
+        }
+    }
+
+    /// Fire bounce + (conditional) confetti after a successful rating submit.
+    /// Confetti shows on the very first rating ever, or on ratings >= 9.
+    private func celebrateSubmission(rating: Double) {
+        withAnimation(.spring(response: 0.25, dampingFraction: 0.5)) {
+            submitButtonBounce = true
+        }
+        Task {
+            try? await Task.sleep(for: .milliseconds(180))
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                submitButtonBounce = false
+            }
+        }
+        let isFirstEver = !hasEverRated
+        let isHighRating = rating >= 9
+        if isFirstEver || isHighRating {
+            showConfetti = true
+            if isFirstEver { hasEverRated = true }
         }
     }
 
