@@ -6,9 +6,17 @@ struct AsyncRestaurantImage: View {
     var cornerRadius: CGFloat = 12
     var showProgress: Bool = false
     var gradient: Bool = false
+    /// Largest point dimension at which this image will be displayed.
+    /// Used to downsample Google Places photos (often 1600px) to a RAM-friendly size.
+    var targetSize: CGFloat = 400
 
+    @Environment(\.displayScale) private var displayScale
     @State private var image: UIImage?
     @State private var failed = false
+
+    private var maxPixelSize: CGFloat {
+        max(1, targetSize * displayScale)
+    }
 
     var body: some View {
         if let url {
@@ -26,8 +34,8 @@ struct AsyncRestaurantImage: View {
                     RoundedRectangle(cornerRadius: cornerRadius).fill(.quaternary)
                 }
             }
-            .task(id: url) {
-                if let loaded = await ImageCache.shared.image(for: url) {
+            .task(id: TaskKey(url: url, pixelSize: maxPixelSize)) {
+                if let loaded = await ImageCache.shared.image(for: url, maxPixelSize: maxPixelSize) {
                     image = loaded
                 } else {
                     failed = true
@@ -58,5 +66,10 @@ struct AsyncRestaurantImage: View {
                         .font(.title)
                 }
         }
+    }
+
+    private struct TaskKey: Hashable {
+        let url: URL
+        let pixelSize: CGFloat
     }
 }

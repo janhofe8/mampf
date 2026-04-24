@@ -26,12 +26,28 @@
 "detail.outOf10" = "/ 10";
 "detail.rate" = "Rate";
 "detail.update" = "Update";
+"detail.remove" = "Remove";
 "detail.info" = "Info";
 "detail.notes" = "Notes";
 "detail.openInGoogleMaps" = "Open in Google Maps";
 "detail.beFirstToRate" = "Be the first to rate!";
 
+/* Rating tiers */
+"rating.tier.avoid" = "Avoid";
+"rating.tier.okay" = "Okay";
+"rating.tier.good" = "Good";
+"rating.tier.recommended" = "Recommended";
+"rating.tier.mampf" = "MAMPF";
+
+/* Search */
+"search.placeholder.pasta" = "Search pasta…";
+"search.placeholder.ottensen" = "Try Ottensen…";
+"search.placeholder.nine" = "Find 9+ ratings…";
+"search.placeholder.ramen" = "Craving ramen?";
+"search.placeholder.pizza" = "Looking for pizza?";
+
 /* Filter */
+"filter.filters" = "Filters";
 "filter.cuisine" = "Cuisine";
 "filter.neighborhood" = "Neighborhood";
 "filter.priceRange" = "Price Range";
@@ -115,8 +131,8 @@
 "a11y.changeViewMode" = "Change view mode";
 
 /* Onboarding */
-"onboarding.welcome.title" = "Welcome to MAMPF";
-"onboarding.welcome.subtitle" = "Jan's curated food spots in Hamburg — with his honest rating out of 10.";
+"onboarding.welcome.title" = "We know Hamburg's food scene.";
+"onboarding.welcome.subtitle" = "Online reviews are broken — faked, paid, deleted when they get inconvenient.\n\nWe've tested 150+ spots ourselves and rated them honestly.\n\nSo you know where it's actually worth going.";
 "onboarding.rating.title" = "The MAMPF Rating";
 "onboarding.rating.subtitle" = "Jan rates every spot from 1 to 10. Colors tell you at a glance how good it is.";
 "onboarding.rating.legend.great" = "Great · 9+";
@@ -146,8 +162,13 @@
 
 /* Profile Tab */
 "tab.profile" = "Profile";
-"profile.signedOutTitle" = "Save your MAMPF across devices";
-"profile.signedOutSubtitle" = "Sign in to sync your ratings and favorites everywhere.";
+"profile.signedOutTitle" = "Your taste, all in one place.";
+"profile.signedOutSubtitle" = "Save what you love. Plan what's next.";
+"profile.continue" = "Continue";
+"profile.previewTitle" = "What you'll unlock";
+"profile.syncBanner.title" = "Your MAMPF profile";
+"profile.syncBanner.subtitle" = "Sign in — get a username, stats, and history.";
+"login.emailPlaceholder" = "your@email.com";
 "profile.signIn" = "Sign in";
 "profile.signOut" = "Sign out";
 "profile.signedIn" = "Signed in";

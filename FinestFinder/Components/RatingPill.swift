@@ -90,7 +90,7 @@ struct RatingPill: View {
                 .font(.system(size: size.iconSize, weight: size == .small ? .semibold : .bold))
                 .frame(width: size.iconFrameWidth)
             Text(value)
-                .font(.system(size: size.fontSize, weight: size.fontWeight).monospacedDigit())
+                .font(.system(size: size.fontSize, weight: size.fontWeight, design: .rounded).monospacedDigit())
         }
         .foregroundStyle(textColor)
         .frame(minWidth: size.minWidth)

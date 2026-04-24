@@ -7,17 +7,13 @@ struct ProfileTabView: View {
     @State private var showingLogin = false
     @State private var showingSettings = false
     @State private var showingEditProfile = false
+    @State private var signupEmail: String = ""
+    @State private var prefilledEmailForSheet: String?
 
     var body: some View {
-        Group {
-            if auth.isSignedIn {
-                signedInContent
-            } else {
-                signedOutContent
-            }
-        }
-        .navigationTitle("tab.profile")
-        .navigationBarTitleDisplayMode(.large)
+        profileContent
+            .navigationTitle("tab.profile")
+            .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
@@ -29,73 +25,41 @@ struct ProfileTabView: View {
                 .accessibilityLabel("settings.title")
             }
         }
-        .sheet(isPresented: $showingLogin) { LoginSheetView() }
+        .sheet(isPresented: $showingLogin) {
+            LoginSheetView(prefilledEmail: prefilledEmailForSheet)
+        }
         .sheet(isPresented: $showingSettings) { SettingsView() }
         .sheet(isPresented: $showingEditProfile) { EditProfileView() }
         .navigationDestination(for: Restaurant.self) { restaurant in
             RestaurantDetailView(restaurant: restaurant)
         }
         .task(id: auth.currentUserId) {
-            if auth.isSignedIn {
-                await store.loadAllMyRatings()
-            }
+            // Always load — anon users also have ratings via device_id.
+            await store.loadAllMyRatings()
         }
         .onAppear {
-            if auth.isSignedIn {
-                Task { await store.loadAllMyRatings() }
-            }
+            applyBrandedNavBarAppearance()
+            Task { await store.loadAllMyRatings() }
         }
     }
 
-    // MARK: - Signed-Out
+    // MARK: - Profile Content (same for anon + signed-in, only the top header differs)
 
-    private var signedOutContent: some View {
+    private var profileContent: some View {
         ScrollView {
             VStack(spacing: 20) {
-                Image(systemName: "person.crop.circle.badge.plus")
-                    .font(.system(size: 64))
-                    .foregroundStyle(.ffPrimary)
-                    .padding(.top, 48)
-
-                VStack(spacing: 8) {
-                    Text("profile.signedOutTitle")
-                        .font(.system(.title2, design: .rounded).weight(.bold))
-                        .multilineTextAlignment(.center)
-                    Text("profile.signedOutSubtitle")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
+                if auth.isSignedIn {
+                    accountHeader
+                } else {
+                    signInBanner
                 }
-                .padding(.horizontal, 32)
-
-                Button {
-                    showingLogin = true
-                } label: {
-                    Text("profile.signIn")
-                        .font(.headline)
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(Color.ffPrimary, in: RoundedRectangle(cornerRadius: 12))
-                }
-                .padding(.horizontal, 32)
-
-                Spacer()
-            }
-        }
-    }
-
-    // MARK: - Signed-In
-
-    private var signedInContent: some View {
-        ScrollView {
-            VStack(spacing: 20) {
-                accountHeader
                 statsCard
                 ratingsSection
                 wantToTrySection
-                signOutButton
-                    .padding(.top, 12)
+                if auth.isSignedIn {
+                    signOutButton
+                        .padding(.top, 12)
+                }
             }
             .padding(.horizontal, 16)
             .padding(.top, 8)
@@ -103,6 +67,68 @@ struct ProfileTabView: View {
         .refreshable {
             await store.loadAllMyRatings()
         }
+    }
+
+    /// Inline email entry above the real profile data — converts better than a link.
+    private var signInBanner: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("profile.syncBanner.title")
+                    .font(.system(.headline, design: .rounded).weight(.semibold))
+                Text("profile.syncBanner.subtitle")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            HStack(spacing: 10) {
+                Image(systemName: "envelope")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                ZStack(alignment: .leading) {
+                    if signupEmail.isEmpty {
+                        Text("login.emailPlaceholder")
+                            .font(.subheadline)
+                            .foregroundStyle(Color(.systemGray3))
+                            .allowsHitTesting(false)
+                    }
+                    TextField("", text: $signupEmail)
+                        .font(.subheadline)
+                        .tint(.ffPrimary)
+                }
+                    .textContentType(.emailAddress)
+                    .keyboardType(.emailAddress)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .submitLabel(.go)
+                    .onSubmit(continueWithEmail)
+                Button(action: continueWithEmail) {
+                    Image(systemName: "arrow.right")
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(.white)
+                        .frame(width: 32, height: 32)
+                        .background(
+                            signupEmail.contains("@") ? Color.ffPrimary : Color.gray.opacity(0.35),
+                            in: Circle()
+                        )
+                }
+                .disabled(!signupEmail.contains("@"))
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(Color(.systemBackground), in: RoundedRectangle(cornerRadius: 12))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(Color(.systemGray4), lineWidth: 1)
+            )
+        }
+        .padding(14)
+        .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 14))
+    }
+
+    private func continueWithEmail() {
+        let trimmed = signupEmail.trimmingCharacters(in: .whitespaces)
+        prefilledEmailForSheet = trimmed.contains("@") ? trimmed : nil
+        showingLogin = true
     }
 
     private var accountHeader: some View {
@@ -229,18 +255,29 @@ struct ProfileTabView: View {
                 )
                 .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 14))
             } else {
-                VStack(spacing: 0) {
-                    ForEach(Array(ratedEntriesWithRestaurants.enumerated()), id: \.element.0.id) { index, pair in
+                // Native List → gives us `.swipeActions`. Scroll disabled so the
+                // outer ScrollView keeps scrolling vertically; only horizontal swipes activate.
+                List {
+                    ForEach(ratedEntriesWithRestaurants, id: \.0.id) { pair in
                         NavigationLink(value: pair.1) {
                             ratingRow(restaurant: pair.1, rating: pair.0.rating)
                         }
-                        .buttonStyle(.plain)
-                        if index < ratedEntriesWithRestaurants.count - 1 {
-                            Divider().padding(.leading, 60)
+                        .listRowInsets(EdgeInsets())
+                        .listRowBackground(Color(.secondarySystemBackground))
+                        .alignmentGuide(.listRowSeparatorLeading) { _ in 60 }
+                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                            Button(role: .destructive) {
+                                Task { await store.deleteRating(for: pair.1) }
+                            } label: {
+                                Label(String(localized: "detail.remove"), systemImage: "trash.fill")
+                            }
                         }
                     }
                 }
-                .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 14))
+                .listStyle(.plain)
+                .scrollDisabled(true)
+                .frame(height: CGFloat(ratedEntriesWithRestaurants.count) * 64)
+                .clipShape(RoundedRectangle(cornerRadius: 14))
             }
         }
     }
@@ -259,18 +296,27 @@ struct ProfileTabView: View {
                 )
                 .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 14))
             } else {
-                VStack(spacing: 0) {
-                    ForEach(Array(wantToTry.enumerated()), id: \.element.id) { index, restaurant in
+                List {
+                    ForEach(wantToTry, id: \.id) { restaurant in
                         NavigationLink(value: restaurant) {
                             wishlistRow(restaurant: restaurant)
                         }
-                        .buttonStyle(.plain)
-                        if index < wantToTry.count - 1 {
-                            Divider().padding(.leading, 60)
+                        .listRowInsets(EdgeInsets())
+                        .listRowBackground(Color(.secondarySystemBackground))
+                        .alignmentGuide(.listRowSeparatorLeading) { _ in 60 }
+                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                            Button(role: .destructive) {
+                                store.toggleFavorite(restaurant)
+                            } label: {
+                                Label(String(localized: "a11y.removeFavorite"), systemImage: "heart.slash.fill")
+                            }
                         }
                     }
                 }
-                .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 14))
+                .listStyle(.plain)
+                .scrollDisabled(true)
+                .frame(height: CGFloat(wantToTry.count) * 64)
+                .clipShape(RoundedRectangle(cornerRadius: 14))
             }
         }
     }
@@ -290,7 +336,7 @@ struct ProfileTabView: View {
 
     private func ratingRow(restaurant: Restaurant, rating: Double) -> some View {
         HStack(spacing: 12) {
-            AsyncRestaurantImage(url: restaurant.imageUrl.flatMap(URL.init), cuisineIcon: restaurant.cuisineType.icon)
+            AsyncRestaurantImage(url: restaurant.imageUrl.flatMap(URL.init), cuisineIcon: restaurant.cuisineType.icon, targetSize: 44)
                 .frame(width: 44, height: 44)
                 .clipShape(RoundedRectangle(cornerRadius: 10))
 
@@ -313,19 +359,16 @@ struct ProfileTabView: View {
                 textColor: .black,
                 size: .compact
             )
-
-            Image(systemName: "chevron.right")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.tertiary)
         }
-        .padding(.horizontal, 12)
+        .padding(.leading, 12)
+        .padding(.trailing, 4)
         .padding(.vertical, 10)
         .contentShape(Rectangle())
     }
 
     private func wishlistRow(restaurant: Restaurant) -> some View {
         HStack(spacing: 12) {
-            AsyncRestaurantImage(url: restaurant.imageUrl.flatMap(URL.init), cuisineIcon: restaurant.cuisineType.icon)
+            AsyncRestaurantImage(url: restaurant.imageUrl.flatMap(URL.init), cuisineIcon: restaurant.cuisineType.icon, targetSize: 44)
                 .frame(width: 44, height: 44)
                 .clipShape(RoundedRectangle(cornerRadius: 10))
 
@@ -351,11 +394,9 @@ struct ProfileTabView: View {
                 )
             }
 
-            Image(systemName: "chevron.right")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.tertiary)
         }
-        .padding(.horizontal, 12)
+        .padding(.leading, 12)
+        .padding(.trailing, 4)
         .padding(.vertical, 10)
         .contentShape(Rectangle())
     }

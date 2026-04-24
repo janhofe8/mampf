@@ -36,7 +36,8 @@ enum RatingSource: String, Codable, CaseIterable, Identifiable {
         switch self {
         case .personal: .ffPrimary
         case .community: .ffSecondary
-        case .google: .gray
+        // Darker gray so white pill text stays legible (WCAG AA vs system .gray).
+        case .google: Color(red: 0.38, green: 0.40, blue: 0.44)
         }
     }
 
@@ -46,6 +47,34 @@ enum RatingSource: String, Codable, CaseIterable, Identifiable {
         case .personal: 0
         case .community: 1
         case .google: 2
+        }
+    }
+}
+
+/// Qualitative tier for a personal rating — mirrors the colour system.
+/// Lets the UI describe a number ("8.0 = Empfehlung") so users align on scale intent.
+enum RatingTier {
+    case none, avoid, okay, good, recommended, mampf
+
+    init(rating: Double) {
+        switch rating {
+        case let r where r <= 0: self = .none
+        case let r where r < 5:  self = .avoid
+        case let r where r < 7:  self = .okay
+        case let r where r < 8:  self = .good
+        case let r where r < 9:  self = .recommended
+        default:                 self = .mampf
+        }
+    }
+
+    var label: String? {
+        switch self {
+        case .none:        nil
+        case .avoid:       String(localized: "rating.tier.avoid")
+        case .okay:        String(localized: "rating.tier.okay")
+        case .good:        String(localized: "rating.tier.good")
+        case .recommended: String(localized: "rating.tier.recommended")
+        case .mampf:       String(localized: "rating.tier.mampf")
         }
     }
 }

@@ -11,6 +11,9 @@ struct RestaurantDetailView: View {
     @State private var errorMessage = ""
     @State private var showConfetti = false
     @State private var submitButtonBounce = false
+    @State private var mapSnapshot: UIImage?
+    @State private var hoursExpanded = false
+    @Environment(\.displayScale) private var displayScale
     @AppStorage("hasEverRated") private var hasEverRated = false
     private let notificationFeedback = UINotificationFeedbackGenerator()
 
@@ -64,7 +67,8 @@ struct RestaurantDetailView: View {
                     cuisineIcon: restaurant.cuisineType.icon,
                     cornerRadius: 0,
                     showProgress: true,
-                    gradient: true
+                    gradient: true,
+                    targetSize: max(geo.size.width, 350)
                 )
                 .frame(width: geo.size.width, height: 350)
                 .clipped()
@@ -81,7 +85,7 @@ struct RestaurantDetailView: View {
                     }
 
                     Text(restaurant.name)
-                        .font(.largeTitle.bold())
+                        .font(.system(.largeTitle, design: .rounded, weight: .bold))
                         .foregroundStyle(.white)
 
                     HStack(spacing: 10) {
@@ -136,105 +140,88 @@ struct RestaurantDetailView: View {
     }
 
     private var userRatingCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        let tierColor = userRating > 0 ? Color.ratingColor(for: userRating) : Color.ffMuted
+
+        return VStack(spacing: 14) {
             Text("detail.yourRating")
                 .font(.headline)
+                .frame(maxWidth: .infinity, alignment: .leading)
 
-            if !hasSubmitted && store.communityRating(for: restaurant) == nil {
-                Label("detail.beFirstToRate", systemImage: "sparkles")
-                    .font(.subheadline)
-                    .foregroundStyle(.ffPrimary)
+            // Hero: rating ring fills with progress, number + tier sit inside
+            ZStack {
+                Circle()
+                    .stroke(Color(.tertiarySystemFill), lineWidth: 10)
+
+                Circle()
+                    .trim(from: 0, to: max(0.001, min(1, userRating / 10)))
+                    .stroke(tierColor, style: StrokeStyle(lineWidth: 10, lineCap: .round))
+                    .rotationEffect(.degrees(-90))
+                    .animation(.easeOut(duration: 0.25), value: userRating)
+
+                VStack(spacing: 0) {
+                    Text(userRating > 0 ? userRating.formattedRating : "–")
+                        .font(.system(size: 40, weight: .black, design: .rounded).monospacedDigit())
+                        .foregroundStyle(tierColor)
+                        .contentTransition(.numericText(value: userRating))
+
+                    Text(RatingTier(rating: userRating).label ?? " ")
+                        .font(.system(.caption, design: .rounded, weight: .bold))
+                        .tracking(0.5)
+                        .foregroundStyle(userRating > 0 ? tierColor : .clear)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                        .textCase(.uppercase)
+                }
             }
+            .frame(width: 140, height: 140)
+            .frame(maxWidth: .infinity)
+            .animation(.easeInOut(duration: 0.2), value: RatingTier(rating: userRating))
 
-            HStack {
-                Text(userRating > 0 ? userRating.formattedRating : "–")
-                    .font(.system(size: 28, weight: .black).monospacedDigit())
-                    .foregroundStyle(userRating > 0 ? .primary : .secondary)
-                    .lineLimit(1)
-                    .fixedSize()
-                    .frame(minWidth: 40)
-
-                Slider(value: $userRating, in: 1...10, step: 0.5)
-                    .tint(RatingSource.community.color)
-                    .sensoryFeedback(.selection, trigger: userRating)
-                    .accessibilityLabel(String(localized: "a11y.rating"))
-                    .accessibilityValue(String(format: String(localized: "a11y.ratingValue"), userRating.formattedRating))
-
-                Text("detail.outOf10")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
-
+            // Slider + trash on one row — trash reserves its space so the card
+            // height doesn't change between rated / unrated states.
             HStack(spacing: 10) {
-                Button {
-                    guard validatedRating != nil else { return }
-                    Task {
-                        isSubmitting = true
-                        await store.submitRating(for: restaurant, rating: userRating)
-                        if store.error != nil {
-                            errorMessage = String(localized: "error.ratingFailed")
-                            showError = true
-                            notificationFeedback.notificationOccurred(.error)
-                        } else {
-                            hasSubmitted = true
-                            notificationFeedback.notificationOccurred(.success)
-                            celebrateSubmission(rating: userRating)
-                        }
-                        isSubmitting = false
-                    }
-                } label: {
-                    Group {
-                        if isSubmitting {
-                            ProgressView()
-                                .tint(.white)
-                        } else {
-                            Text(hasSubmitted ? String(localized: "detail.update") : String(localized: "detail.rate"))
-                        }
-                    }
-                    .font(.subheadline.weight(.semibold))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 10)
-                    .background(validatedRating != nil ? Color.ffPrimary : Color.gray.opacity(0.3), in: RoundedRectangle(cornerRadius: 10))
-                    .foregroundStyle(.white)
-                    .scaleEffect(submitButtonBounce ? 1.06 : 1.0)
-                }
-                .disabled(validatedRating == nil || isSubmitting)
+                RatingSlider(value: $userRating, onEditingChanged: { editing in
+                    // Don't auto-submit if a delete or submit is already in flight — avoids
+                    // a stray gesture re-inserting the row right after a trash tap.
+                    if !editing, validatedRating != nil, !isSubmitting { submitRating() }
+                })
+                .accessibilityLabel(String(localized: "a11y.rating"))
+                .accessibilityValue(String(format: String(localized: "a11y.ratingValue"), userRating.formattedRating))
 
-                if hasSubmitted {
-                    Button {
-                        Task {
-                            isSubmitting = true
-                            await store.deleteRating(for: restaurant)
-                            if store.error != nil {
-                                errorMessage = String(localized: "error.deleteFailed")
-                                showError = true
-                                notificationFeedback.notificationOccurred(.error)
-                            } else {
-                                userRating = 0
-                                hasSubmitted = false
-                                notificationFeedback.notificationOccurred(.warning)
-                            }
-                            isSubmitting = false
-                        }
-                    } label: {
-                        Image(systemName: "trash")
-                            .font(.subheadline.weight(.semibold))
-                            .padding(.vertical, 10)
-                            .padding(.horizontal, 14)
-                            .background(Color.gray.opacity(0.15), in: RoundedRectangle(cornerRadius: 10))
-                            .foregroundStyle(.red)
-                    }
-                    .disabled(isSubmitting)
+                Button(action: deleteRating) {
+                    Image(systemName: "trash")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 28, height: 28)
+                        .contentShape(Rectangle())
                 }
-            }
-            .alert(String(localized: "error.title"), isPresented: $showError) {
-                Button("OK") {}
-            } message: {
-                Text(errorMessage)
+                .buttonStyle(.plain)
+                .opacity(hasSubmitted ? 1 : 0)
+                .disabled(!hasSubmitted || isSubmitting)
+                .accessibilityLabel(String(localized: "detail.remove"))
+                .accessibilityHidden(!hasSubmitted)
             }
         }
-        .padding()
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .alert(String(localized: "error.title"), isPresented: $showError) {
+            Button("OK") {}
+        } message: {
+            Text(errorMessage)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity)
+        .background(
+            LinearGradient(
+                colors: [tierColor.opacity(0.14), tierColor.opacity(0.03)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            ),
+            in: RoundedRectangle(cornerRadius: 16)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(tierColor.opacity(0.22), lineWidth: 1)
+        )
+        .animation(.easeInOut(duration: 0.25), value: tierColor)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
     }
 
@@ -243,17 +230,7 @@ struct RestaurantDetailView: View {
             Text("detail.info")
                 .font(.headline)
 
-            // Mini-Map
-            Map(initialPosition: .region(MKCoordinateRegion(
-                center: restaurant.coordinate,
-                span: MKCoordinateSpan(latitudeDelta: 0.005, longitudeDelta: 0.005)
-            ))) {
-                Marker(restaurant.name, coordinate: restaurant.coordinate)
-                    .tint(.ffPrimary)
-            }
-            .frame(height: 150)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
-            .allowsHitTesting(false)
+            miniMap
 
             infoRow(icon: "mappin.circle.fill", label: restaurant.address)
             openingHoursView
@@ -280,6 +257,42 @@ struct RestaurantDetailView: View {
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
     }
 
+    /// Static MapKit snapshot — way cheaper than a live `Map()` and renders once.
+    private var miniMap: some View {
+        GeometryReader { geo in
+            ZStack {
+                if let mapSnapshot {
+                    Image(uiImage: mapSnapshot)
+                        .resizable()
+                        .scaledToFill()
+                        .transition(.opacity)
+                } else {
+                    Rectangle()
+                        .fill(Color(.tertiarySystemBackground))
+                        .overlay {
+                            ProgressView()
+                        }
+                }
+                Image(systemName: "mappin.circle.fill")
+                    .font(.title)
+                    .foregroundStyle(.ffPrimary)
+                    .background(Circle().fill(.white).padding(4))
+                    .shadow(color: .black.opacity(0.25), radius: 3, y: 1)
+            }
+            .frame(width: geo.size.width, height: 150)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .task(id: geo.size.width) {
+                guard mapSnapshot == nil, geo.size.width > 0 else { return }
+                mapSnapshot = await MapSnapshotCache.shared.snapshot(
+                    for: restaurant.coordinate,
+                    size: CGSize(width: geo.size.width, height: 150),
+                    scale: displayScale
+                )
+            }
+        }
+        .frame(height: 150)
+    }
+
     private var notesCard: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("detail.notes")
@@ -294,30 +307,116 @@ struct RestaurantDetailView: View {
     }
 
     private var openingHoursView: some View {
-        HStack(alignment: .top, spacing: 10) {
-            Image(systemName: "clock.fill")
-                .foregroundStyle(.ffPrimary)
-                .frame(width: 24)
-                .padding(.top, 2)
-            VStack(alignment: .leading, spacing: 4) {
-                if let isOpen = restaurant.isOpenNow {
-                    Text(isOpen ? "status.open" : "status.closed")
-                        .font(.subheadline.bold())
-                        .foregroundStyle(isOpen ? .green : .red)
+        let allDays = restaurant.openingHours
+            .components(separatedBy: CharacterSet(charactersIn: ";\n"))
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+        let todayName = Self.currentWeekdayName()
+        let todayLine = allDays.first { line in
+            guard let colon = line.firstIndex(of: ":") else { return false }
+            return String(line[..<colon]).trimmingCharacters(in: .whitespaces)
+                .caseInsensitiveCompare(todayName) == .orderedSame
+        }
+
+        return Button {
+            withAnimation(.easeInOut(duration: 0.22)) { hoursExpanded.toggle() }
+        } label: {
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: "clock.fill")
+                    .foregroundStyle(.ffPrimary)
+                    .frame(width: 24)
+                    .padding(.top, 2)
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 6) {
+                        if let isOpen = restaurant.isOpenNow {
+                            Text(isOpen ? "status.open" : "status.closed")
+                                .font(.subheadline.bold())
+                                .foregroundStyle(isOpen ? .green : .red)
+                        }
+                        // "Today's hours" line right next to the status — the one piece of info users actually want
+                        if let todayLine, let colon = todayLine.firstIndex(of: ":") {
+                            Text("·")
+                                .font(.subheadline)
+                                .foregroundStyle(.tertiary)
+                            Text(todayLine[todayLine.index(after: colon)...].trimmingCharacters(in: .whitespaces))
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+
+                    if hoursExpanded {
+                        ForEach(allDays, id: \.self) { day in
+                            Text(day)
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
+                        .transition(.opacity.combined(with: .move(edge: .top)))
+                    }
                 }
-                let days = restaurant.openingHours
-                    .components(separatedBy: "; ")
-                    .map { $0.trimmingCharacters(in: .whitespaces) }
-                ForEach(days, id: \.self) { day in
-                    Text(day)
-                        .font(.subheadline)
-                }
+                Spacer()
+                Image(systemName: "chevron.down")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+                    .rotationEffect(.degrees(hoursExpanded ? 180 : 0))
+                    .padding(.top, 4)
             }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private static func currentWeekdayName() -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "EEEE"
+        return formatter.string(from: .now)
+    }
+
+    private func submitRating() {
+        guard validatedRating != nil else { return }
+        Task {
+            isSubmitting = true
+            await store.submitRating(for: restaurant, rating: userRating)
+            if store.error != nil {
+                errorMessage = String(localized: "error.ratingFailed")
+                showError = true
+                notificationFeedback.notificationOccurred(.error)
+            } else {
+                hasSubmitted = true
+                notificationFeedback.notificationOccurred(.success)
+                celebrateSubmission(rating: userRating)
+            }
+            isSubmitting = false
         }
     }
 
-    /// Fire bounce + (conditional) confetti after a successful rating submit.
-    /// Confetti shows on the very first rating ever, or on ratings >= 9.
+    private func deleteRating() {
+        // Optimistic UI update — clear immediately, restore only on server failure.
+        let previousRating = userRating
+        withAnimation(.easeInOut(duration: 0.2)) {
+            userRating = 0
+            hasSubmitted = false
+        }
+        notificationFeedback.notificationOccurred(.warning)
+
+        Task {
+            isSubmitting = true
+            await store.deleteRating(for: restaurant)
+            if store.error != nil {
+                // Restore the UI — server delete failed.
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    userRating = previousRating
+                    hasSubmitted = true
+                }
+                errorMessage = String(localized: "error.deleteFailed")
+                showError = true
+                notificationFeedback.notificationOccurred(.error)
+            }
+            isSubmitting = false
+        }
+    }
+
+    /// Bounce + (optional) confetti for a first-ever rating — the only true milestone.
     private func celebrateSubmission(rating: Double) {
         withAnimation(.spring(response: 0.25, dampingFraction: 0.5)) {
             submitButtonBounce = true
@@ -328,11 +427,9 @@ struct RestaurantDetailView: View {
                 submitButtonBounce = false
             }
         }
-        let isFirstEver = !hasEverRated
-        let isHighRating = rating >= 9
-        if isFirstEver || isHighRating {
+        if !hasEverRated {
             showConfetti = true
-            if isFirstEver { hasEverRated = true }
+            hasEverRated = true
         }
     }
 

@@ -42,6 +42,7 @@ struct RestaurantCardView: View {
                             Image(systemName: isFavorite ? "heart.fill" : "heart")
                                 .font(.body.weight(.semibold))
                                 .foregroundStyle(isFavorite ? .red : .white)
+                                .shadow(color: .black.opacity(0.35), radius: 2, y: 1)
                                 .frame(width: 36, height: 36)
                                 .background(.ultraThinMaterial, in: Circle())
                         }
@@ -57,7 +58,9 @@ struct RestaurantCardView: View {
                 Spacer()
                 VStack(alignment: .leading, spacing: compact ? 2 : 6) {
                     Text(restaurant.name)
-                        .font(compact ? .caption.bold() : .title2.bold())
+                        .font(compact
+                            ? .system(.caption, design: .rounded, weight: .bold)
+                            : .system(.title2, design: .rounded, weight: .bold))
                         .foregroundStyle(.white)
                         .lineLimit(compact ? 1 : 2)
 
@@ -116,15 +119,22 @@ struct RestaurantCardView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(
                     LinearGradient(
-                        colors: [.clear, .black.opacity(0.7)],
+                        stops: [
+                            .init(color: .clear, location: 0),
+                            .init(color: .black.opacity(0.35), location: 0.35),
+                            .init(color: .black.opacity(0.85), location: 1.0)
+                        ],
                         startPoint: .top,
                         endPoint: .bottom
                     )
                 )
             }
         }
-        .frame(height: compact ? 120 : 280)
+        .frame(height: compact ? 120 : 240)
         .clipShape(RoundedRectangle(cornerRadius: compact ? 12 : 20))
+        // Explicit hit shape — guarantees the whole card accepts taps even where
+        // subviews (image placeholders, gradients) are transparent.
+        .contentShape(RoundedRectangle(cornerRadius: compact ? 12 : 20))
         .shadow(color: .black.opacity(0.15), radius: compact ? 5 : 10, y: compact ? 2 : 5)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(cardAccessibilityLabel)
@@ -151,7 +161,8 @@ struct RestaurantCardView: View {
             cuisineIcon: restaurant.cuisineType.icon,
             cornerRadius: compact ? 12 : 20,
             showProgress: true,
-            gradient: true
+            gradient: true,
+            targetSize: compact ? 220 : 430
         )
         .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
     }

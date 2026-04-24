@@ -10,14 +10,24 @@ struct RestaurantListView: View {
     @State private var searchText = ""
     @State private var showingFilters = false
     @State private var viewMode: ViewMode = .cards
+    @State private var placeholder = RotatingPlaceholder(examples: [
+        String(localized: "search.placeholder.pasta"),
+        String(localized: "search.placeholder.ottensen"),
+        String(localized: "search.placeholder.nine"),
+        String(localized: "search.placeholder.ramen"),
+        String(localized: "search.placeholder.pizza")
+    ])
     @State private var showFavoritesOnly = false
     @State private var filtered: [Restaurant] = []
+    @State private var suggestions: [Restaurant] = []
+    @State private var distanceCache: [UUID: String] = [:]
     @State private var isHeaderVisible: Bool = true
     @State private var scrollAccumulator: CGFloat = 0
     @FocusState private var searchFocused: Bool
 
     private var showingDropdown: Bool { !searchText.isEmpty }
-    private var headerVisible: Bool { isHeaderVisible || showingDropdown }
+    /// Force-show in list mode (swipeActions conflict) and when search dropdown is open.
+    private var headerVisible: Bool { isHeaderVisible || showingDropdown || viewMode == .list }
 
     /// Hash of all inputs that affect `filtered` — single onChange instead of many
     private var filterInputsToken: Int {
@@ -46,27 +56,49 @@ struct RestaurantListView: View {
         GridItem(.flexible(), spacing: 10)
     ]
 
+    /// Ranks restaurants against a free-text query.
+    /// Name prefix > name contains > cuisine > neighborhood. Ties break on rating.
+    static func rankMatches(_ query: String, in restaurants: [Restaurant]) -> [Restaurant] {
+        let q = query.lowercased().trimmingCharacters(in: .whitespaces)
+        guard !q.isEmpty else { return [] }
+
+        let scored: [(Restaurant, Int)] = restaurants.compactMap { r in
+            let name = r.name.lowercased()
+            let cuisine = r.cuisineType.displayName.lowercased()
+            let hood = r.neighborhood.displayName.lowercased()
+
+            let score: Int
+            if name.hasPrefix(q) { score = 100 }
+            else if name.contains(q) { score = 80 }
+            else if cuisine.hasPrefix(q) { score = 60 }
+            else if cuisine.contains(q) { score = 40 }
+            else if hood.hasPrefix(q) { score = 30 }
+            else if hood.contains(q) { score = 20 }
+            else { return nil }
+
+            return (r, score)
+        }
+
+        return scored
+            .sorted { a, b in
+                if a.1 != b.1 { return a.1 > b.1 }
+                return (a.0.personalRating ?? 0) > (b.0.personalRating ?? 0)
+            }
+            .map(\.0)
+    }
+
     // MARK: - Body
 
     var body: some View {
-        Group {
-            if showingDropdown {
-                VStack(spacing: 0) {
-                    headerContent
-                    Spacer(minLength: 0)
-                }
-            } else {
-                scrollContent
-                    .safeAreaInset(edge: .top, spacing: 0) {
-                        headerContent
-                            .frame(height: headerVisible ? nil : 0, alignment: .top)
-                            .opacity(headerVisible ? 1 : 0)
-                            .clipped()
-                            .animation(.easeOut(duration: 0.22), value: headerVisible)
-                    }
+        scrollContent
+            .safeAreaInset(edge: .top, spacing: 0) {
+                headerContent
+                    .frame(height: headerVisible ? nil : 0, alignment: .top)
+                    .clipped()
+                    .animation(.easeOut(duration: 0.18), value: headerVisible)
             }
-        }
         .task(id: searchText) {
+            refreshSuggestions()
             if searchText.isEmpty {
                 filterVM.activeSearchText = ""
                 return
@@ -74,8 +106,16 @@ struct RestaurantListView: View {
             try? await Task.sleep(for: .milliseconds(250))
             filterVM.activeSearchText = searchText
         }
-        .task { refreshFiltered() }
+        .task {
+            refreshFiltered()
+            refreshDistances()
+        }
         .onChange(of: filterInputsToken) { refreshFiltered() }
+        .onChange(of: store.restaurants.count) {
+            refreshSuggestions()
+            refreshDistances()
+        }
+        .onChange(of: locationManager.lastLocationToken) { refreshDistances() }
         .navigationTitle("")
         .toolbarTitleDisplayMode(.inline)
         .onAppear { applyBrandedNavBarAppearance() }
@@ -129,45 +169,14 @@ struct RestaurantListView: View {
                 .accessibilityLabel(String(localized: "a11y.changeViewMode"))
             }
 
-            ToolbarItem(placement: .topBarTrailing) {
-                Menu {
-                    ForEach(SortField.allCases) { field in
-                        Button {
-                            filterVM.selectSort(field)
-                        } label: {
-                            Label {
-                                Text(field.displayName)
-                            } icon: {
-                                if filterVM.sortField == field {
-                                    Image(systemName: field.supportsDirection
-                                          ? (filterVM.sortAscending ? "chevron.up" : "chevron.down")
-                                          : "checkmark")
-                                }
-                            }
-                        }
-                    }
-                } label: {
-                    Image(systemName: "arrow.up.arrow.down")
-                        .foregroundStyle(.ffPrimary)
-                }
-            }
-
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    showingFilters = true
-                } label: {
-                    Image(systemName: filterVM.hasActiveFilters ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
-                        .foregroundStyle(.ffPrimary)
-                }
-            }
-        }
-        .sheet(isPresented: $showingFilters) {
-            FilterSheetView()
         }
         .overlay {
             if filtered.isEmpty && !store.isLoading && !store.restaurants.isEmpty {
                 emptyStateOverlay
             }
+        }
+        .sheet(isPresented: $showingFilters) {
+            FilterSheetView()
         }
         .navigationDestination(for: Restaurant.self) { restaurant in
             RestaurantDetailView(restaurant: restaurant)
@@ -219,7 +228,7 @@ struct RestaurantListView: View {
         VStack(spacing: 0) {
             searchHeader
             if !showingDropdown {
-                activeFiltersBar
+                chipBar
             }
         }
         .background(Color(.systemBackground))
@@ -234,12 +243,14 @@ struct RestaurantListView: View {
                 searchDropdownContent
             }
         }
-        .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 14))
-        .shadow(color: .black.opacity(0.08), radius: 6, y: 2)
+        .background(Color(.systemBackground), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .stroke(Color(.systemGray4), lineWidth: 1)
+        )
         .padding(.horizontal, 12)
         .padding(.top, 8)
         .padding(.bottom, 4)
-        .animation(.easeInOut(duration: 0.2), value: showingDropdown)
     }
 
     private var searchBarRow: some View {
@@ -247,18 +258,24 @@ struct RestaurantListView: View {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 18, weight: .medium))
                 .foregroundStyle(.secondary)
-            TextField(
-                String(format: String(localized: "search.restaurants"), store.restaurants.count),
-                text: $searchText
-            )
-            .focused($searchFocused)
-            .textFieldStyle(.plain)
-            .font(.system(size: 17))
-            .onSubmit {
-                if let first = searchSuggestions.first {
-                    openSuggestion(first)
+            TextField(placeholder.current, text: $searchText)
+                .focused($searchFocused)
+                .textFieldStyle(.plain)
+                .font(.system(size: 17))
+                .onSubmit {
+                    if let first = suggestions.first {
+                        openSuggestion(first)
+                    }
                 }
-            }
+                .onAppear {
+                    if searchText.isEmpty && !searchFocused { placeholder.start() }
+                }
+                .onChange(of: searchFocused) {
+                    searchFocused ? placeholder.stop() : placeholder.start()
+                }
+                .onChange(of: searchText) {
+                    searchText.isEmpty ? placeholder.start() : placeholder.stop()
+                }
             if searchFocused || !searchText.isEmpty {
                 Button {
                     withAnimation(.easeOut(duration: 0.2)) {
@@ -279,7 +296,7 @@ struct RestaurantListView: View {
 
     @ViewBuilder
     private var searchDropdownContent: some View {
-        let capped = Array(searchSuggestions.prefix(8))
+        let capped = Array(suggestions.prefix(8))
         if capped.isEmpty {
             VStack(spacing: 6) {
                 Image(systemName: "magnifyingglass")
@@ -309,7 +326,7 @@ struct RestaurantListView: View {
     private func searchSuggestionRow(for restaurant: Restaurant) -> some View {
         NavigationLink(value: restaurant) {
             HStack(spacing: 10) {
-                AsyncRestaurantImage(url: restaurant.imageUrl.flatMap(URL.init), cuisineIcon: restaurant.cuisineType.icon)
+                AsyncRestaurantImage(url: restaurant.imageUrl.flatMap(URL.init), cuisineIcon: restaurant.cuisineType.icon, targetSize: 36)
                     .frame(width: 36, height: 36)
                     .clipShape(RoundedRectangle(cornerRadius: 8))
 
@@ -342,16 +359,12 @@ struct RestaurantListView: View {
         .simultaneousGesture(TapGesture().onEnded { clearSearch() })
     }
 
-    private var searchSuggestions: [Restaurant] {
-        guard !searchText.isEmpty else { return [] }
-        let query = searchText.lowercased()
-        return store.restaurants
-            .filter {
-                $0.name.lowercased().contains(query)
-                    || $0.cuisineType.displayName.lowercased().contains(query)
-                    || $0.neighborhood.displayName.lowercased().contains(query)
-            }
-            .sorted { ($0.personalRating ?? 0) > ($1.personalRating ?? 0) }
+    private func refreshSuggestions() {
+        guard !searchText.isEmpty else {
+            if !suggestions.isEmpty { suggestions = [] }
+            return
+        }
+        suggestions = Self.rankMatches(searchText, in: store.restaurants)
     }
 
     private func openSuggestion(_ restaurant: Restaurant) {
@@ -372,69 +385,13 @@ struct RestaurantListView: View {
 
     @ViewBuilder
     private var scrollContent: some View {
-        ScrollView {
+        Group {
             if store.isLoading && store.restaurants.isEmpty {
-                skeletonContent
+                ScrollView { skeletonContent }
+            } else if viewMode == .list {
+                listModeList
             } else {
-                switch viewMode {
-                case .grid:
-                    LazyVGrid(columns: compactColumns, spacing: 14) {
-                        ForEach(filtered) { restaurant in
-                            NavigationLink(value: restaurant) {
-                                RestaurantCardView(
-                                    restaurant: restaurant,
-                                    isFavorite: store.isFavorite(restaurant),
-                                    onFavoriteTap: { store.toggleFavorite(restaurant) },
-                                    compact: true,
-                                    communityRating: store.communityRating(for: restaurant)
-                                )
-                            }
-                            .buttonStyle(.plain)
-                            .matchedTransitionSource(id: restaurant.id, in: heroNamespace) { config in
-                                config.clipShape(RoundedRectangle(cornerRadius: 12))
-                            }
-                        }
-                    }
-                    .padding(.horizontal)
-                    .padding(.top, 8)
-                    .transition(.opacity)
-                case .list:
-                    LazyVStack(spacing: 0) {
-                        ForEach(filtered) { restaurant in
-                            NavigationLink(value: restaurant) {
-                                listRow(for: restaurant)
-                            }
-                            .buttonStyle(.plain)
-                            .matchedTransitionSource(id: restaurant.id, in: heroNamespace) { config in
-                                config.clipShape(RoundedRectangle(cornerRadius: 12))
-                            }
-                            Divider().padding(.leading, 110)
-                        }
-                    }
-                    .padding(.top, 8)
-                    .transition(.opacity)
-                case .cards:
-                    LazyVStack(spacing: 16) {
-                        ForEach(filtered) { restaurant in
-                            NavigationLink(value: restaurant) {
-                                RestaurantCardView(
-                                    restaurant: restaurant,
-                                    isFavorite: store.isFavorite(restaurant),
-                                    onFavoriteTap: { store.toggleFavorite(restaurant) },
-                                    communityRating: store.communityRating(for: restaurant),
-                                    distanceText: distanceText(to: restaurant)
-                                )
-                            }
-                            .buttonStyle(.plain)
-                            .matchedTransitionSource(id: restaurant.id, in: heroNamespace) { config in
-                                config.clipShape(RoundedRectangle(cornerRadius: 20))
-                            }
-                        }
-                    }
-                    .padding(.horizontal)
-                    .padding(.top, 8)
-                    .transition(.opacity)
-                }
+                cardsOrGridScrollView
             }
         }
         .scrollDismissesKeyboard(.interactively)
@@ -447,6 +404,9 @@ struct RestaurantListView: View {
     }
 
     private func handleScrollChange(from oldValue: CGFloat, to newValue: CGFloat) {
+        // Skip in list mode — native List + swipeActions fight with the inset animation.
+        if viewMode == .list { return }
+
         // Always show near the top
         if newValue < 20 {
             if !isHeaderVisible {
@@ -457,112 +417,275 @@ struct RestaurantListView: View {
         }
 
         let delta = newValue - oldValue
-        // Reset accumulator on direction change
+        guard abs(delta) > 1 else { return }
+
         if (delta > 0) != (scrollAccumulator > 0) {
             scrollAccumulator = 0
         }
         scrollAccumulator += delta
 
-        if scrollAccumulator > 40, isHeaderVisible {
-            withAnimation(.easeOut(duration: 0.22)) { isHeaderVisible = false }
+        if scrollAccumulator > 8, isHeaderVisible {
+            withAnimation(.easeOut(duration: 0.18)) { isHeaderVisible = false }
             scrollAccumulator = 0
-        } else if scrollAccumulator < -30, !isHeaderVisible {
-            withAnimation(.easeOut(duration: 0.22)) { isHeaderVisible = true }
+        } else if scrollAccumulator < -10, !isHeaderVisible {
+            withAnimation(.easeOut(duration: 0.18)) { isHeaderVisible = true }
             scrollAccumulator = 0
         }
     }
 
-    // MARK: - Active Filters Bar
-
-    @ViewBuilder
-    private var activeFiltersBar: some View {
-        let isNonDefaultSort = filterVM.sortField != .mampfRating || filterVM.sortAscending
-
-        if isNonDefaultSort || filterVM.hasActiveFilters {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 6) {
-                    if isNonDefaultSort {
-                        chipButton(
-                            icon: filterVM.sortField.icon,
-                            label: filterVM.sortField.displayName,
-                            suffix: filterVM.sortField.supportsDirection
-                                ? (filterVM.sortAscending ? "chevron.up" : "chevron.down")
-                                : nil,
-                            tinted: true
-                        ) {
-                            withAnimation {
-                                filterVM.sortField = .mampfRating
-                                filterVM.sortAscending = false
-                            }
+    private var cardsOrGridScrollView: some View {
+        ScrollView {
+            switch viewMode {
+            case .grid:
+                LazyVGrid(columns: compactColumns, spacing: 14) {
+                    ForEach(filtered) { restaurant in
+                        NavigationLink(value: restaurant) {
+                            RestaurantCardView(
+                                restaurant: restaurant,
+                                isFavorite: store.isFavorite(restaurant),
+                                onFavoriteTap: { store.toggleFavorite(restaurant) },
+                                compact: true,
+                                communityRating: store.communityRating(for: restaurant)
+                            )
                         }
-                    }
-
-                    ForEach(filterVM.selectedCuisines.sorted(by: { $0.rawValue < $1.rawValue })) { cuisine in
-                        removableChip(label: "\(cuisine.icon) \(cuisine.displayName)") {
-                            withAnimation { filterVM.selectedCuisines.toggle(cuisine) }
-                        }
-                    }
-
-                    ForEach(filterVM.selectedNeighborhoods.sorted(by: { $0.rawValue < $1.rawValue })) { hood in
-                        removableChip(label: hood.displayName) {
-                            withAnimation { filterVM.selectedNeighborhoods.toggle(hood) }
-                        }
-                    }
-
-                    ForEach(filterVM.selectedPriceRanges.sorted(by: { $0.tier < $1.tier })) { price in
-                        removableChip(label: price.label) {
-                            withAnimation { filterVM.selectedPriceRanges.toggle(price) }
+                        .buttonStyle(.plain)
+                        .matchedTransitionSource(id: restaurant.id, in: heroNamespace) { config in
+                            config.clipShape(RoundedRectangle(cornerRadius: 12))
                         }
                     }
                 }
                 .padding(.horizontal)
-                .padding(.vertical, 6)
+                .padding(.top, 8)
+                .transition(.opacity)
+            case .cards:
+                LazyVStack(spacing: 16) {
+                    ForEach(filtered) { restaurant in
+                        NavigationLink(value: restaurant) {
+                            RestaurantCardView(
+                                restaurant: restaurant,
+                                isFavorite: store.isFavorite(restaurant),
+                                onFavoriteTap: { store.toggleFavorite(restaurant) },
+                                communityRating: store.communityRating(for: restaurant),
+                                distanceText: distanceText(to: restaurant)
+                            )
+                        }
+                        .buttonStyle(.plain)
+                        .matchedTransitionSource(id: restaurant.id, in: heroNamespace) { config in
+                            config.clipShape(RoundedRectangle(cornerRadius: 20))
+                        }
+                    }
+                }
+                .padding(.horizontal)
+                .padding(.top, 8)
+                .transition(.opacity)
+            case .list:
+                EmptyView()
             }
-            .transition(.opacity.combined(with: .move(edge: .top)))
         }
     }
 
-    private func chipButton(icon: String, label: String, suffix: String?, tinted: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: 4) {
-                Image(systemName: icon).font(.system(size: 10, weight: .bold))
-                Text(label)
-                if let suffix {
-                    Image(systemName: suffix).font(.system(size: 9, weight: .bold))
+    /// List-mode uses a real SwiftUI List so we get native .swipeActions.
+    private var listModeList: some View {
+        List {
+            ForEach(filtered) { restaurant in
+                NavigationLink(value: restaurant) {
+                    listRow(for: restaurant)
+                }
+                .listRowInsets(EdgeInsets())
+                .listRowBackground(Color(.systemBackground))
+                .alignmentGuide(.listRowSeparatorLeading) { _ in 110 }
+                .matchedTransitionSource(id: restaurant.id, in: heroNamespace) { config in
+                    config.clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                    Button {
+                        store.toggleFavorite(restaurant)
+                    } label: {
+                        Label(
+                            store.isFavorite(restaurant)
+                                ? String(localized: "a11y.removeFavorite")
+                                : String(localized: "a11y.addFavorite"),
+                            systemImage: store.isFavorite(restaurant) ? "heart.slash.fill" : "heart.fill"
+                        )
+                    }
+                    .tint(.red)
                 }
             }
-            .font(.caption)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
-            .background(tinted ? Color.ffPrimary.opacity(0.12) : Color(.tertiarySystemFill), in: Capsule())
-            .foregroundStyle(tinted ? .ffPrimary : .primary)
         }
-        .buttonStyle(.borderless)
+        .listStyle(.plain)
+        .transition(.opacity)
     }
 
-    private func removableChip(label: String, onRemove: @escaping () -> Void) -> some View {
-        Button(action: onRemove) {
-            Text(label)
-                .font(.caption)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-                .background(Color.ffPrimary.opacity(0.12), in: Capsule())
-                .foregroundStyle(.ffPrimary)
+
+    // MARK: - Chip Bar
+
+    private var chipBar: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                filtersChip
+                sortChip
+                openNowChip
+                cuisineChip
+                priceChip
+                neighborhoodChip
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
         }
-        .buttonStyle(.borderless)
+        .sensoryFeedback(.selection, trigger: filterVM.selectedCuisines)
+        .sensoryFeedback(.selection, trigger: filterVM.selectedNeighborhoods)
+        .sensoryFeedback(.selection, trigger: filterVM.selectedPriceRanges)
+    }
+
+    private var filtersChip: some View {
+        FiltersEntryChip(activeCount: filterVM.activeFilterCount) {
+            showingFilters = true
+        }
+    }
+
+    private var sortChip: some View {
+        let isNonDefault = filterVM.sortField != .mampfRating || filterVM.sortAscending
+        // Leading icon doubles as direction indicator — no second arrow in the text.
+        let sortIcon: String = filterVM.sortField.supportsDirection
+            ? (filterVM.sortAscending ? "arrow.up" : "arrow.down")
+            : "shuffle"
+        return Menu {
+            ForEach(SortField.allCases) { field in
+                Button {
+                    filterVM.selectSort(field)
+                } label: {
+                    Label {
+                        Text(field.displayName)
+                    } icon: {
+                        if filterVM.sortField == field {
+                            Image(systemName: field.supportsDirection
+                                  ? (filterVM.sortAscending ? "chevron.up" : "chevron.down")
+                                  : "checkmark")
+                        }
+                    }
+                }
+            }
+        } label: {
+            FilterBarChip(
+                icon: sortIcon,
+                text: filterVM.sortField.displayName,
+                isActive: isNonDefault
+            )
+        }
+    }
+
+    private var openNowChip: some View {
+        Button {
+            withAnimation { filterVM.showOpenOnly.toggle() }
+        } label: {
+            FilterBarChip(
+                icon: "clock.fill",
+                text: String(localized: "filter.openNow"),
+                isActive: filterVM.showOpenOnly,
+                showChevron: false
+            )
+        }
+        .sensoryFeedback(.selection, trigger: filterVM.showOpenOnly)
+    }
+
+    private var cuisineChip: some View {
+        let count = filterVM.selectedCuisines.count
+        let active = count > 0
+        let label: String
+        if count == 1, let c = filterVM.selectedCuisines.first {
+            label = "\(c.icon) \(c.displayName)"
+        } else if active {
+            label = String(localized: "filter.cuisine") + " · \(count)"
+        } else {
+            label = String(localized: "filter.cuisine")
+        }
+
+        return Menu {
+            ForEach(CuisineType.allCases) { cuisine in
+                Button {
+                    withAnimation { filterVM.selectedCuisines.toggle(cuisine) }
+                } label: {
+                    if filterVM.selectedCuisines.contains(cuisine) {
+                        Label("\(cuisine.icon) \(cuisine.displayName)", systemImage: "checkmark")
+                    } else {
+                        Text("\(cuisine.icon) \(cuisine.displayName)")
+                    }
+                }
+            }
+        } label: {
+            FilterBarChip(icon: "fork.knife", text: label, isActive: active)
+        }
+    }
+
+    private var priceChip: some View {
+        let count = filterVM.selectedPriceRanges.count
+        let active = count > 0
+        let label: String
+        if count == 1, let p = filterVM.selectedPriceRanges.first {
+            label = p.label
+        } else if active {
+            label = String(localized: "filter.priceRange") + " · \(count)"
+        } else {
+            label = String(localized: "filter.priceRange")
+        }
+
+        return Menu {
+            ForEach(PriceRange.allCases) { price in
+                Button {
+                    withAnimation { filterVM.selectedPriceRanges.toggle(price) }
+                } label: {
+                    if filterVM.selectedPriceRanges.contains(price) {
+                        Label(price.label, systemImage: "checkmark")
+                    } else {
+                        Text(price.label)
+                    }
+                }
+            }
+        } label: {
+            FilterBarChip(icon: "eurosign", text: label, isActive: active)
+        }
+    }
+
+    private var neighborhoodChip: some View {
+        let count = filterVM.selectedNeighborhoods.count
+        let active = count > 0
+        let label: String
+        if count == 1, let n = filterVM.selectedNeighborhoods.first {
+            label = n.displayName
+        } else if active {
+            label = String(localized: "filter.neighborhood") + " · \(count)"
+        } else {
+            label = String(localized: "filter.neighborhood")
+        }
+
+        return Menu {
+            ForEach(Neighborhood.allCases) { hood in
+                Button {
+                    withAnimation { filterVM.selectedNeighborhoods.toggle(hood) }
+                } label: {
+                    if filterVM.selectedNeighborhoods.contains(hood) {
+                        Label(hood.displayName, systemImage: "checkmark")
+                    } else {
+                        Text(hood.displayName)
+                    }
+                }
+            }
+        } label: {
+            FilterBarChip(icon: "mappin", text: label, isActive: active)
+        }
     }
 
     // MARK: - List Row
 
     private func listRow(for restaurant: Restaurant) -> some View {
         HStack(alignment: .center, spacing: 14) {
-            AsyncRestaurantImage(url: restaurant.imageUrl.flatMap(URL.init), cuisineIcon: restaurant.cuisineType.icon)
+            AsyncRestaurantImage(url: restaurant.imageUrl.flatMap(URL.init), cuisineIcon: restaurant.cuisineType.icon, targetSize: 80)
                 .frame(width: 80, height: 80)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
 
             VStack(alignment: .leading, spacing: 6) {
                 Text(restaurant.name)
-                    .font(.system(size: 18, weight: .bold))
+                    .font(.system(size: 18, weight: .bold, design: .rounded))
                     .lineLimit(1)
 
                 HStack(spacing: 6) {
@@ -619,15 +742,26 @@ struct RestaurantListView: View {
     // MARK: - Distance (#11)
 
     private func distanceText(to restaurant: Restaurant) -> String? {
-        guard let loc = locationManager.lastLocation else { return nil }
-        let from = CLLocation(latitude: loc.latitude, longitude: loc.longitude)
-        let to = CLLocation(latitude: restaurant.latitude, longitude: restaurant.longitude)
-        let meters = from.distance(from: to)
-        if meters < 1000 {
-            return String(format: "%.0f m", meters)
-        } else {
-            return String(format: "%.1f km", meters / 1000)
+        distanceCache[restaurant.id]
+    }
+
+    /// Computes distance strings once per location/data change — avoids per-row recomputation while scrolling.
+    private func refreshDistances() {
+        guard let loc = locationManager.lastLocation else {
+            if !distanceCache.isEmpty { distanceCache = [:] }
+            return
         }
+        let from = CLLocation(latitude: loc.latitude, longitude: loc.longitude)
+        var cache: [UUID: String] = [:]
+        cache.reserveCapacity(store.restaurants.count)
+        for restaurant in store.restaurants {
+            let to = CLLocation(latitude: restaurant.latitude, longitude: restaurant.longitude)
+            let meters = from.distance(from: to)
+            cache[restaurant.id] = meters < 1000
+                ? String(format: "%.0f m", meters)
+                : String(format: "%.1f km", meters / 1000)
+        }
+        distanceCache = cache
     }
 
     // MARK: - Skeleton

@@ -95,6 +95,17 @@ final class FilterViewModel {
             || showOpenOnly
     }
 
+    /// Count of currently-applied filter dimensions — shown as a badge on the "Filters" chip.
+    var activeFilterCount: Int {
+        var count = 0
+        if !selectedCuisines.isEmpty { count += 1 }
+        if !selectedNeighborhoods.isEmpty { count += 1 }
+        if !selectedPriceRanges.isEmpty { count += 1 }
+        if minimumRating > 0 { count += 1 }
+        if showOpenOnly { count += 1 }
+        return count
+    }
+
     func apply(
         to restaurants: [Restaurant],
         userLocation: CLLocationCoordinate2D? = nil,

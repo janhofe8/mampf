@@ -124,7 +124,16 @@ struct RatingHistogramFilter: View {
                     let inRange = !isFiltering || bucket >= minimumRating
 
                     RoundedRectangle(cornerRadius: 3)
-                        .fill(inRange ? Color.ratingColor(for: bucket) : Color.gray.opacity(0.22))
+                        .fill(
+                            inRange
+                                ? AnyShapeStyle(LinearGradient(
+                                    colors: [Color.ratingColor(for: bucket).opacity(0.55),
+                                             Color.ratingColor(for: bucket)],
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                ))
+                                : AnyShapeStyle(Color.gray.opacity(0.22))
+                        )
                         .frame(width: barW, height: max(4, frac * barAreaHeight))
                         .frame(maxHeight: .infinity, alignment: .bottom)
                         .contentShape(Rectangle())

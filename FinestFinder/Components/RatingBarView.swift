@@ -63,6 +63,12 @@ struct RatingBarView: View {
                     animatedProgress = rating.normalized
                 }
             }
+            .onChange(of: rating.normalized) { _, newValue in
+                // Community ratings can arrive after first render — keep the bar in sync.
+                withAnimation(.spring(duration: 0.5, bounce: 0.15)) {
+                    animatedProgress = newValue
+                }
+            }
         }
         .accessibilityLabel("\(rating.source.displayName) Rating: \(rating.value ?? 0, specifier: "%.1f") von \(Int(rating.source.maxValue))")
     }

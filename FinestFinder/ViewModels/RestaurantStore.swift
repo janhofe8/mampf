@@ -3,13 +3,17 @@ import Observation
 
 @Observable
 final class RestaurantStore {
-    private(set) var restaurants: [Restaurant] = []
+    private(set) var restaurants: [Restaurant] = [] {
+        didSet { recomputeFavorites() }
+    }
     private(set) var isLoading = false
     private(set) var error: Error?
     private(set) var communityRatings: [UUID: (average: Double, count: Int)] = [:]
     private(set) var myRatings: [UUID: Double] = [:]
     /// Full list of the signed-in (or anonymous) user's ratings with timestamps — loaded on demand for Profile tab.
     private(set) var myRatingEntries: [MyRatingEntry] = []
+    /// Cached favorite restaurants — recomputed only when restaurants or favorite IDs change.
+    private(set) var favorites: [Restaurant] = []
 
     private let repository = RestaurantRepository()
     private let userRatingRepo = UserRatingRepository()
@@ -21,16 +25,17 @@ final class RestaurantStore {
         didSet {
             let strings = favoriteIDs.map(\.uuidString)
             UserDefaults.standard.set(Array(strings), forKey: favoritesKey)
+            recomputeFavorites()
         }
-    }
-
-    var favorites: [Restaurant] {
-        restaurants.filter { favoriteIDs.contains($0.id) }
     }
 
     init() {
         let strings = UserDefaults.standard.stringArray(forKey: favoritesKey) ?? []
         self.favoriteIDs = Set(strings.compactMap { UUID(uuidString: $0) })
+    }
+
+    private func recomputeFavorites() {
+        favorites = restaurants.filter { favoriteIDs.contains($0.id) }
     }
 
     func isFavorite(_ restaurant: Restaurant) -> Bool {

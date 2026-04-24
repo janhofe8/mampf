@@ -32,7 +32,9 @@ func applyBrandedNavBarAppearance() {
     let inlineFont = UIFont.rounded(ofSize: 17, weight: .bold)
 
     let appearance = UINavigationBarAppearance()
-    appearance.configureWithDefaultBackground()
+    appearance.configureWithOpaqueBackground()
+    appearance.backgroundColor = UIColor.systemBackground
+    appearance.shadowColor = .clear
     appearance.largeTitleTextAttributes = [.foregroundColor: purple, .font: largeFont]
     appearance.titleTextAttributes = [.foregroundColor: purple, .font: inlineFont]
 

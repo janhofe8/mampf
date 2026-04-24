@@ -117,20 +117,25 @@ actor UserRatingRepository {
     }
 
     /// Delete the caller's rating for a restaurant.
+    /// Covers both user_id-matched rows and anonymous device_id rows so a legacy
+    /// unclaimed row doesn't survive the delete after migration/sign-in.
     func deleteRating(restaurantId: UUID, userId: UUID?) async throws {
-        let base = client
+        if let userId {
+            try await client
+                .from("user_ratings")
+                .delete()
+                .eq("restaurant_id", value: restaurantId.uuidString)
+                .eq("user_id", value: userId.uuidString)
+                .execute()
+        }
+        // Always also clear any anon row for this device (no-op if nothing matches).
+        try await client
             .from("user_ratings")
             .delete()
             .eq("restaurant_id", value: restaurantId.uuidString)
-
-        if let userId {
-            try await base.eq("user_id", value: userId.uuidString).execute()
-        } else {
-            try await base
-                .eq("device_id", value: DeviceID.current)
-                .is("user_id", value: nil)
-                .execute()
-        }
+            .eq("device_id", value: DeviceID.current)
+            .is("user_id", value: nil)
+            .execute()
     }
 
     /// Delete ALL of the caller's ratings.

@@ -6,6 +6,13 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
     private let manager = CLLocationManager()
     var lastLocation: CLLocationCoordinate2D?
 
+    /// Equatable token — updates whenever the coordinate changes meaningfully.
+    /// SwiftUI `.onChange` can observe this where `CLLocationCoordinate2D?` isn't Equatable.
+    var lastLocationToken: String {
+        guard let l = lastLocation else { return "" }
+        return "\((l.latitude * 1000).rounded()),\((l.longitude * 1000).rounded())"
+    }
+
     var authorizationStatus: CLAuthorizationStatus {
         manager.authorizationStatus
     }

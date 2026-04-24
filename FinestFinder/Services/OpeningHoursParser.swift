@@ -16,9 +16,10 @@ struct OpeningHoursParser {
         let minute = calendar.component(.minute, from: date)
         let currentMinutes = hour * 60 + minute
 
-        let segments = trimmed.components(separatedBy: ";").map {
-            normalizeUnicode($0.trimmingCharacters(in: .whitespaces))
-        }
+        let segments = trimmed
+            .components(separatedBy: CharacterSet(charactersIn: ";\n"))
+            .map { normalizeUnicode($0.trimmingCharacters(in: .whitespaces)) }
+            .filter { !$0.isEmpty }
 
         for segment in segments {
             if let result = parseSegment(segment, weekday: weekday, currentMinutes: currentMinutes) {
@@ -165,9 +166,10 @@ struct OpeningHoursParser {
         let minute = calendar.component(.minute, from: date)
         let currentMinutes = hour * 60 + minute
 
-        let segments = trimmed.components(separatedBy: ";").map {
-            normalizeUnicode($0.trimmingCharacters(in: .whitespaces))
-        }
+        let segments = trimmed
+            .components(separatedBy: CharacterSet(charactersIn: ";\n"))
+            .map { normalizeUnicode($0.trimmingCharacters(in: .whitespaces)) }
+            .filter { !$0.isEmpty }
 
         for segment in segments {
             if let close = parseSegmentClosingTime(segment, weekday: weekday, currentMinutes: currentMinutes) {

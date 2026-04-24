@@ -4,6 +4,9 @@ struct LoginSheetView: View {
     enum Mode { case signIn, signUp }
     enum Step { case email, password, name }
 
+    /// Optional initial email — when set, the sheet skips the email step.
+    var prefilledEmail: String?
+
     @Environment(AuthService.self) private var auth
     @Environment(\.dismiss) private var dismiss
 
@@ -31,6 +34,14 @@ struct LoginSheetView: View {
                 }
             }
             .animation(.easeInOut(duration: 0.2), value: step)
+            .task {
+                // Pre-fill from Profile-tab inline email entry and jump straight to password.
+                if let prefilled = prefilledEmail?.trimmingCharacters(in: .whitespaces),
+                   !prefilled.isEmpty, email.isEmpty {
+                    email = prefilled
+                    await advanceToPassword()
+                }
+            }
             .navigationTitle(navigationTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

@@ -95,7 +95,7 @@ struct SkeletonCardView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
-        .frame(height: compact ? 120 : 280)
+        .frame(height: compact ? 120 : 240)
         .clipShape(RoundedRectangle(cornerRadius: compact ? 12 : 20))
         .shimmer()
     }

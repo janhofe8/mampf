@@ -14,10 +14,24 @@ struct MapTabView: View {
     )
     @State private var searchText = ""
     @State private var showRatingFilter = false
+    @State private var showingFilters = false
     @State private var mapDragged = false
     @FocusState private var searchFocused: Bool
     // Cached results — updated only when inputs change
     @State private var cachedFiltered: [Restaurant] = []
+    @State private var placeholder = RotatingPlaceholder(examples: [
+        String(localized: "search.placeholder.pasta"),
+        String(localized: "search.placeholder.ottensen"),
+        String(localized: "search.placeholder.nine"),
+        String(localized: "search.placeholder.ramen"),
+        String(localized: "search.placeholder.pizza")
+    ])
+    @State private var visiblePins: [Restaurant] = []
+    @State private var zoomTier: ZoomTier = .medium
+    @State private var suggestions: [Restaurant] = []
+    @State private var cachedCategories: [(cuisine: CuisineType, count: Int)] = []
+
+    private enum ZoomTier { case far, medium, close }
 
     // MARK: - Body
 
@@ -34,7 +48,7 @@ struct MapTabView: View {
                 }
             }
 
-            ForEach(cachedFiltered) { restaurant in
+            ForEach(visiblePins) { restaurant in
                 Annotation(restaurant.name, coordinate: CLLocationCoordinate2D(latitude: restaurant.latitude, longitude: restaurant.longitude)) {
                     mapPin(for: restaurant)
                         .accessibilityLabel("\(restaurant.name), \(restaurant.cuisineType.displayName)")
@@ -49,7 +63,13 @@ struct MapTabView: View {
             DragGesture(minimumDistance: 10)
                 .onChanged { _ in mapDragged = true }
         )
-        .onMapCameraChange { _ in
+        .onMapCameraChange(frequency: .onEnd) { context in
+            // Update LOD tier only when it changes — avoids thrashing visiblePins
+            let newTier = Self.zoomTier(for: context.region.span.latitudeDelta)
+            if newTier != zoomTier {
+                zoomTier = newTier
+                refreshVisiblePins()
+            }
             // Only dismiss UI on genuine user drag — avoids keyboard-induced layout changes killing focus
             if mapDragged {
                 if searchFocused { searchFocused = false }
@@ -90,6 +110,7 @@ struct MapTabView: View {
         }
         .animation(.easeInOut(duration: 0.2), value: cachedFiltered.isEmpty)
         .task(id: searchText) {
+            refreshSuggestions()
             if searchText.isEmpty {
                 filterVM.activeSearchText = ""
                 return
@@ -97,13 +118,23 @@ struct MapTabView: View {
             try? await Task.sleep(for: .milliseconds(250))
             filterVM.activeSearchText = searchText
         }
-        .task { refreshAnnotations() }
+        .task {
+            refreshAnnotations()
+            refreshCategories()
+        }
         .onChange(of: filterInputsToken) { refreshAnnotations() }
+        .onChange(of: store.restaurants.count) {
+            refreshCategories()
+            refreshSuggestions()
+        }
         .toolbar(.hidden, for: .navigationBar)
         .sensoryFeedback(.selection, trigger: selectedRestaurant)
         .sensoryFeedback(.impact(weight: .light), trigger: showRatingFilter)
         .sheet(item: $selectedRestaurant) { restaurant in
             detailSheet(for: restaurant)
+        }
+        .sheet(isPresented: $showingFilters) {
+            FilterSheetView()
         }
     }
 
@@ -207,7 +238,11 @@ struct MapTabView: View {
                     searchDropdownContent
                 }
             }
-            .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 14))
+            .background(Color(.systemBackground), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .stroke(Color(.systemGray4), lineWidth: 1)
+            )
             .shadow(color: .black.opacity(0.08), radius: 6, y: 2)
 
             // Chip bar (hide when dropdown open)
@@ -226,18 +261,24 @@ struct MapTabView: View {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 18, weight: .medium))
                 .foregroundStyle(.secondary)
-            TextField(
-                String(format: String(localized: "search.restaurants"), store.restaurants.count),
-                text: $searchText
-            )
-            .focused($searchFocused)
-            .textFieldStyle(.plain)
-            .font(.system(size: 17))
-            .onSubmit {
-                if let first = searchSuggestions.first {
-                    selectSearchResult(first)
+            TextField(placeholder.current, text: $searchText)
+                .focused($searchFocused)
+                .textFieldStyle(.plain)
+                .font(.system(size: 17))
+                .onSubmit {
+                    if let first = suggestions.first {
+                        selectSearchResult(first)
+                    }
                 }
-            }
+                .onAppear {
+                    if searchText.isEmpty && !searchFocused { placeholder.start() }
+                }
+                .onChange(of: searchFocused) {
+                    searchFocused ? placeholder.stop() : placeholder.start()
+                }
+                .onChange(of: searchText) {
+                    searchText.isEmpty ? placeholder.start() : placeholder.stop()
+                }
             if searchFocused || !searchText.isEmpty {
                 Button {
                     withAnimation(.easeOut(duration: 0.2)) {
@@ -253,7 +294,7 @@ struct MapTabView: View {
             }
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 16)
+        .padding(.vertical, 14)
     }
 
     @ViewBuilder
@@ -263,7 +304,7 @@ struct MapTabView: View {
             categorySuggestions
         } else {
             // Restaurant results when typing
-            let capped = Array(searchSuggestions.prefix(8))
+            let capped = Array(suggestions.prefix(8))
             if capped.isEmpty {
                 VStack(spacing: 6) {
                     Image(systemName: "magnifyingglass")
@@ -293,27 +334,23 @@ struct MapTabView: View {
 
     /// Popular categories sorted by restaurant count
     private var categorySuggestions: some View {
-        let counts = Dictionary(grouping: store.restaurants, by: \.cuisineType)
-            .mapValues(\.count)
-        let sorted = counts.sorted { $0.value > $1.value }.prefix(8)
-
-        return ScrollView {
+        ScrollView {
             VStack(spacing: 0) {
-                ForEach(Array(sorted.enumerated()), id: \.element.key) { index, entry in
+                ForEach(Array(cachedCategories.enumerated()), id: \.element.cuisine) { index, entry in
                     Button {
                         withAnimation(.easeOut(duration: 0.15)) {
-                            searchText = entry.key.displayName
+                            searchText = entry.cuisine.displayName
                         }
                     } label: {
                         HStack(spacing: 14) {
-                            Text(entry.key.icon)
+                            Text(entry.cuisine.icon)
                                 .font(.system(size: 22))
                                 .frame(width: 36)
-                            Text(entry.key.displayName)
+                            Text(entry.cuisine.displayName)
                                 .font(.system(size: 16, weight: .medium))
                                 .foregroundStyle(.primary)
                             Spacer()
-                            Text("\(entry.value)")
+                            Text("\(entry.count)")
                                 .font(.subheadline)
                                 .foregroundStyle(.tertiary)
                         }
@@ -322,7 +359,7 @@ struct MapTabView: View {
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
-                    if index < sorted.count - 1 {
+                    if index < cachedCategories.count - 1 {
                         Divider().padding(.leading, 66)
                     }
                 }
@@ -331,32 +368,25 @@ struct MapTabView: View {
         .frame(maxHeight: 380)
     }
 
+    private func refreshCategories() {
+        let counts = Dictionary(grouping: store.restaurants, by: \.cuisineType)
+            .mapValues(\.count)
+        cachedCategories = counts
+            .sorted { $0.value > $1.value }
+            .prefix(8)
+            .map { (cuisine: $0.key, count: $0.value) }
+    }
+
     // MARK: - Chip Bar
 
     private var chipBar: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
+                filtersChip
                 openNowChip
                 ratingChip
                 cuisineChip
                 priceChip
-
-                if filterVM.hasActiveFilters {
-                    Button {
-                        withAnimation {
-                            filterVM.clearFilters()
-                            showRatingFilter = false
-                        }
-                    } label: {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 11, weight: .bold))
-                            .foregroundStyle(.secondary)
-                            .frame(width: 32, height: 32)
-                            .background(.regularMaterial, in: Circle())
-                            .shadow(color: .black.opacity(0.08), radius: 4, y: 2)
-                    }
-                    .transition(.scale.combined(with: .opacity))
-                }
             }
         }
         .sensoryFeedback(.selection, trigger: filterVM.selectedCuisines)
@@ -366,11 +396,17 @@ struct MapTabView: View {
 
     // MARK: - Filter Chips
 
+    private var filtersChip: some View {
+        FiltersEntryChip(activeCount: filterVM.activeFilterCount) {
+            showingFilters = true
+        }
+    }
+
     private var openNowChip: some View {
         Button {
             withAnimation { filterVM.showOpenOnly.toggle() }
         } label: {
-            MapChip(
+            FilterBarChip(
                 icon: "clock.fill",
                 text: String(localized: "filter.openNow"),
                 isActive: filterVM.showOpenOnly,
@@ -394,7 +430,7 @@ struct MapTabView: View {
                 }
             }
         } label: {
-            MapChip(
+            FilterBarChip(
                 icon: "star.fill",
                 text: active ? "≥ \(filterVM.minimumRating.formattedRating)" : String(localized: "filter.rating"),
                 isActive: active || showRatingFilter,
@@ -430,7 +466,7 @@ struct MapTabView: View {
                 }
             }
         } label: {
-            MapChip(icon: "fork.knife", text: label, isActive: active)
+            FilterBarChip(icon: "fork.knife", text: label, isActive: active)
         }
     }
 
@@ -459,7 +495,7 @@ struct MapTabView: View {
                 }
             }
         } label: {
-            MapChip(icon: "eurosign", text: label, isActive: active)
+            FilterBarChip(icon: "eurosign", text: label, isActive: active)
         }
     }
 
@@ -470,7 +506,7 @@ struct MapTabView: View {
             selectSearchResult(restaurant)
         } label: {
             HStack(spacing: 10) {
-                AsyncRestaurantImage(url: restaurant.imageUrl.flatMap(URL.init), cuisineIcon: restaurant.cuisineType.icon)
+                AsyncRestaurantImage(url: restaurant.imageUrl.flatMap(URL.init), cuisineIcon: restaurant.cuisineType.icon, targetSize: 36)
                     .frame(width: 36, height: 36)
                     .clipShape(RoundedRectangle(cornerRadius: 8))
 
@@ -507,16 +543,12 @@ struct MapTabView: View {
         .buttonStyle(.plain)
     }
 
-    private var searchSuggestions: [Restaurant] {
-        guard !searchText.isEmpty else { return [] }
-        let query = searchText.lowercased()
-        return store.restaurants
-            .filter {
-                $0.name.lowercased().contains(query)
-                    || $0.cuisineType.displayName.lowercased().contains(query)
-                    || $0.neighborhood.displayName.lowercased().contains(query)
-            }
-            .sorted { ($0.personalRating ?? 0) > ($1.personalRating ?? 0) }
+    private func refreshSuggestions() {
+        guard !searchText.isEmpty else {
+            if !suggestions.isEmpty { suggestions = [] }
+            return
+        }
+        suggestions = RestaurantListView.rankMatches(searchText, in: store.restaurants)
     }
 
     private func selectSearchResult(_ restaurant: Restaurant) {
@@ -539,6 +571,27 @@ struct MapTabView: View {
 
     private func refreshAnnotations() {
         cachedFiltered = filterVM.apply(to: store.restaurants, userLocation: locationManager.lastLocation, communityRatings: store.communityRatings)
+        refreshVisiblePins()
+    }
+
+    private func refreshVisiblePins() {
+        switch zoomTier {
+        case .far:
+            // Zoomed way out: only show the top spots (rating ≥ 8) so pins don't clump into noise
+            visiblePins = cachedFiltered.filter { ($0.personalRating ?? 0) >= 8 }
+        case .medium:
+            // Default zoom: hide unrated grey dots, keep all rated spots
+            visiblePins = cachedFiltered.filter { $0.personalRating != nil }
+        case .close:
+            // Zoomed in: show everything including unrated
+            visiblePins = cachedFiltered
+        }
+    }
+
+    private static func zoomTier(for latitudeDelta: Double) -> ZoomTier {
+        if latitudeDelta > 0.12 { return .far }
+        if latitudeDelta > 0.035 { return .medium }
+        return .close
     }
 
     // MARK: - Map Pins
@@ -551,43 +604,18 @@ struct MapTabView: View {
                 .foregroundStyle(Color.ratingTextColor(for: rating))
                 .frame(minWidth: 28, minHeight: 28)
                 .background(Color.ratingColor(for: rating), in: Circle())
-                .overlay { Circle().strokeBorder(.white, lineWidth: 1.5) }
+                // Elite rating halo — makes top spots pop against a busy map
+                .shadow(color: rating >= 9 ? Color.ffPrimary.opacity(0.65) : .black.opacity(0.15),
+                        radius: rating >= 9 ? 8 : 2, y: 1)
         } else {
             Circle()
                 .fill(Color.ffMuted)
                 .frame(width: 14, height: 14)
-                .overlay { Circle().strokeBorder(.white, lineWidth: 1.5) }
         }
     }
 }
 
 // MARK: - Supporting Views
-
-private struct MapChip: View {
-    let icon: String
-    let text: String
-    let isActive: Bool
-    var showChevron: Bool = true
-
-    var body: some View {
-        HStack(spacing: 5) {
-            Image(systemName: icon)
-                .font(.system(size: 11, weight: .semibold))
-            Text(text)
-                .font(.subheadline.weight(.medium))
-                .lineLimit(1)
-            if showChevron {
-                Image(systemName: "chevron.down")
-                    .font(.system(size: 9, weight: .bold))
-            }
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(isActive ? AnyShapeStyle(Color.ffPrimary) : AnyShapeStyle(.regularMaterial), in: Capsule())
-        .foregroundStyle(isActive ? .white : .primary)
-        .shadow(color: .black.opacity(isActive ? 0 : 0.08), radius: 4, y: 2)
-    }
-}
 
 private struct MapControlButton: View {
     let icon: String

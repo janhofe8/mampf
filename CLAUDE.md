@@ -6,6 +6,8 @@ Restaurant-Rating-App für Hamburg (~155 Restaurants). MAMPF-Rating (Jans persö
 
 - **iOS:** SwiftUI, iOS 26.2, Swift 6 (MainActor default isolation)
   - Build: `xcodebuild -project MAMPF.xcodeproj -scheme MAMPF -destination 'platform=iOS Simulator,name=iPhone 17 Pro'`
+  - **Simulator-Deploy** (wenn User „deploy" oder „simulator" sagt ohne „iphone"): verwende booteten Simulator via `xcrun simctl`. UDID vorher mit `xcrun simctl list devices booted` prüfen (kann sich ändern). Drei-Schritte: build → `simctl install` → `simctl launch janhoferichter.FinestFinder`.
+  - **iPhone-Deploy** (Default für „deploy"): `mampf-device` Alias. UDID `00008150-00095D410E93401C`. Aus der Claude-Session die 3 Commands direkt (xcodebuild → `devicectl install` → `devicectl launch`).
 - **Web:** Next.js + Tailwind + TypeScript, Vercel
   - Build: `cd web && npm run build`
   - Deploy: `cd /Users/janhoferichter/test/FinestFinder && vercel --prod --yes` (Root Directory = `web`)
@@ -17,11 +19,11 @@ Restaurant-Rating-App für Hamburg (~155 Restaurants). MAMPF-Rating (Jans persö
 
 ```
 FinestFinder/              ← iOS App
-├── Models/                Restaurant.swift (Codable struct + Enums), Rating.swift
+├── Models/                Restaurant.swift (Codable struct + Enums), Rating.swift (+ RatingTier enum)
 ├── ViewModels/            RestaurantStore.swift (@Observable), FilterViewModel.swift (debounced search)
 ├── Views/                 List (3 Modi: Cards/Grid/List), Detail, Map, Filter, Settings, Profile, Login, EditProfile
-├── Components/            Cards, Rating-Bars/Pills/Badges, SkeletonLoadingView, RatingHistogramFilter
-├── Services/              SupabaseManager, AuthService, RestaurantRepository, UserRatingRepository, LocationManager, DeviceID, ImageCache, OpeningHoursParser
+├── Components/            Cards, Rating-Bars/Pills/Badges, RatingSlider (custom), SkeletonLoadingView, RatingHistogramFilter, FilterBarChip (+FiltersEntryChip), RotatingPlaceholder
+├── Services/              SupabaseManager, AuthService, RestaurantRepository, UserRatingRepository, LocationManager, DeviceID, ImageCache (mit Foodie-Preset für /own/), MapSnapshotCache, OpeningHoursParser
 ├── Config/                Secrets.swift (Supabase URL + Anon Key), Theme.swift
 ├── Data/                  PreviewSampleData.swift
 └── PrivacyInfo.xcprivacy  App Store Privacy Manifest (Auth-Daten, Required Reason APIs)
@@ -57,23 +59,34 @@ docs/                      PRIVACY_POLICY.md, GOOGLE_PHOTOS_MIGRATION.md
 ## UX-Patterns
 
 - **Brand Typography:** SF Rounded für alle Brand-Headers — NavBar-Titles global via `applyBrandedNavBarAppearance()` in `MAMPFApp.init()`, inline via `.font(.system(.headline, design: .rounded))` für Section-Titles, Hero-Headings, Stats-Zahlen.
-- **Hero-Animation:** `.matchedTransitionSource` + `.navigationTransition(.zoom)` für Liste→Detail
+- **Navigation Bar:** `configureWithOpaqueBackground()` + `backgroundColor = .systemBackground` + `shadowColor = .clear`. Kein Translucent/Material — User zieht solide Flächen vor. Auf Profile-Tab `.navigationBarTitleDisplayMode(.inline)` (kein Large-Title-Collapse).
+- **Hero-Animation:** `.matchedTransitionSource` + `.navigationTransition(.zoom)` für Liste→Detail. Namespace nur in `RestaurantListView`.
 - **Haptic Feedback:** `.sensoryFeedback()` auf Favoriten-Toggle, View-Mode-Wechsel, Slider, Filter-Chips, Map-Controls. `UINotificationFeedbackGenerator` für Rating Submit/Delete.
 - **Skeleton Loading:** Shimmer-Effekt beim App-Start (SkeletonCardView/SkeletonListRow statt ProgressView)
-- **Suche:** Custom Suchbalken in Liste + Map. Card-Background = `Color(.secondarySystemBackground)` (NICHT `systemBackground` — sonst schwarz-auf-schwarz in Dark Mode). Debouncing: `searchText` instant → `activeSearchText` (250ms). `localizedCaseInsensitiveContains` für Unicode. List zeigt Dropdown nur bei Query; Map zeigt zusätzlich Küchen-Suggestions bei leerem+fokussiertem Feld.
-- **List-Header Hide-on-Scroll:** `safeAreaInset(edge: .top)` + `frame(height: visible ? nil : 0) + clipped()`. NICHT conditional im Body-Tree — das zerstört TextField-Identity und die Suche "bricht sofort ab" beim Tippen.
+- **Suche:** Custom Suchbalken in Liste + Map mit solidem `systemBackground` + 1pt `systemGray4` Stroke, 22pt continuous corner radius. Debouncing: `searchText` instant → `activeSearchText` (250ms). List zeigt Dropdown nur bei Query; Map zeigt zusätzlich Küchen-Suggestions bei leerem+fokussiertem Feld.
+  - **Ranking via `RestaurantListView.rankMatches(_:in:)`** (shared helper, auch von Map benutzt): Name-Prefix (100) > Name-Contains (80) > Cuisine-Prefix (60) > Cuisine-Contains (40) > Hood-Prefix (30) > Hood-Contains (20). Ties nach MAMPF-Rating.
+  - **Suggestions sind `@State`, nicht computed** — werden per `refreshSuggestions()` bei `searchText`-Change gepuscht, nicht pro Render neu berechnet.
+  - **Rotating Placeholder:** `RotatingPlaceholder` (@Observable) cycled alle 4s durch Beispiele, pausiert bei Fokus/Typing. Als Custom-Overlay implementiert (nicht `prompt:`), weil iOS 26 prompt-foregroundStyle unzuverlässig rendert.
+- **List-Header Hide-on-Scroll:** `safeAreaInset(edge: .top)` + `frame(height: visible ? nil : 0) + clipped()`, NUR für Cards/Grid-Modi. **Im List-Modus DEAKTIVIERT** (`headerVisible` immer true bei `viewMode == .list`) — native `.swipeActions` konfliktet mit der animierten Inset-Höhe und frisst Taps. **NICHT conditional im Body-Tree** — das zerstört TextField-Identity und die Suche "bricht sofort ab" beim Tippen. `.onScrollGeometryChange` triggert mit Thresholds 8pt (hide) / 10pt (show) + Animation 0.18s.
 - **Map-Focus-Dismiss nur bei echtem User-Drag:** `onMapCameraChange` feuert auch bei keyboard-induzierten Layout-Änderungen. Flag via `.simultaneousGesture(DragGesture(minimumDistance: 10))` setzen, im Callback prüfen.
-- **Filter UX:**
-  - **Filter-Sheet:** Custom Sheet (kein Form) mit Capsule-Chips im Grid. Header: nur X rechts (Settings lebt jetzt im Profil-Tab).
-  - **Active-Filter-Bar (Liste):** Purple-tinted Capsule-Chips unter Suche. **Kein X-Icon** — Tap auf Chip entfernt Filter direkt. Bar liegt AUSSERHALB der ScrollView (sticky Header), sonst Gesture-Konflikt mit NavigationLinks.
-  - **Map-Chip-Bar:** Open Now, Rating, Cuisine, Preis (keine Sort/Stadtteil — Pan erfüllt's). **Rating-Chip-Toggle:** aktiv → Tap resettet sofort (nicht Histogram öffnen); inaktiv → Tap öffnet Histogram.
-- **Image Caching:** Eigener `ImageCache` (NSCache memory + URLCache disk) statt `AsyncImage`. Bilder laden aus Cache instant, Netzwerk-Bilder mit Fade-In.
-- **Opening Hours:** `OpeningHoursParser` parst Google Places Format (`"Monday: 4:00 – 10:00 PM"`) und einfaches Format (`"Mon-Sun 12:00-22:30"`). Grüner/roter Dot auf Cards/List-Rows, "Open"/"Closed" Label im Detail. `showOpenOnly` Filter.
+- **Filter UX (Liste + Map einheitlich):**
+  - **Chip-Bar** nutzt shared `FilterBarChip` (Pill mit Icon + Text + optional Chevron). `FiltersEntryChip` ist die Entry-Pill ganz links (mit lila Badge für Active-Filter-Count) — öffnet `FilterSheetView`.
+  - **Liste:** Filters → Sort → Open Now → Cuisine → Preis → Stadtteil. Kein separater Clear-X-Button (Sheet hat Reset-Button).
+  - **Map:** Filters → Open Now → Rating → Cuisine → Preis (kein Sort/Stadtteil — Pan erfüllt's). **Rating-Chip-Toggle:** aktiv → Tap resettet sofort (nicht Histogram öffnen); inaktiv → Tap öffnet Histogram.
+  - **Sort-Chip** (Liste): Leading-Icon = aktuelle Richtung (`arrow.up`/`arrow.down`), Text = nur Field-Name, Menu-Chevron trailing. Kein redundanter Direction-Suffix.
+  - **Filter-Sheet:** Custom Sheet mit Capsule-Chips im Grid.
+- **Map-Pin-LOD:** `ZoomTier` (far/medium/close) basiert auf `latitudeDelta`. Weit raus (>0.12): nur Rating ≥ 8. Mittel: nur bewertete Spots. Nah (<0.035): alle. `onMapCameraChange(frequency: .onEnd)` updatet nur bei Tier-Wechsel. **Pins ohne weißen Rand.** Rating ≥ 9 bekommt zusätzlich lila Glow-Shadow.
+- **Image Caching:** Eigener `ImageCache` (NSCache memory + URLCache disk). **Echtes Downsampling** via `CGImageSourceCreateThumbnailAtIndex` im Background-Task — Call-Sites geben `targetSize` mit (× `displayScale`). `totalCostLimit: 80 MB`, per-size Cache-Keys. **Foodie-Preset für `/own/`-URLs:** `CIGammaAdjust` (adaptive Helligkeit pro Bild, Ziel-Luminanz 0.45, gamma clamped 0.55–1.25) + `CIHighlightShadowAdjust` (Highlights 0.65, Shadows 0.25) + `CITemperatureAndTint` (+150K) + `CIColorControls` (Saturation 1.13, Contrast 1.03). Google-Photos bleiben unberührt.
+- **Rating-Eingabe (Detail):** Custom `RatingSlider` (1-10, 0.5 Steps) — minimalistisch: dünner grauer Track, farbige Filled-Portion bis Thumb, 22pt Thumb in Rating-Farbe, Scale +35% + Callout-Bubble beim Drag. **Auto-Save on Release** via `onEditingChanged(false)` — KEIN Rate/Update-Button mehr. Trash-Button sitzt inline neben Slider, reserved space via `opacity(0)` wenn nicht bewertet (Card-Höhe bleibt konstant). Optimistic UI: State direkt clearen, nur bei Server-Error zurückrollen.
+- **Rating-Hero-Card:** Progress-Ring (140×140pt, 10pt lineWidth) um die Zahl, gefüllt proportional zum Rating. Farbe wechselt mit Tier. Card-Background = subtiler Rating-Tier-Gradient (opacity 0.14 → 0.03) + 1pt Stroke.
+- **`RatingTier` Enum** (in `Rating.swift`): avoid (<5) / okay (<7) / good (<8) / recommended (<9) / mampf (≥9) — wird als UPPERCASE-Label neben der Zahl angezeigt damit User:innen die Skala teilen (eine 7 bei Jan = „Gut"). Locale: DE „Meiden/Okay/Gut/Empfehlung/MAMPF", EN „Avoid/Okay/Good/Recommended/MAMPF".
+- **Opening Hours:** `OpeningHoursParser` splittet auf `;` UND `\n` (Supabase liefert Google-Format mit Newlines). Akzeptiert Google-Format (`"Monday: 4:00 – 10:00 PM"`) + simples Format (`"Mon-Sun 12:00-22:30"`). Detail-View nutzt Accordion: heute prominent (Status + Zeit), Chevron aufklappen für alle 7 Tage.
 - **Share:** `ShareLink` im Detail-Toolbar mit Name, MAMPF-Rating, Cuisine/Stadtteil/Preis, Google Maps URL.
-- **Mini-Map:** Eingebettete Map (150pt) mit Marker im Detail Info-Card, nicht interaktiv.
+- **Mini-Map:** Statischer `MKMapSnapshotter` (`MapSnapshotCache` shared) statt Live-`Map()` im Detail — Sheet öffnet deutlich schneller. Coord + Size als Cache-Key. Scale kommt vom `@Environment(\.displayScale)` des Call-Site (nicht deprecated `UIScreen.main`).
 - **Keyboard:** `.scrollDismissesKeyboard(.interactively)` auf Listen-ScrollView
-- **Distanz:** Entfernung auf Cards und Listenzeilen wenn Location aktiv
-- **Community-Rating CTA:** "Be the first to rate!" im Detail wenn noch kein Rating vorhanden
+- **Distanz:** Gecacht in `distanceCache: [UUID: String]` in RestaurantListView — berechnet einmal bei Location-/Data-Change (via `LocationManager.lastLocationToken`), nicht pro Row-Render.
+- **Swipe-to-Favorite** (List-Mode): `SwiftUI.List` mit `.swipeActions(edge: .leading, allowsFullSwipe: true)`. Cards/Grid benutzen LazyVStack/Grid (Heart-Icon auf Card reicht).
+- **Swipe-to-Delete im Profil:** „Your Ratings" + „Want to Try" nutzen `List` mit `.scrollDisabled(true)` + fixed height — native `.swipeActions` für Delete/Remove-Favorite, Outer-ScrollView scrollt weiter vertikal.
 
 ## Auth & Account (Non-Obvious)
 
@@ -87,9 +100,13 @@ docs/                      PRIVACY_POLICY.md, GOOGLE_PHOTOS_MIGRATION.md
 ## UI-Struktur
 
 - **Tabs:** Map ("Karte"), Food Spots, Profil — Standard iOS TabView
-- **Food Spots-Tab:** Title "Hamburg ˅" (City-Selector Menu, inline title mode). Custom Suchbalken darunter (sticky, mit Restaurant-Suggestions beim Tippen — Tap auf Restaurant pusht auf Detail). Active-Filter-Bar darunter (nur wenn Filter aktiv). Dann Content: 3 View-Modi (Cards → Grid → Liste), Grid-Cards zeigen Cuisine-Emoji + Stadtteil + Preis. Trailing-Toolbar: Heart, ViewMode, Sort, Filter. **Header versteckt sich beim Scrollen nach unten**, kommt beim Scroll-up zurück.
-- **Map:** Custom Suchbalken oben (identisch zur Liste, aber mit Küchen-Suggestions bei leerem+fokussiertem Feld), Quick-Filter-Chips darunter (Open Now, Rating, Cuisine, Preis). Location-Button unten rechts. Rating-Histogram als Bottom-Overlay (tappable Bars). Tap auf Such-Ergebnis schließt Suche + zoomt Map + öffnet Detail-Sheet. **Pins:** Alle gefilterten Spots werden einzeln als Rating-Bubble (28pt, Rating-Farbe, Zahl zentriert) gerendert — kein Clustering, zoom-unabhängig. Restaurants ohne Rating als 14pt Grau-Dot.
-- **Profil-Tab:** Logged-out Hero, logged-in Account-Header (tap → Edit Profile) + Stats + „Your Ratings" + „Want to Try" + Sign-Out. Settings via Gear oben rechts. User-Rating-Bubble = Community-Lime (differenziert von MAMPF-Lila).
+- **Food Spots-Tab:** Title "Hamburg ˅" (City-Selector Menu, inline title mode). Custom Suchbalken darunter (sticky, mit Restaurant-Suggestions beim Tippen). Chip-Bar darunter (Filters · Sort · Open Now · Cuisine · Preis · Stadtteil). Content: 3 View-Modi (Cards → Grid → Liste). Trailing-Toolbar: Heart, ViewMode (Sort ist jetzt als Chip, nicht mehr Toolbar). **Header versteckt sich in Cards/Grid-Modi beim Scrollen** (im List-Modus immer sichtbar).
+- **Map:** Custom Suchbalken oben, Quick-Filter-Chips darunter (Filters · Open Now · Rating · Cuisine · Preis). Location-Button unten rechts. Rating-Histogram als Bottom-Overlay (tappable Bars, Balken mit Vertical-Gradient innerhalb Rating-Farbe für Depth). Tap auf Such-Ergebnis schließt Suche + zoomt Map + öffnet Detail-Sheet. **Pins:** Rating-Bubble (28pt, Rating-Farbe, Zahl zentriert), unbewertete 14pt Grau-Dot — **ohne weißen Rand**. Rating ≥ 9 hat zusätzlich lila Glow-Shadow. LOD basiert auf Zoom-Level.
+- **Profil-Tab:** Zeigt **gleiche Struktur für anon + signed-in** — Stats + „Your Ratings" + „Want to Try". Anon Ratings kommen via `device_id` (DB) + Wishlist aus UserDefaults. Oben:
+  - Signed-in: Account-Header (tap → Edit Profile) + Sign-Out-Button unten
+  - Signed-out: Inline Email-Entry-Card mit Envelope-Icon + Arrow-Button (lila wenn valid email, sonst grau). Submit → LoginSheet mit `prefilledEmail` → skippt Email-Step direkt zu Password
+  - Settings via Gear oben rechts
+  - Title „Profil" immer inline (kein Large-Title-Collapse)
 - **Ratings immer:** MAMPF → Community → Google. Community "–" wenn nicht vorhanden.
 - **Sortierung:** Inkl. "Zufällig" (stabiler Seed, nur bei erneutem Auswählen neu gemischt)
 - **Localization:** EN/DE via `Localizable.strings`, "Food Spots" (EN) / "Foodspots" (DE)
@@ -115,7 +132,11 @@ Schema-Änderungen (ALTER TABLE) müssen im Supabase SQL Editor ausgeführt werd
 
 **restaurants** (~155 Einträge): id, name, cuisine_type, neighborhood, price_range, address, latitude, longitude, opening_hours, is_closed, notes, image_url, personal_rating, google_rating, google_review_count, google_place_id, google_maps_url, created_at, updated_at
 
-**user_ratings**: id, restaurant_id, device_id, user_id (nullable — signed-in Nutzer haben user_id, anon Device-ID-only), rating (1-10), created_at, updated_at — UNIQUE(restaurant_id, device_id), UNIQUE(restaurant_id, user_id). **RLS-Policy** `"authed users manage own ratings"`: `FOR ALL TO authenticated USING (user_id = auth.uid())`.
+**user_ratings**: id, restaurant_id, device_id, user_id (nullable — signed-in Nutzer haben user_id, anon Device-ID-only), rating (1-10), created_at, updated_at — UNIQUE(restaurant_id, device_id), UNIQUE(restaurant_id, user_id).
+- **RLS-Policies:**
+  - `"authed users manage own ratings"`: `FOR ALL TO authenticated USING (user_id = auth.uid())`
+  - `"anon users manage own anon ratings"`: `FOR ALL TO anon USING (user_id IS NULL) WITH CHECK (user_id IS NULL)` — ohne diese Policy fallen anon-Deletes silent durch (HTTP 204 ohne DB-Change). Client-side device_id-Filter begrenzt Scope.
+- **Delete-Logik robuster:** `UserRatingRepository.deleteRating` führt **zwei** Deletes aus — bei signed-in den user_id-Match, immer zusätzlich den device_id-anon-Match. Fängt Migrations-Edge-Cases ab, wo ein Row halb-migriert steckt.
 
 **restaurant_community_ratings** (View): restaurant_id, community_rating, community_rating_count
 
@@ -150,10 +171,16 @@ Schema-Änderungen (ALTER TABLE) müssen im Supabase SQL Editor ausgeführt werd
 ## Bekannte Themen
 
 - Google-Fotos in Supabase Storage verstoßen gegen Google ToS (Caching). Vor Public Release durch eigene Fotos ersetzen.
-- **Storage-Struktur:** `restaurant-images/` Root = Google Places Fotos, `own/` = eigene Fotos. **Niemals Google Places Fotos in `own/` speichern.**
+- **Storage-Struktur:** `restaurant-images/` Root = Google Places Fotos, `own/` = eigene Fotos. **Niemals Google Places Fotos in `own/` speichern.** Eigene Fotos werden beim Decode automatisch angepasst (siehe ImageCache Foodie-Preset).
 - `user_ratings` hat vorbereitete `user_id`-Spalte für zukünftigen Email-Login (Supabase Auth aktiviert, aktuell Device-ID)
-- Custom DragGesture-Slider auf Map funktioniert nicht — nativen SwiftUI Slider verwenden
+- Custom DragGesture-Slider auf Map funktioniert nicht — nativen SwiftUI Slider verwenden (der custom `RatingSlider` in der Detail-Card ist OK — Map-Context ist anders)
 - `.toolbarTitleMenu` zeigt keinen sichtbaren Chevron im Large-Title-Modus — für City-Selector stattdessen inline Title mit Custom Menu + explizitem chevron.down verwenden
 - Swift 6 Concurrency: `SupabaseManager` muss `Sendable` + `nonisolated static let shared` sein, `DeviceID` Properties müssen `nonisolated` sein, damit `actor UserRatingRepository` darauf zugreifen kann
-- **Tap-Through bei ScrollView + NavigationLinks:** Ein `Button` oder `onTapGesture` im gleichen ScrollView-Scope wie NavigationLinks kann Taps an das erste NavigationLink durchreichen (erstes Card öffnet sich statt Button-Action zu feuern). Fix: Ziel-View strukturell außerhalb der ScrollView platzieren (sticky Header via VStack über der ScrollView), nicht via Button-Style oder Gesture-Priority tricksen. Passiert typischerweise bei Header-Bars (Filter-Chips etc.).
+- **Tap-Through bei ScrollView + NavigationLinks:** Ein `Button` oder `onTapGesture` im gleichen ScrollView-Scope wie NavigationLinks kann Taps an das erste NavigationLink durchreichen (erstes Card öffnet sich statt Button-Action zu feuern). Fix: Ziel-View strukturell außerhalb der ScrollView platzieren (sticky Header via VStack über der ScrollView), nicht via Button-Style oder Gesture-Priority tricksen.
+- **Performance-Killer die wir gefunden haben:**
+  - `PulseDot` (Infinite `.repeatForever`-Animation) pro sichtbarer Card × 4-5 sichtbare → Tap-Latenz + Scroll-Stutter. **Entfernt.** Open/Closed-Dots sind jetzt statisch.
+  - Body-Tree-Switch im List-View (`if showingDropdown { … } else { … }`) zerstört TextField-Identity und Gesture-State → Suche hakt. **Nicht tun** — immer gleichen View-Tree rendern, Dropdown inline expandieren.
+  - `.onScrollGeometryChange` + animated `.safeAreaInset` + Material + `.refreshable` in List-Modus mit `.swipeActions` → Stuck-Gesture-State. Fix: Hide-on-Scroll NUR in Cards/Grid, nicht in List-Modus.
+- **iOS 26 TextField `prompt: Text(...).foregroundStyle(...)`** wird manchmal ignoriert (Placeholder bleibt tint-farbig/blau). Workaround: Custom `Text` als ZStack-Overlay, `if $binding.wrappedValue.isEmpty` einblenden. Siehe `ProfileTabView.signInBanner`.
+- **AsyncRestaurantImage** braucht `targetSize` pro Call-Site — sonst lädt iOS das volle 1600px-Google-Foto auch für 36px-Thumbnails in den RAM. Bucket-Größen: 36 (search), 44 (profile rows), 80 (list row), 220 (grid card), 430 (full card), ≥350 (detail hero).
 - **SourceKit-Warnings beim Editieren** ("Cannot find type 'Restaurant' in scope" etc.) sind meist stale Cross-File-Warnings wegen `PBXFileSystemSynchronizedRootGroup` — Index ist kurz nicht aktuell. Ignorieren solange `xcodebuild` sauber baut.

@@ -4,8 +4,8 @@ import SwiftUI
 /// to fire a one-shot animation. Auto-resets after the burst.
 struct ConfettiView: View {
     @Binding var isActive: Bool
-    var particleCount: Int = 60
-    var duration: Double = 1.6
+    var particleCount: Int = 35
+    var duration: Double = 1.0
 
     @State private var particles: [Particle] = []
 

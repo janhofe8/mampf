@@ -26,12 +26,28 @@
 "detail.outOf10" = "/ 10";
 "detail.rate" = "Bewerten";
 "detail.update" = "Aktualisieren";
+"detail.remove" = "Löschen";
 "detail.info" = "Info";
 "detail.notes" = "Notizen";
 "detail.openInGoogleMaps" = "In Google Maps öffnen";
 "detail.beFirstToRate" = "Sei der Erste, der bewertet!";
 
+/* Rating tiers */
+"rating.tier.avoid" = "Meiden";
+"rating.tier.okay" = "Okay";
+"rating.tier.good" = "Gut";
+"rating.tier.recommended" = "Empfehlung";
+"rating.tier.mampf" = "MAMPF";
+
+/* Search */
+"search.placeholder.pasta" = "Pasta suchen…";
+"search.placeholder.ottensen" = "Ottensen entdecken…";
+"search.placeholder.nine" = "9+ Bewertungen finden…";
+"search.placeholder.ramen" = "Lust auf Ramen?";
+"search.placeholder.pizza" = "Pizza gesucht?";
+
 /* Filter */
+"filter.filters" = "Filter";
 "filter.cuisine" = "Küche";
 "filter.neighborhood" = "Stadtteil";
 "filter.priceRange" = "Preisklasse";
@@ -115,8 +131,8 @@
 "a11y.changeViewMode" = "Ansicht ändern";
 
 /* Onboarding */
-"onboarding.welcome.title" = "Willkommen bei MAMPF";
-"onboarding.welcome.subtitle" = "Jans kuratierte Foodspots in Hamburg — mit seiner ehrlichen Bewertung von 1 bis 10.";
+"onboarding.welcome.title" = "Wir kennen Hamburgs Gastro.";
+"onboarding.welcome.subtitle" = "Online-Bewertungen kannst du vergessen — gefälscht, gekauft, gelöscht, wenn sie unbequem werden.\n\nWir haben über 150 Spots selbst getestet und ehrlich bewertet.\n\nDamit du weißt, wo's wirklich schmeckt.";
 "onboarding.rating.title" = "Das MAMPF-Rating";
 "onboarding.rating.subtitle" = "Jan bewertet jeden Spot von 1 bis 10. Die Farben zeigen sofort, wie gut's ist.";
 "onboarding.rating.legend.great" = "Top · 9+";
@@ -146,8 +162,13 @@
 
 /* Profile Tab */
 "tab.profile" = "Profil";
-"profile.signedOutTitle" = "Dein MAMPF auf allen Geräten";
-"profile.signedOutSubtitle" = "Melde dich an, um Bewertungen und Favoriten überall zu synchronisieren.";
+"profile.signedOutTitle" = "Dein Geschmack, an einem Ort.";
+"profile.signedOutSubtitle" = "Sammle, was dir schmeckt. Plane, was du noch willst.";
+"profile.continue" = "Weiter";
+"profile.previewTitle" = "Das bekommst du";
+"profile.syncBanner.title" = "Dein MAMPF-Profil";
+"profile.syncBanner.subtitle" = "Anmelden — mit Nutzername, Stats und Verlauf.";
+"login.emailPlaceholder" = "deine@email.de";
 "profile.signIn" = "Anmelden";
 "profile.signOut" = "Abmelden";
 "profile.signedIn" = "Angemeldet";
