@@ -13,14 +13,11 @@ struct MapTabView: View {
         )
     )
     @State private var searchText = ""
-    @State private var isZoomedIn = false
-    @State private var currentSpan: Double = 0.06
     @State private var showRatingFilter = false
     @State private var mapDragged = false
     @FocusState private var searchFocused: Bool
     // Cached results — updated only when inputs change
     @State private var cachedFiltered: [Restaurant] = []
-    @State private var cachedAnnotations: [MapCluster] = []
 
     // MARK: - Body
 
@@ -37,9 +34,14 @@ struct MapTabView: View {
                 }
             }
 
-            ForEach(cachedAnnotations) { cluster in
-                Annotation(cluster.label, coordinate: cluster.coordinate) {
-                    annotationContent(for: cluster)
+            ForEach(cachedFiltered) { restaurant in
+                Annotation(restaurant.name, coordinate: CLLocationCoordinate2D(latitude: restaurant.latitude, longitude: restaurant.longitude)) {
+                    mapPin(for: restaurant)
+                        .accessibilityLabel("\(restaurant.name), \(restaurant.cuisineType.displayName)")
+                        .accessibilityAddTraits(.isButton)
+                        .onTapGesture {
+                            selectedRestaurant = restaurant
+                        }
                 }
             }
         }
@@ -47,15 +49,7 @@ struct MapTabView: View {
             DragGesture(minimumDistance: 10)
                 .onChanged { _ in mapDragged = true }
         )
-        .onMapCameraChange { context in
-            let span = context.region.span.latitudeDelta
-            currentSpan = span
-            let zoomed = span < 0.03
-            if zoomed != isZoomedIn {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    isZoomedIn = zoomed
-                }
-            }
+        .onMapCameraChange { _ in
             // Only dismiss UI on genuine user drag — avoids keyboard-induced layout changes killing focus
             if mapDragged {
                 if searchFocused { searchFocused = false }
@@ -97,7 +91,6 @@ struct MapTabView: View {
         }
         .task { refreshAnnotations() }
         .onChange(of: filterInputsToken) { refreshAnnotations() }
-        .onChange(of: isZoomedIn) { refreshAnnotations() }
         .toolbar(.hidden, for: .navigationBar)
         .sensoryFeedback(.selection, trigger: selectedRestaurant)
         .sensoryFeedback(.impact(weight: .light), trigger: showRatingFilter)
@@ -499,117 +492,27 @@ struct MapTabView: View {
         }
     }
 
-    // MARK: - Annotation Content
-
-    @ViewBuilder
-    private func annotationContent(for cluster: MapCluster) -> some View {
-        if cluster.isCluster {
-            clusterPin(count: cluster.count, topRating: cluster.topRating)
-                .onTapGesture {
-                    withAnimation(.easeInOut(duration: 0.4)) {
-                        position = .region(MKCoordinateRegion(
-                            center: cluster.coordinate,
-                            span: MKCoordinateSpan(latitudeDelta: currentSpan * 0.4, longitudeDelta: currentSpan * 0.4)
-                        ))
-                    }
-                }
-        } else if let restaurant = cluster.restaurants.first {
-            mapPin(for: restaurant)
-                .accessibilityLabel("\(restaurant.name), \(restaurant.cuisineType.displayName)")
-                .accessibilityAddTraits(.isButton)
-                .onTapGesture {
-                    selectedRestaurant = restaurant
-                }
-        }
-    }
-
-    // MARK: - Clustering
-
-    /// Fixed grid size (~600m) so cluster IDs stay stable across zoom changes
-    private static let clusterGridSize: Double = 0.008
-
     private func refreshAnnotations() {
-        let filtered = filterVM.apply(to: store.restaurants, userLocation: locationManager.lastLocation, communityRatings: store.communityRatings)
-        cachedFiltered = filtered
-
-        guard !isZoomedIn else {
-            cachedAnnotations = filtered.map { MapCluster(id: $0.id.uuidString, restaurants: [$0]) }
-            return
-        }
-        let gs = Self.clusterGridSize
-        var grid: [String: [Restaurant]] = [:]
-        for r in filtered {
-            let gx = Int((r.longitude / gs).rounded(.down))
-            let gy = Int((r.latitude / gs).rounded(.down))
-            grid["c\(gx),\(gy)", default: []].append(r)
-        }
-        cachedAnnotations = grid.map { key, restaurants in
-            let id = restaurants.count == 1 ? restaurants[0].id.uuidString : key
-            return MapCluster(id: id, restaurants: restaurants)
-        }
-    }
-
-    @ViewBuilder
-    private func clusterPin(count: Int, topRating: Double?) -> some View {
-        let color: Color = topRating.map { .ratingColor(for: $0) } ?? .ffMuted
-        Circle()
-            .fill(color)
-            .frame(width: 32, height: 32)
-            .overlay {
-                Text("\(count)")
-                    .font(.system(size: 13, weight: .black).monospacedDigit())
-                    .foregroundStyle(.white)
-            }
-            .overlay {
-                Circle().strokeBorder(.white, lineWidth: 2.5)
-            }
+        cachedFiltered = filterVM.apply(to: store.restaurants, userLocation: locationManager.lastLocation, communityRatings: store.communityRatings)
     }
 
     // MARK: - Map Pins
 
     @ViewBuilder
     private func mapPin(for restaurant: Restaurant) -> some View {
-        let color = annotationColor(for: restaurant)
-        if isZoomedIn, let rating = restaurant.personalRating {
+        if let rating = restaurant.personalRating {
             Text(rating.formattedRating)
                 .font(.system(size: 11, weight: .black).monospacedDigit())
                 .foregroundStyle(Color.ratingTextColor(for: rating))
                 .frame(minWidth: 28, minHeight: 28)
-                .background(color, in: Circle())
+                .background(Color.ratingColor(for: rating), in: Circle())
                 .overlay { Circle().strokeBorder(.white, lineWidth: 1.5) }
         } else {
             Circle()
-                .fill(color)
+                .fill(Color.ffMuted)
                 .frame(width: 14, height: 14)
                 .overlay { Circle().strokeBorder(.white, lineWidth: 1.5) }
         }
-    }
-
-    private func annotationColor(for restaurant: Restaurant) -> Color {
-        guard let rating = restaurant.personalRating else { return .ffMuted }
-        return .ratingColor(for: rating)
-    }
-}
-
-// MARK: - Clustering Model
-
-private struct MapCluster: Identifiable {
-    /// Stable ID: single restaurant uses its UUID, clusters use grid key
-    let id: String
-    let restaurants: [Restaurant]
-
-    var count: Int { restaurants.count }
-    var isCluster: Bool { count > 1 }
-    var label: String { isCluster ? "" : (restaurants.first?.name ?? "") }
-
-    var coordinate: CLLocationCoordinate2D {
-        let lat = restaurants.map(\.latitude).reduce(0, +) / Double(restaurants.count)
-        let lon = restaurants.map(\.longitude).reduce(0, +) / Double(restaurants.count)
-        return CLLocationCoordinate2D(latitude: lat, longitude: lon)
-    }
-
-    var topRating: Double? {
-        restaurants.compactMap(\.personalRating).max()
     }
 }
 

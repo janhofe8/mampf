@@ -39,9 +39,10 @@
 
 /* Rating Filter */
 "ratingFilter.minRating" = "Mind. Rating";
-"ratingFilter.all" = "Alle";
+"ratingFilter.all" = "Alle Ratings";
 "ratingFilter.restaurants" = "Foodspots";
-"ratingFilter.reset" = "Reset";
+"ratingFilter.reset" = "Filter zurücksetzen";
+"ratingFilter.matchSummary" = "%1$lld von %2$lld Foodspots";
 
 /* Card / Row */
 "card.closed" = "Geschlossen";
