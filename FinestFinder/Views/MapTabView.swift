@@ -6,16 +6,13 @@ struct MapTabView: View {
     @Environment(RestaurantStore.self) private var store
     @Environment(LocationManager.self) private var locationManager
     @State private var selectedRestaurant: Restaurant?
-    @State private var position: MapCameraPosition = .region(
-        MKCoordinateRegion(
-            center: CLLocationCoordinate2D(latitude: 53.5575, longitude: 9.9620),
-            span: MKCoordinateSpan(latitudeDelta: 0.06, longitudeDelta: 0.06)
-        )
+    @State private var region = MKCoordinateRegion(
+        center: CLLocationCoordinate2D(latitude: 53.5575, longitude: 9.9620),
+        span: MKCoordinateSpan(latitudeDelta: 0.06, longitudeDelta: 0.06)
     )
     @State private var searchText = ""
     @State private var showRatingFilter = false
     @State private var showingFilters = false
-    @State private var mapDragged = false
     @FocusState private var searchFocused: Bool
     // Cached results — updated only when inputs change
     @State private var cachedFiltered: [Restaurant] = []
@@ -38,46 +35,27 @@ struct MapTabView: View {
     var body: some View {
         @Bindable var vm = filterVM
 
-        Map(position: $position) {
-            if let location = locationManager.lastLocation {
-                Annotation(String(localized: "map.myLocation"), coordinate: location) {
-                    Circle()
-                        .fill(.blue)
-                        .frame(width: 14, height: 14)
-                        .overlay(Circle().strokeBorder(.white, lineWidth: 2.5))
-                }
-            }
-
-            ForEach(visiblePins) { restaurant in
-                Annotation(restaurant.name, coordinate: CLLocationCoordinate2D(latitude: restaurant.latitude, longitude: restaurant.longitude)) {
-                    mapPin(for: restaurant)
-                        .accessibilityLabel("\(restaurant.name), \(restaurant.cuisineType.displayName)")
-                        .accessibilityAddTraits(.isButton)
-                        .onTapGesture {
-                            selectedRestaurant = restaurant
+        ZStack {
+            MapKitMapView(
+                region: $region,
+                pins: visiblePins,
+                userLocation: locationManager.lastLocation,
+                onTap: { selectedRestaurant = $0 },
+                onRegionChange: { newRegion, userInitiated in
+                    let newTier = Self.zoomTier(for: newRegion.span.latitudeDelta)
+                    if newTier != zoomTier {
+                        zoomTier = newTier
+                        refreshVisiblePins()
+                    }
+                    if userInitiated {
+                        if searchFocused { searchFocused = false }
+                        if showRatingFilter {
+                            withAnimation { showRatingFilter = false }
                         }
+                    }
                 }
-            }
-        }
-        .simultaneousGesture(
-            DragGesture(minimumDistance: 10)
-                .onChanged { _ in mapDragged = true }
-        )
-        .onMapCameraChange(frequency: .onEnd) { context in
-            // Update LOD tier only when it changes — avoids thrashing visiblePins
-            let newTier = Self.zoomTier(for: context.region.span.latitudeDelta)
-            if newTier != zoomTier {
-                zoomTier = newTier
-                refreshVisiblePins()
-            }
-            // Only dismiss UI on genuine user drag — avoids keyboard-induced layout changes killing focus
-            if mapDragged {
-                if searchFocused { searchFocused = false }
-                if showRatingFilter {
-                    withAnimation { showRatingFilter = false }
-                }
-                mapDragged = false
-            }
+            )
+            .ignoresSafeArea()
         }
         // Top: search + chips
         .overlay(alignment: .top) {
@@ -176,10 +154,10 @@ struct MapTabView: View {
                 locationManager.refreshLocation()
                 if let location = locationManager.lastLocation {
                     withAnimation {
-                        position = .region(MKCoordinateRegion(
+                        region = MKCoordinateRegion(
                             center: location,
                             span: MKCoordinateSpan(latitudeDelta: 0.02, longitudeDelta: 0.02)
-                        ))
+                        )
                     }
                 }
             }
@@ -570,10 +548,10 @@ struct MapTabView: View {
             filterVM.activeSearchText = ""
         }
         withAnimation {
-            position = .region(MKCoordinateRegion(
+            region = MKCoordinateRegion(
                 center: restaurant.coordinate,
                 span: MKCoordinateSpan(latitudeDelta: 0.005, longitudeDelta: 0.005)
-            ))
+            )
         }
         Task {
             try? await Task.sleep(for: .milliseconds(500))
@@ -606,25 +584,6 @@ struct MapTabView: View {
         return .close
     }
 
-    // MARK: - Map Pins
-
-    @ViewBuilder
-    private func mapPin(for restaurant: Restaurant) -> some View {
-        if let rating = restaurant.personalRating {
-            Text(rating.formattedRating)
-                .font(.system(size: 11, weight: .black).monospacedDigit())
-                .foregroundStyle(Color.ratingTextColor(for: rating))
-                .frame(minWidth: 28, minHeight: 28)
-                .background(Color.ratingColor(for: rating), in: Circle())
-                // Elite rating halo — makes top spots pop against a busy map
-                .shadow(color: rating >= 9 ? Color.ffPrimary.opacity(0.65) : .black.opacity(0.15),
-                        radius: rating >= 9 ? 8 : 2, y: 1)
-        } else {
-            Circle()
-                .fill(Color.ffMuted)
-                .frame(width: 14, height: 14)
-        }
-    }
 }
 
 // MARK: - Supporting Views
