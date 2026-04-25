@@ -2,19 +2,58 @@ import UIKit
 import ImageIO
 import CoreImage
 
-@MainActor
-final class ImageCache {
+/// Thread-safe by virtue of NSCache + URLSession being thread-safe themselves.
+/// Crucially NOT @MainActor — prefetch completions write to the cache off the main
+/// thread so they don't compete with scroll rendering.
+final class ImageCache: @unchecked Sendable {
     static let shared = ImageCache()
 
     private let memoryCache = NSCache<NSString, UIImage>()
     private let session: URLSession
 
     private init() {
-        memoryCache.countLimit = 300
+        // ~155 restaurants × up to 6 size buckets (36/44/80/220/430/hero) = potentially 900+
+        // entries. A tight count limit causes aggressive eviction so cache "hits" become
+        // misses on scroll-back, producing visible reloads. The cost limit is the real cap.
+        memoryCache.countLimit = 1000
         memoryCache.totalCostLimit = 80 * 1024 * 1024 // 80 MB of decoded pixels
         let config = URLSessionConfiguration.default
         config.urlCache = URLCache(memoryCapacity: 20_000_000, diskCapacity: 200_000_000)
         session = URLSession(configuration: config)
+    }
+
+    /// Synchronous in-memory lookup. Returns nil on miss — does not touch disk or network.
+    /// Lets call sites render cached images on the first frame after a view is recreated
+    /// (e.g. when a row scrolls back into a LazyVStack), avoiding the placeholder flash.
+    func cachedImage(for url: URL, maxPixelSize: CGFloat) -> UIImage? {
+        memoryCache.object(forKey: cacheKey(url: url, maxPixelSize: maxPixelSize))
+    }
+
+    /// Warm the in-memory cache with the given URLs at the given pixel size, capped concurrency.
+    /// Skips entries already cached. Errors are swallowed — best-effort warmup.
+    func prefetch(urls: [URL], maxPixelSize: CGFloat, concurrency: Int = 4) async {
+        let pending = urls.filter { cachedImage(for: $0, maxPixelSize: maxPixelSize) == nil }
+        guard !pending.isEmpty else { return }
+        await withTaskGroup(of: Void.self) { group in
+            var index = 0
+            let initial = min(concurrency, pending.count)
+            for _ in 0..<initial {
+                let url = pending[index]
+                index += 1
+                group.addTask { [weak self] in
+                    _ = await self?.image(for: url, maxPixelSize: maxPixelSize)
+                }
+            }
+            while await group.next() != nil {
+                if index < pending.count {
+                    let url = pending[index]
+                    index += 1
+                    group.addTask { [weak self] in
+                        _ = await self?.image(for: url, maxPixelSize: maxPixelSize)
+                    }
+                }
+            }
+        }
     }
 
     /// Fetch a downsampled image sized for the given display bucket.

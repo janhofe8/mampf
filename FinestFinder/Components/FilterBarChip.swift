@@ -23,7 +23,7 @@ struct FilterBarChip: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .background(isActive ? AnyShapeStyle(Color.ffPrimary) : AnyShapeStyle(.regularMaterial), in: Capsule())
+        .background(isActive ? AnyShapeStyle(Color.ffPrimary) : AnyShapeStyle(Color(.tertiarySystemBackground)), in: Capsule())
         .foregroundStyle(isActive ? .white : .primary)
         .shadow(color: .black.opacity(isActive ? 0 : 0.08), radius: 4, y: 2)
     }
@@ -57,7 +57,7 @@ struct FiltersEntryChip: View {
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
-            .background(.regularMaterial, in: Capsule())
+            .background(Color(.tertiarySystemBackground), in: Capsule())
             .foregroundStyle(.primary)
             .shadow(color: .black.opacity(0.08), radius: 4, y: 2)
         }

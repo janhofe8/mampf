@@ -20,12 +20,12 @@ struct AsyncRestaurantImage: View {
 
     var body: some View {
         if let url {
+            let displayed = image ?? ImageCache.shared.cachedImage(for: url, maxPixelSize: maxPixelSize)
             Group {
-                if let image {
-                    Image(uiImage: image)
+                if let displayed {
+                    Image(uiImage: displayed)
                         .resizable()
                         .aspectRatio(contentMode: .fill)
-                        .transition(.opacity.animation(.easeIn(duration: 0.15)))
                 } else if failed {
                     placeholder
                 } else if showProgress {
@@ -35,6 +35,8 @@ struct AsyncRestaurantImage: View {
                 }
             }
             .task(id: TaskKey(url: url, pixelSize: maxPixelSize)) {
+                // image(for:) checks the cache internally; if hit, this returns synchronously
+                // without touching the network — no need to pre-check here.
                 if let loaded = await ImageCache.shared.image(for: url, maxPixelSize: maxPixelSize) {
                     image = loaded
                 } else {

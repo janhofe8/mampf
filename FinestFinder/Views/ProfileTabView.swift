@@ -9,6 +9,13 @@ struct ProfileTabView: View {
     @State private var showingEditProfile = false
     @State private var signupEmail: String = ""
     @State private var prefilledEmailForSheet: String?
+    @State private var navigatedRestaurant: Restaurant?
+
+    // Cached stats — recomputed only when ratings or restaurants change, not per render.
+    @State private var ratedCount: Int = 0
+    @State private var averageRating: Double?
+    @State private var favoriteCuisine: CuisineType?
+    @State private var ratedEntriesWithRestaurants: [(MyRatingEntry, Restaurant)] = []
 
     var body: some View {
         profileContent
@@ -33,6 +40,9 @@ struct ProfileTabView: View {
         .navigationDestination(for: Restaurant.self) { restaurant in
             RestaurantDetailView(restaurant: restaurant)
         }
+        .navigationDestination(item: $navigatedRestaurant) { restaurant in
+            RestaurantDetailView(restaurant: restaurant)
+        }
         .task(id: auth.currentUserId) {
             // Always load — anon users also have ratings via device_id.
             await store.loadAllMyRatings()
@@ -40,7 +50,10 @@ struct ProfileTabView: View {
         .onAppear {
             applyBrandedNavBarAppearance()
             Task { await store.loadAllMyRatings() }
+            recomputeStats()
         }
+        .onChange(of: store.myRatingEntries) { recomputeStats() }
+        .onChange(of: store.restaurants.count) { recomputeStats() }
     }
 
     // MARK: - Profile Content (same for anon + signed-in, only the top header differs)
@@ -163,20 +176,14 @@ struct ProfileTabView: View {
     // MARK: - Stats
 
     private var statsCard: some View {
-        let count = store.myRatingEntries.count
-        let average: Double? = count > 0
-            ? store.myRatingEntries.map(\.rating).reduce(0, +) / Double(count)
-            : nil
-        let favoriteCuisine = computeFavoriteCuisine()
-
-        return HStack(spacing: 0) {
+        HStack(spacing: 0) {
             statBox(
-                value: "\(count)",
+                value: "\(ratedCount)",
                 label: String(localized: "profile.stats.rated")
             )
             Divider().frame(height: 36)
             statBox(
-                value: average.map { String(format: "%.1f", $0) } ?? "–",
+                value: averageRating.map { String(format: "%.1f", $0) } ?? "–",
                 label: String(localized: "profile.stats.avg")
             )
             Divider().frame(height: 36)
@@ -187,6 +194,31 @@ struct ProfileTabView: View {
         }
         .padding(.vertical, 14)
         .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 14))
+    }
+
+    /// Recomputes derived stats once when source data changes, instead of per render.
+    /// Uses `store.restaurantsById` for O(1) joins instead of repeated `first(where:)` scans.
+    private func recomputeStats() {
+        let entries = store.myRatingEntries
+        ratedCount = entries.count
+        averageRating = entries.isEmpty ? nil : entries.map(\.rating).reduce(0, +) / Double(entries.count)
+
+        // Join entries with restaurants in O(n) via the lookup dict.
+        let pairs = entries.compactMap { entry -> (MyRatingEntry, Restaurant)? in
+            store.restaurant(id: entry.restaurantId).map { (entry, $0) }
+        }
+        ratedEntriesWithRestaurants = pairs.sorted { $0.0.updatedAt > $1.0.updatedAt }
+
+        // Favorite cuisine: average rating per cuisine, prefer cuisines with ≥2 ratings.
+        let byCuisine = Dictionary(grouping: pairs, by: { $0.1.cuisineType })
+            .mapValues { $0.map(\.0.rating) }
+        let qualifying = byCuisine.filter { $0.value.count >= 2 }
+        let pool = qualifying.isEmpty ? byCuisine : qualifying
+        favoriteCuisine = pool.max { a, b in
+            let avgA = a.value.reduce(0, +) / Double(a.value.count)
+            let avgB = b.value.reduce(0, +) / Double(b.value.count)
+            return avgA < avgB
+        }?.key
     }
 
     private func statBox(value: String, label: String) -> some View {
@@ -202,34 +234,7 @@ struct ProfileTabView: View {
         .frame(maxWidth: .infinity)
     }
 
-    private func computeFavoriteCuisine() -> CuisineType? {
-        guard !store.myRatingEntries.isEmpty else { return nil }
-        let ratingsByCuisine: [CuisineType: [Double]] = Dictionary(
-            grouping: store.myRatingEntries.compactMap { entry in
-                store.restaurants.first(where: { $0.id == entry.restaurantId }).map { ($0.cuisineType, entry.rating) }
-            },
-            by: { $0.0 }
-        ).mapValues { $0.map(\.1) }
-
-        // Require at least 2 ratings in a cuisine to avoid one-hit favorites
-        let qualifying = ratingsByCuisine.filter { $0.value.count >= 2 }
-        let pool = qualifying.isEmpty ? ratingsByCuisine : qualifying
-        return pool.max { a, b in
-            let avgA = a.value.reduce(0, +) / Double(a.value.count)
-            let avgB = b.value.reduce(0, +) / Double(b.value.count)
-            return avgA < avgB
-        }?.key
-    }
-
     // MARK: - Ratings / Wishlist Sections
-
-    private var ratedEntriesWithRestaurants: [(MyRatingEntry, Restaurant)] {
-        store.myRatingEntries
-            .compactMap { entry in
-                store.restaurants.first(where: { $0.id == entry.restaurantId }).map { (entry, $0) }
-            }
-            .sorted { $0.0.updatedAt > $1.0.updatedAt }
-    }
 
     /// Favorites that the user has rated → "Visited"
     private var visitedFavorites: [Restaurant] {
@@ -259,9 +264,12 @@ struct ProfileTabView: View {
                 // outer ScrollView keeps scrolling vertically; only horizontal swipes activate.
                 List {
                     ForEach(ratedEntriesWithRestaurants, id: \.0.id) { pair in
-                        NavigationLink(value: pair.1) {
+                        Button {
+                            navigatedRestaurant = pair.1
+                        } label: {
                             ratingRow(restaurant: pair.1, rating: pair.0.rating)
                         }
+                        .buttonStyle(.plain)
                         .listRowInsets(EdgeInsets())
                         .listRowBackground(Color(.secondarySystemBackground))
                         .alignmentGuide(.listRowSeparatorLeading) { _ in 60 }
@@ -298,9 +306,12 @@ struct ProfileTabView: View {
             } else {
                 List {
                     ForEach(wantToTry, id: \.id) { restaurant in
-                        NavigationLink(value: restaurant) {
+                        Button {
+                            navigatedRestaurant = restaurant
+                        } label: {
                             wishlistRow(restaurant: restaurant)
                         }
+                        .buttonStyle(.plain)
                         .listRowInsets(EdgeInsets())
                         .listRowBackground(Color(.secondarySystemBackground))
                         .alignmentGuide(.listRowSeparatorLeading) { _ in 60 }
@@ -359,9 +370,13 @@ struct ProfileTabView: View {
                 textColor: .black,
                 size: .compact
             )
+
+            Image(systemName: "chevron.right")
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(.tertiary)
         }
         .padding(.leading, 12)
-        .padding(.trailing, 4)
+        .padding(.trailing, 12)
         .padding(.vertical, 10)
         .contentShape(Rectangle())
     }
@@ -394,9 +409,12 @@ struct ProfileTabView: View {
                 )
             }
 
+            Image(systemName: "chevron.right")
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(.tertiary)
         }
         .padding(.leading, 12)
-        .padding(.trailing, 4)
+        .padding(.trailing, 12)
         .padding(.vertical, 10)
         .contentShape(Rectangle())
     }

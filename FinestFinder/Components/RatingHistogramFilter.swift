@@ -41,19 +41,22 @@ struct RatingHistogramFilter: View {
     private var accentColor: Color { isFiltering ? Color.ratingColor(for: minimumRating) : .ffPrimary }
 
     var body: some View {
-        VStack(spacing: 14) {
+        VStack(spacing: 10) {
             header
             histogram
             Slider(value: $minimumRating, in: lo...hi, step: step)
                 .tint(accentColor)
-            if isFiltering {
-                resetButton
-                    .transition(.opacity.combined(with: .move(edge: .bottom)))
-            }
+                .padding(.horizontal, 2)
         }
-        .padding(16)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
-        .shadow(color: .black.opacity(0.15), radius: 10, y: 5)
+        .padding(.horizontal, 14)
+        .padding(.top, 12)
+        .padding(.bottom, 10)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18))
+        .overlay(
+            RoundedRectangle(cornerRadius: 18)
+                .strokeBorder(Color.white.opacity(0.18), lineWidth: 0.5)
+        )
+        .shadow(color: .black.opacity(0.18), radius: 14, y: 6)
         .animation(.easeInOut(duration: 0.2), value: isFiltering)
         .onChange(of: minimumRating) {
             if minimumRating > 0 && minimumRating < lo {
@@ -62,49 +65,53 @@ struct RatingHistogramFilter: View {
         }
     }
 
-    // MARK: - Header
+    // MARK: - Header (single compact line)
 
     private var header: some View {
-        ZStack(alignment: .top) {
-            VStack(spacing: 4) {
-                heroValue
-                Text(String(format: String(localized: "ratingFilter.matchSummary"), matchCount, totalCount))
-                    .font(.system(.footnote, design: .rounded, weight: .semibold))
-                    .foregroundStyle(.secondary)
-                    .contentTransition(.numericText())
-                    .monospacedDigit()
-            }
-            .frame(maxWidth: .infinity)
+        HStack(spacing: 10) {
+            valuePill
 
-            HStack {
-                Spacer()
-                Button { onDismiss() } label: {
-                    Image(systemName: "xmark")
-                        .font(.footnote.weight(.bold))
-                        .foregroundStyle(.secondary)
-                        .frame(width: 26, height: 26)
-                        .background(Color.gray.opacity(0.18), in: Circle())
-                }
-                .buttonStyle(.plain)
+            Text(String(format: String(localized: "ratingFilter.matchSummary"), matchCount, totalCount))
+                .font(.system(.footnote, design: .rounded, weight: .semibold))
+                .foregroundStyle(.secondary)
+                .contentTransition(.numericText())
+                .monospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            Button { onDismiss() } label: {
+                Image(systemName: "xmark")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 24, height: 24)
+                    .background(Color.gray.opacity(0.16), in: Circle())
             }
+            .buttonStyle(.plain)
         }
     }
 
     @ViewBuilder
-    private var heroValue: some View {
+    private var valuePill: some View {
         if isFiltering {
-            HStack(alignment: .firstTextBaseline, spacing: 0) {
+            HStack(spacing: 1) {
                 Text(minimumRating.formattedRating)
                     .monospacedDigit()
                 Text("+")
             }
-            .font(.system(size: 36, weight: .black, design: .rounded))
-            .foregroundStyle(accentColor)
+            .font(.system(.subheadline, design: .rounded, weight: .heavy))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 9)
+            .padding(.vertical, 4)
+            .background(accentColor, in: Capsule())
             .contentTransition(.numericText(value: minimumRating))
         } else {
             Text("ratingFilter.all")
-                .font(.system(size: 30, weight: .black, design: .rounded))
+                .font(.system(.subheadline, design: .rounded, weight: .heavy))
                 .foregroundStyle(.secondary)
+                .padding(.horizontal, 9)
+                .padding(.vertical, 4)
+                .background(Color.gray.opacity(0.18), in: Capsule())
         }
     }
 
@@ -113,7 +120,7 @@ struct RatingHistogramFilter: View {
     private var histogram: some View {
         GeometryReader { geo in
             let maxCount = max(histogramData.values.max() ?? 1, 1)
-            let spacing: CGFloat = 2.5
+            let spacing: CGFloat = 3
             let barW = (geo.size.width - CGFloat(bucketValues.count - 1) * spacing) / CGFloat(bucketValues.count)
             let barAreaHeight = geo.size.height
 
@@ -122,13 +129,13 @@ struct RatingHistogramFilter: View {
                     let count = histogramData[bucket] ?? 0
                     let frac = CGFloat(count) / CGFloat(maxCount)
                     let inRange = !isFiltering || bucket >= minimumRating
+                    let barColor = Color.ratingColor(for: bucket)
 
-                    RoundedRectangle(cornerRadius: 3)
+                    RoundedRectangle(cornerRadius: 4, style: .continuous)
                         .fill(
                             inRange
                                 ? AnyShapeStyle(LinearGradient(
-                                    colors: [Color.ratingColor(for: bucket).opacity(0.55),
-                                             Color.ratingColor(for: bucket)],
+                                    colors: [barColor.opacity(0.7), barColor],
                                     startPoint: .top,
                                     endPoint: .bottom
                                 ))
@@ -136,6 +143,7 @@ struct RatingHistogramFilter: View {
                         )
                         .frame(width: barW, height: max(4, frac * barAreaHeight))
                         .frame(maxHeight: .infinity, alignment: .bottom)
+                        .shadow(color: inRange ? barColor.opacity(0.25) : .clear, radius: 3, y: 1)
                         .contentShape(Rectangle())
                         .onTapGesture {
                             withAnimation(.easeInOut(duration: 0.15)) {
@@ -145,23 +153,8 @@ struct RatingHistogramFilter: View {
                 }
             }
         }
-        .frame(height: 60)
+        .frame(height: 48)
         .sensoryFeedback(.selection, trigger: minimumRating)
     }
 
-    // MARK: - Reset
-
-    private var resetButton: some View {
-        Button {
-            withAnimation { minimumRating = 0 }
-        } label: {
-            Label("ratingFilter.reset", systemImage: "arrow.counterclockwise")
-                .font(.system(.footnote, design: .rounded, weight: .semibold))
-                .foregroundStyle(.ffPrimary)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 7)
-                .background(Color.ffPrimary.opacity(0.14), in: Capsule())
-        }
-        .buttonStyle(.plain)
-    }
 }

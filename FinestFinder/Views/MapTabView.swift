@@ -97,9 +97,11 @@ struct MapTabView: View {
                 .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
-        // Bottom-right: location
+        // Bottom-right: location — lifts above the histogram when it's open
         .overlay(alignment: .bottomTrailing) {
             locationButton
+                .padding(.bottom, showRatingFilter ? 168 : 0)
+                .animation(.easeInOut(duration: 0.2), value: showRatingFilter)
         }
         // Empty-state banner when filters produce zero matches
         .overlay(alignment: .center) {
@@ -238,7 +240,7 @@ struct MapTabView: View {
                     searchDropdownContent
                 }
             }
-            .background(Color(.systemBackground), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+            .background(Color(.tertiarySystemBackground), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 22, style: .continuous)
                     .stroke(Color(.systemGray4), lineWidth: 1)
@@ -258,27 +260,6 @@ struct MapTabView: View {
 
     private var searchBarRow: some View {
         HStack(spacing: 12) {
-            Image(systemName: "magnifyingglass")
-                .font(.system(size: 18, weight: .medium))
-                .foregroundStyle(.secondary)
-            TextField(placeholder.current, text: $searchText)
-                .focused($searchFocused)
-                .textFieldStyle(.plain)
-                .font(.system(size: 17))
-                .onSubmit {
-                    if let first = suggestions.first {
-                        selectSearchResult(first)
-                    }
-                }
-                .onAppear {
-                    if searchText.isEmpty && !searchFocused { placeholder.start() }
-                }
-                .onChange(of: searchFocused) {
-                    searchFocused ? placeholder.stop() : placeholder.start()
-                }
-                .onChange(of: searchText) {
-                    searchText.isEmpty ? placeholder.start() : placeholder.stop()
-                }
             if searchFocused || !searchText.isEmpty {
                 Button {
                     withAnimation(.easeOut(duration: 0.2)) {
@@ -287,10 +268,41 @@ struct MapTabView: View {
                         filterVM.activeSearchText = ""
                     }
                 } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 20))
-                        .foregroundStyle(.tertiary)
+                    Image(systemName: "chevron.backward")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(.ffPrimary)
                 }
+                .buttonStyle(.plain)
+            } else {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 18, weight: .medium))
+                    .foregroundStyle(.secondary)
+            }
+            ZStack(alignment: .leading) {
+                if searchText.isEmpty {
+                    Text(placeholder.current)
+                        .font(.system(size: 17))
+                        .foregroundStyle(Color(.systemGray2))
+                        .allowsHitTesting(false)
+                }
+                TextField("", text: $searchText)
+                    .focused($searchFocused)
+                    .textFieldStyle(.plain)
+                    .font(.system(size: 17))
+                    .onSubmit {
+                        if let first = suggestions.first {
+                            selectSearchResult(first)
+                        }
+                    }
+                    .onAppear {
+                        if searchText.isEmpty && !searchFocused { placeholder.start() }
+                    }
+                    .onChange(of: searchFocused) {
+                        searchFocused ? placeholder.stop() : placeholder.start()
+                    }
+                    .onChange(of: searchText) {
+                        searchText.isEmpty ? placeholder.start() : placeholder.stop()
+                    }
             }
         }
         .padding(.horizontal, 16)
@@ -628,7 +640,7 @@ private struct MapControlButton: View {
                 .font(.body.weight(.semibold))
                 .foregroundStyle(tint)
                 .frame(width: 44, height: 44)
-                .background(.regularMaterial, in: Circle())
+                .background(Color(.tertiarySystemBackground), in: Circle())
                 .shadow(color: .black.opacity(0.15), radius: 4, y: 2)
         }
     }

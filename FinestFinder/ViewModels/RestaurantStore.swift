@@ -1,10 +1,14 @@
 import Foundation
 import Observation
+import UIKit
 
 @Observable
 final class RestaurantStore {
     private(set) var restaurants: [Restaurant] = [] {
-        didSet { recomputeFavorites() }
+        didSet {
+            rebuildLookup()
+            recomputeFavorites()
+        }
     }
     private(set) var isLoading = false
     private(set) var error: Error?
@@ -14,6 +18,15 @@ final class RestaurantStore {
     private(set) var myRatingEntries: [MyRatingEntry] = []
     /// Cached favorite restaurants — recomputed only when restaurants or favorite IDs change.
     private(set) var favorites: [Restaurant] = []
+    /// O(1) lookup by id — avoids O(n²) `restaurants.first(where:)` scans in Profile views
+    /// where we join `myRatingEntries` against the restaurant list.
+    private(set) var restaurantsById: [UUID: Restaurant] = [:]
+
+    private func rebuildLookup() {
+        restaurantsById = Dictionary(uniqueKeysWithValues: restaurants.map { ($0.id, $0) })
+    }
+
+    func restaurant(id: UUID) -> Restaurant? { restaurantsById[id] }
 
     private let repository = RestaurantRepository()
     private let userRatingRepo = UserRatingRepository()
@@ -21,13 +34,7 @@ final class RestaurantStore {
 
     @ObservationIgnored private var currentUserId: UUID?
 
-    private var favoriteIDs: Set<UUID> {
-        didSet {
-            let strings = favoriteIDs.map(\.uuidString)
-            UserDefaults.standard.set(Array(strings), forKey: favoritesKey)
-            recomputeFavorites()
-        }
-    }
+    private(set) var favoriteIDs: Set<UUID> = []
 
     init() {
         let strings = UserDefaults.standard.stringArray(forKey: favoritesKey) ?? []
@@ -36,6 +43,11 @@ final class RestaurantStore {
 
     private func recomputeFavorites() {
         favorites = restaurants.filter { favoriteIDs.contains($0.id) }
+    }
+
+    private func persistFavorites() {
+        let strings = favoriteIDs.map(\.uuidString)
+        UserDefaults.standard.set(Array(strings), forKey: favoritesKey)
     }
 
     func isFavorite(_ restaurant: Restaurant) -> Bool {
@@ -48,6 +60,8 @@ final class RestaurantStore {
         } else {
             favoriteIDs.insert(restaurant.id)
         }
+        persistFavorites()
+        recomputeFavorites()
     }
 
     func communityRating(for restaurant: Restaurant) -> (average: Double, count: Int)? {
@@ -153,6 +167,8 @@ final class RestaurantStore {
         myRatings.removeAll()
         myRatingEntries.removeAll()
         favoriteIDs.removeAll()
+        persistFavorites()
+        recomputeFavorites()
         DeviceID.reset()
         if let updated = try? await userRatingRepo.fetchCommunityRatings() {
             communityRatings = updated
@@ -166,6 +182,7 @@ final class RestaurantStore {
         let (cached, cachedRatings) = await (cachedRestaurants, cachedCommunity)
         if !cached.isEmpty {
             restaurants = cached
+            prefetchListImages()
         }
         if !cachedRatings.isEmpty {
             communityRatings = cachedRatings
@@ -173,6 +190,20 @@ final class RestaurantStore {
 
         // Always fetch fresh data from Supabase
         await refresh()
+    }
+
+    /// Warm the image cache for the default Cards view (430pt) so subsequent scrolls are smooth.
+    /// Deferred 1.5s after data load so initial UI interactions (first tap, hero zoom transition)
+    /// aren't fighting prefetch traffic for bandwidth/CPU. Background priority — it's truly
+    /// optional warmup, not anything the user is waiting for.
+    private func prefetchListImages() {
+        let urls = restaurants.compactMap { $0.imageUrl.flatMap(URL.init) }
+        guard !urls.isEmpty else { return }
+        Task.detached(priority: .background) {
+            try? await Task.sleep(for: .seconds(1.5))
+            let scale = await MainActor.run { UITraitCollection.current.displayScale }
+            await ImageCache.shared.prefetch(urls: urls, maxPixelSize: 430 * scale)
+        }
     }
 
     func refresh() async {
@@ -185,6 +216,7 @@ final class RestaurantStore {
 
             restaurants = try await fetchedRestaurants
             communityRatings = (try? await fetchedCommunity) ?? communityRatings
+            prefetchListImages()
         } catch {
             // If we have cached data, treat network failure as silently offline — no scary toast.
             if !error.isCancellation && !hadCachedData {

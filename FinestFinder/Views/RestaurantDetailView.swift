@@ -130,7 +130,7 @@ struct RestaurantDetailView: View {
         }
         .padding(20)
         .background(Color(.systemBackground))
-        .task {
+        .task(id: restaurant.id) {
             await store.loadMyRating(for: restaurant)
             if let existing = store.myRating(for: restaurant) {
                 userRating = existing
@@ -365,11 +365,16 @@ struct RestaurantDetailView: View {
         .buttonStyle(.plain)
     }
 
+    /// Cached formatter — DateFormatter init is expensive, so we keep a single instance.
+    private static let weekdayFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.dateFormat = "EEEE"
+        return f
+    }()
+
     private static func currentWeekdayName() -> String {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.dateFormat = "EEEE"
-        return formatter.string(from: .now)
+        weekdayFormatter.string(from: .now)
     }
 
     private func submitRating() {

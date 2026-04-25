@@ -22,12 +22,21 @@ struct RestaurantListView: View {
     @State private var suggestions: [Restaurant] = []
     @State private var distanceCache: [UUID: String] = [:]
     @State private var isHeaderVisible: Bool = true
-    @State private var scrollAccumulator: CGFloat = 0
+    /// Plain class so its mutations during scroll don't invalidate the view body — vital
+    /// for scroll smoothness. Only `isHeaderVisible` (a @State Bool) drives the actual UI.
+    @State private var scrollTracker = ScrollTracker()
     @FocusState private var searchFocused: Bool
 
     private var showingDropdown: Bool { !searchText.isEmpty }
-    /// Force-show in list mode (swipeActions conflict) and when search dropdown is open.
-    private var headerVisible: Bool { isHeaderVisible || showingDropdown || viewMode == .list }
+    /// Force-show when search dropdown is open so users keep access to the search field.
+    private var headerVisible: Bool { isHeaderVisible || showingDropdown }
+
+    /// Plain class for the scroll accumulator: mutating its property doesn't invalidate the view
+    /// body (which @State on a CGFloat would). The only @State we touch on threshold-cross is
+    /// `isHeaderVisible`, which has to invalidate to drive the safeAreaInset animation.
+    private final class ScrollTracker {
+        var accumulator: CGFloat = 0
+    }
 
     /// Hash of all inputs that affect `filtered` — single onChange instead of many
     private var filterInputsToken: Int {
@@ -95,7 +104,7 @@ struct RestaurantListView: View {
                 headerContent
                     .frame(height: headerVisible ? nil : 0, alignment: .top)
                     .clipped()
-                    .animation(.easeOut(duration: 0.18), value: headerVisible)
+                    .animation(.easeOut(duration: 0.2), value: headerVisible)
             }
         .task(id: searchText) {
             refreshSuggestions()
@@ -106,12 +115,11 @@ struct RestaurantListView: View {
             try? await Task.sleep(for: .milliseconds(250))
             filterVM.activeSearchText = searchText
         }
-        .task {
-            refreshFiltered()
-            refreshDistances()
-        }
-        .onChange(of: filterInputsToken) { refreshFiltered() }
-        .onChange(of: store.restaurants.count) {
+        // initial:true covers first appearance — re-appearing the view (e.g. zooming back from
+        // detail) does NOT re-fire these. A standalone `.task { ... }` would, which previously
+        // re-filtered all 155 restaurants on every back-nav and stalled the hero zoom animation.
+        .onChange(of: filterInputsToken, initial: true) { refreshFiltered() }
+        .onChange(of: store.restaurants.count, initial: true) {
             refreshSuggestions()
             refreshDistances()
         }
@@ -243,7 +251,7 @@ struct RestaurantListView: View {
                 searchDropdownContent
             }
         }
-        .background(Color(.systemBackground), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .background(Color(.tertiarySystemBackground), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 22, style: .continuous)
                 .stroke(Color(.systemGray4), lineWidth: 1)
@@ -258,24 +266,32 @@ struct RestaurantListView: View {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 18, weight: .medium))
                 .foregroundStyle(.secondary)
-            TextField(placeholder.current, text: $searchText)
-                .focused($searchFocused)
-                .textFieldStyle(.plain)
-                .font(.system(size: 17))
-                .onSubmit {
-                    if let first = suggestions.first {
-                        openSuggestion(first)
+            ZStack(alignment: .leading) {
+                if searchText.isEmpty {
+                    Text(placeholder.current)
+                        .font(.system(size: 17))
+                        .foregroundStyle(Color(.systemGray2))
+                        .allowsHitTesting(false)
+                }
+                TextField("", text: $searchText)
+                    .focused($searchFocused)
+                    .textFieldStyle(.plain)
+                    .font(.system(size: 17))
+                    .onSubmit {
+                        if let first = suggestions.first {
+                            openSuggestion(first)
+                        }
                     }
-                }
-                .onAppear {
-                    if searchText.isEmpty && !searchFocused { placeholder.start() }
-                }
-                .onChange(of: searchFocused) {
-                    searchFocused ? placeholder.stop() : placeholder.start()
-                }
-                .onChange(of: searchText) {
-                    searchText.isEmpty ? placeholder.start() : placeholder.stop()
-                }
+                    .onAppear {
+                        if searchText.isEmpty && !searchFocused { placeholder.start() }
+                    }
+                    .onChange(of: searchFocused) {
+                        searchFocused ? placeholder.stop() : placeholder.start()
+                    }
+                    .onChange(of: searchText) {
+                        searchText.isEmpty ? placeholder.start() : placeholder.stop()
+                    }
+            }
             if searchFocused || !searchText.isEmpty {
                 Button {
                     withAnimation(.easeOut(duration: 0.2)) {
@@ -404,32 +420,24 @@ struct RestaurantListView: View {
     }
 
     private func handleScrollChange(from oldValue: CGFloat, to newValue: CGFloat) {
-        // Skip in list mode — native List + swipeActions fight with the inset animation.
-        if viewMode == .list { return }
-
-        // Always show near the top
         if newValue < 20 {
             if !isHeaderVisible {
                 withAnimation(.easeOut(duration: 0.22)) { isHeaderVisible = true }
             }
-            scrollAccumulator = 0
+            scrollTracker.accumulator = 0
             return
         }
-
         let delta = newValue - oldValue
-        guard abs(delta) > 1 else { return }
-
-        if (delta > 0) != (scrollAccumulator > 0) {
-            scrollAccumulator = 0
+        if (delta > 0) != (scrollTracker.accumulator > 0) {
+            scrollTracker.accumulator = 0
         }
-        scrollAccumulator += delta
-
-        if scrollAccumulator > 8, isHeaderVisible {
-            withAnimation(.easeOut(duration: 0.18)) { isHeaderVisible = false }
-            scrollAccumulator = 0
-        } else if scrollAccumulator < -10, !isHeaderVisible {
-            withAnimation(.easeOut(duration: 0.18)) { isHeaderVisible = true }
-            scrollAccumulator = 0
+        scrollTracker.accumulator += delta
+        if scrollTracker.accumulator > 40, isHeaderVisible {
+            withAnimation(.easeOut(duration: 0.22)) { isHeaderVisible = false }
+            scrollTracker.accumulator = 0
+        } else if scrollTracker.accumulator < -30, !isHeaderVisible {
+            withAnimation(.easeOut(duration: 0.22)) { isHeaderVisible = true }
+            scrollTracker.accumulator = 0
         }
     }
 
