@@ -8,6 +8,10 @@ import CoreImage
 final class ImageCache: @unchecked Sendable {
     static let shared = ImageCache()
 
+    // Shared across all foodie-preset renders. CIContext is thread-safe for concurrent
+    // render calls and expensive to init (Metal queues + shader compilation).
+    nonisolated private static let ciContext = CIContext(options: [.useSoftwareRenderer: false])
+
     private let memoryCache = NSCache<NSString, UIImage>()
     private let session: URLSession
 
@@ -118,7 +122,7 @@ final class ImageCache: @unchecked Sendable {
     /// reads at a consistent level — dark photos brighten, bright photos stay in check.
     nonisolated private static func applyFoodPreset(_ cgImage: CGImage) -> UIImage? {
         let ciImage = CIImage(cgImage: cgImage)
-        let context = CIContext(options: [.useSoftwareRenderer: false])
+        let context = ciContext
 
         // Step 1: measure the image's average luminance (perceptual Rec. 709)
         let avgFilter = CIFilter(name: "CIAreaAverage", parameters: [

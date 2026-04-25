@@ -76,17 +76,19 @@ struct RestaurantCardView: View {
                         .foregroundStyle(.white.opacity(0.8))
                         .lineLimit(1)
                     } else {
+                        let opening = restaurant.openingInfo
+                        let closingSoonMin: Int? = opening.minutesUntilClosing.flatMap { $0 > 0 && $0 <= 30 ? $0 : nil }
                         HStack(spacing: 8) {
-                            if restaurant.closingSoon, let min = restaurant.minutesUntilClosing {
+                            if let min = closingSoonMin {
                                 HStack(spacing: 3) {
                                     Circle().fill(.orange).frame(width: 6, height: 6)
                                     Text(String(format: String(localized: "status.closingSoon"), min))
                                         .font(.caption2.bold())
                                 }
                                 .foregroundStyle(.orange)
-                            } else if let isOpen = restaurant.isOpenNow {
+                            } else if opening.status != .unknown {
                                 Circle()
-                                    .fill(isOpen ? .green : .red)
+                                    .fill(opening.status == .open ? .green : .red)
                                     .frame(width: 6, height: 6)
                             }
                             Label(restaurant.neighborhood.displayName, systemImage: "mappin")
@@ -146,10 +148,11 @@ struct RestaurantCardView: View {
         if let rating = restaurant.personalRating {
             parts.append("MAMPF \(rating.formattedRating)")
         }
-        if restaurant.closingSoon, let min = restaurant.minutesUntilClosing {
+        let opening = restaurant.openingInfo
+        if let min = opening.minutesUntilClosing, min > 0, min <= 30 {
             parts.append(String(format: String(localized: "status.closingSoon"), min))
-        } else if let isOpen = restaurant.isOpenNow {
-            parts.append(isOpen ? String(localized: "status.open") : String(localized: "status.closed"))
+        } else if opening.status != .unknown {
+            parts.append(opening.status == .open ? String(localized: "status.open") : String(localized: "status.closed"))
         }
         if isFavorite { parts.append(String(localized: "a11y.favorite")) }
         return parts.joined(separator: ", ")

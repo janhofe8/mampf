@@ -25,6 +25,7 @@ struct RestaurantListView: View {
     /// Plain class so its mutations during scroll don't invalidate the view body — vital
     /// for scroll smoothness. Only `isHeaderVisible` (a @State Bool) drives the actual UI.
     @State private var scrollTracker = ScrollTracker()
+    @State private var scrollPhase: ScrollPhase = .idle
     @FocusState private var searchFocused: Bool
 
     private var showingDropdown: Bool { !searchText.isEmpty }
@@ -417,21 +418,36 @@ struct RestaurantListView: View {
         } action: { oldValue, newValue in
             handleScrollChange(from: oldValue, to: newValue)
         }
+        .onScrollPhaseChange { _, newPhase in
+            scrollPhase = newPhase
+            // Only react to real flicks. Slow drags end in `.idle` directly without
+            // ever entering `.decelerating`, so tiny finger movements never animate
+            // the header even if the accumulator quietly crossed the threshold.
+            if newPhase == .decelerating {
+                evaluateHeaderVisibility()
+            }
+        }
     }
 
     private func handleScrollChange(from oldValue: CGFloat, to newValue: CGFloat) {
+        // Auto-show when bounced back to top — regardless of accumulator state.
         if newValue < 20 {
-            if !isHeaderVisible {
+            if !isHeaderVisible, scrollPhase != .tracking {
                 withAnimation(.easeOut(duration: 0.22)) { isHeaderVisible = true }
             }
             scrollTracker.accumulator = 0
             return
         }
+        // Track delta silently. Visibility flips only happen on `.decelerating`
+        // phase entry (handled in onScrollPhaseChange).
         let delta = newValue - oldValue
         if (delta > 0) != (scrollTracker.accumulator > 0) {
             scrollTracker.accumulator = 0
         }
         scrollTracker.accumulator += delta
+    }
+
+    private func evaluateHeaderVisibility() {
         if scrollTracker.accumulator > 40, isHeaderVisible {
             withAnimation(.easeOut(duration: 0.22)) { isHeaderVisible = false }
             scrollTracker.accumulator = 0
@@ -710,15 +726,17 @@ struct RestaurantListView: View {
                     }
                 }
 
+                let opening = restaurant.openingInfo
+                let closingSoonMin: Int? = opening.minutesUntilClosing.flatMap { $0 > 0 && $0 <= 30 ? $0 : nil }
                 HStack(spacing: 4) {
-                    if restaurant.closingSoon, let min = restaurant.minutesUntilClosing {
+                    if let min = closingSoonMin {
                         Circle().fill(.orange).frame(width: 6, height: 6)
                         Text(String(format: String(localized: "status.closingSoon"), min))
                             .foregroundStyle(.orange)
                             .fontWeight(.semibold)
-                    } else if let isOpen = restaurant.isOpenNow {
+                    } else if opening.status != .unknown {
                         Circle()
-                            .fill(isOpen ? .green : .red)
+                            .fill(opening.status == .open ? .green : .red)
                             .frame(width: 6, height: 6)
                     }
                     Text("\(restaurant.neighborhood.displayName) · \(restaurant.cuisineType.icon) \(restaurant.cuisineType.displayName) · \(restaurant.priceRange.label)")

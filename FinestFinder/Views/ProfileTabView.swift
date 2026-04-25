@@ -37,9 +37,6 @@ struct ProfileTabView: View {
         }
         .sheet(isPresented: $showingSettings) { SettingsView() }
         .sheet(isPresented: $showingEditProfile) { EditProfileView() }
-        .navigationDestination(for: Restaurant.self) { restaurant in
-            RestaurantDetailView(restaurant: restaurant)
-        }
         .navigationDestination(item: $navigatedRestaurant) { restaurant in
             RestaurantDetailView(restaurant: restaurant)
         }
@@ -49,7 +46,6 @@ struct ProfileTabView: View {
         }
         .onAppear {
             applyBrandedNavBarAppearance()
-            Task { await store.loadAllMyRatings() }
             recomputeStats()
         }
         .onChange(of: store.myRatingEntries) { recomputeStats() }

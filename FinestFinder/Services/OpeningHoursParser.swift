@@ -4,6 +4,12 @@ enum OpeningStatus: Equatable {
     case open, closed, unknown
 }
 
+struct OpeningInfo: Equatable {
+    let status: OpeningStatus
+    /// Minutes until closing if `status == .open`, else nil.
+    let minutesUntilClosing: Int?
+}
+
 struct OpeningHoursParser {
 
     static func status(for openingHours: String, at date: Date = .now) -> OpeningStatus {
@@ -155,6 +161,50 @@ struct OpeningHoursParser {
         }
     }
 
+    /// Single-pass parse that returns both status and minutes-until-closing.
+    /// Use this on hot paths (list rows, cards) to avoid parsing the same string 2-3x per render.
+    static func openingInfo(for openingHours: String, at date: Date = .now) -> OpeningInfo {
+        let trimmed = openingHours.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return OpeningInfo(status: .unknown, minutesUntilClosing: nil) }
+
+        let calendar = Calendar.current
+        let weekday = calendar.component(.weekday, from: date)
+        let hour = calendar.component(.hour, from: date)
+        let minute = calendar.component(.minute, from: date)
+        let currentMinutes = hour * 60 + minute
+
+        let segments = trimmed
+            .components(separatedBy: CharacterSet(charactersIn: ";\n"))
+            .map { normalizeUnicode($0.trimmingCharacters(in: .whitespaces)) }
+            .filter { !$0.isEmpty }
+
+        var status: OpeningStatus = .unknown
+        var minutesLeft: Int? = nil
+
+        for segment in segments {
+            guard let part = timePart(for: segment, weekday: weekday) else { continue }
+            if part.lowercased() == "closed" {
+                status = .closed
+                break
+            }
+            if let (open, close) = parseTimeRange(part) {
+                if isTimeInRange(currentMinutes, open: open, close: close) {
+                    status = .open
+                    if close > currentMinutes {
+                        minutesLeft = close - currentMinutes
+                    } else if close < currentMinutes {
+                        minutesLeft = (24 * 60 - currentMinutes) + close
+                    }
+                    break
+                } else {
+                    status = .closed
+                    // keep scanning — another segment for today may put us inside its range
+                }
+            }
+        }
+        return OpeningInfo(status: status, minutesUntilClosing: minutesLeft)
+    }
+
     /// Returns minutes until closing for the current day segment, or nil if unknown/closed.
     static func minutesUntilClosing(for openingHours: String, at date: Date = .now) -> Int? {
         let trimmed = openingHours.trimmingCharacters(in: .whitespaces)
@@ -196,6 +246,13 @@ struct OpeningHoursParser {
 // MARK: - Restaurant Extension
 
 extension Restaurant {
+    /// Single-pass status + minutes-until-closing. Prefer this over reading
+    /// `openingStatus`/`minutesUntilClosing`/`closingSoon` separately on hot paths.
+    var openingInfo: OpeningInfo {
+        if isClosed { return OpeningInfo(status: .closed, minutesUntilClosing: nil) }
+        return OpeningHoursParser.openingInfo(for: openingHours)
+    }
+
     var openingStatus: OpeningStatus {
         if isClosed { return .closed }
         return OpeningHoursParser.status(for: openingHours)

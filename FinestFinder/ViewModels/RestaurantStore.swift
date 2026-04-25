@@ -163,6 +163,9 @@ final class RestaurantStore {
             if !error.isCancellation {
                 self.error = error
             }
+            // Server delete failed — keep local state so the user can retry.
+            // Resetting DeviceID here would orphan the anon ratings still on the server.
+            return
         }
         myRatings.removeAll()
         myRatingEntries.removeAll()
