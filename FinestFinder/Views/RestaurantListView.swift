@@ -10,13 +10,6 @@ struct RestaurantListView: View {
     @State private var searchText = ""
     @State private var showingFilters = false
     @State private var viewMode: ViewMode = .cards
-    @State private var placeholder = RotatingPlaceholder(examples: [
-        String(localized: "search.placeholder.pasta"),
-        String(localized: "search.placeholder.ottensen"),
-        String(localized: "search.placeholder.nine"),
-        String(localized: "search.placeholder.ramen"),
-        String(localized: "search.placeholder.pizza")
-    ])
     @State private var showFavoritesOnly = false
     @State private var filtered: [Restaurant] = []
     @State private var suggestions: [Restaurant] = []
@@ -51,6 +44,8 @@ struct RestaurantListView: View {
         h.combine(filterVM.selectedPriceRanges)
         h.combine(filterVM.minimumRating)
         h.combine(filterVM.showOpenOnly)
+        h.combine(filterVM.showMyRatedOnly)
+        h.combine(store.myRatings.count)
         h.combine(filterVM.sortField)
         h.combine(filterVM.sortAscending)
         return h.finalize()
@@ -58,7 +53,12 @@ struct RestaurantListView: View {
 
     private func refreshFiltered() {
         let base = showFavoritesOnly ? store.favorites : store.restaurants
-        filtered = filterVM.apply(to: base, userLocation: locationManager.lastLocation, communityRatings: store.communityRatings)
+        filtered = filterVM.apply(
+            to: base,
+            userLocation: locationManager.lastLocation,
+            communityRatings: store.communityRatings,
+            myRatedIds: Set(store.myRatings.keys)
+        )
     }
 
     private let compactColumns = [
@@ -269,7 +269,7 @@ struct RestaurantListView: View {
                 .foregroundStyle(.secondary)
             ZStack(alignment: .leading) {
                 if searchText.isEmpty {
-                    Text(placeholder.current)
+                    Text(String(format: String(localized: "search.restaurants"), store.restaurants.count))
                         .font(.system(size: 17))
                         .foregroundStyle(Color(.systemGray2))
                         .allowsHitTesting(false)
@@ -282,15 +282,6 @@ struct RestaurantListView: View {
                         if let first = suggestions.first {
                             openSuggestion(first)
                         }
-                    }
-                    .onAppear {
-                        if searchText.isEmpty && !searchFocused { placeholder.start() }
-                    }
-                    .onChange(of: searchFocused) {
-                        searchFocused ? placeholder.stop() : placeholder.start()
-                    }
-                    .onChange(of: searchText) {
-                        searchText.isEmpty ? placeholder.start() : placeholder.stop()
                     }
             }
             if searchFocused || !searchText.isEmpty {
@@ -549,6 +540,7 @@ struct RestaurantListView: View {
                 filtersChip
                 sortChip
                 openNowChip
+                if !store.myRatings.isEmpty { myRatingsChip }
                 cuisineChip
                 priceChip
                 neighborhoodChip
@@ -559,6 +551,20 @@ struct RestaurantListView: View {
         .sensoryFeedback(.selection, trigger: filterVM.selectedCuisines)
         .sensoryFeedback(.selection, trigger: filterVM.selectedNeighborhoods)
         .sensoryFeedback(.selection, trigger: filterVM.selectedPriceRanges)
+    }
+
+    private var myRatingsChip: some View {
+        Button {
+            withAnimation { filterVM.showMyRatedOnly.toggle() }
+        } label: {
+            FilterBarChip(
+                icon: "star.fill",
+                text: String(localized: "filter.myRatings"),
+                isActive: filterVM.showMyRatedOnly,
+                showChevron: false
+            )
+        }
+        .sensoryFeedback(.selection, trigger: filterVM.showMyRatedOnly)
     }
 
     private var filtersChip: some View {

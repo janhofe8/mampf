@@ -39,13 +39,6 @@
 "rating.tier.recommended" = "Recommended";
 "rating.tier.mampf" = "MAMPF";
 
-/* Search */
-"search.placeholder.pasta" = "Search pasta…";
-"search.placeholder.ottensen" = "Try Ottensen…";
-"search.placeholder.nine" = "Find 9+ ratings…";
-"search.placeholder.ramen" = "Craving ramen?";
-"search.placeholder.pizza" = "Looking for pizza?";
-
 /* Filter */
 "filter.filters" = "Filters";
 "filter.cuisine" = "Cuisine";
@@ -93,6 +86,9 @@
 /* Settings */
 "settings.title" = "Settings";
 "settings.privacy" = "Privacy";
+"settings.account" = "Account";
+
+"filter.myRatings" = "My ratings";
 "settings.privacyPolicy" = "Privacy Policy";
 "settings.dataCollection" = "Data Collection";
 "settings.dataCollectionInfo" = "MAMPF uses an anonymous device ID to save your community ratings. Your location is only used to show nearby food spots on the map and is never stored.";
@@ -131,20 +127,29 @@
 "a11y.changeViewMode" = "Change view mode";
 
 /* Onboarding */
-"onboarding.welcome.title" = "We know Hamburg's food scene.";
-"onboarding.welcome.subtitle" = "Online reviews are broken — faked, paid, deleted when they get inconvenient.\n\nWe've tested 150+ spots ourselves and rated them honestly.\n\nSo you know where it's actually worth going.";
-"onboarding.rating.title" = "The MAMPF Rating";
-"onboarding.rating.subtitle" = "Jan rates every spot from 1 to 10. Colors tell you at a glance how good it is.";
+"onboarding.welcome.title" = "Welcome to MAMPF.";
+"onboarding.welcome.subtitle" = "Find Hamburg's truly best food spots.";
+"onboarding.expertise.title" = "Tired of fake reviews?\nSame here.";
+"onboarding.expertise.subtitle" = "That's why we test every spot ourselves.\nHonest and independent.";
+"onboarding.rating.legend.mampf" = "MAMPF · 9+";
+"onboarding.rating.legend.recommended" = "Recommended · 8-8.5";
+"onboarding.rating.legend.good" = "Good · 7-7.5";
+"onboarding.rating.legend.okay" = "Okay · 5-6.5";
+"onboarding.rating.legend.avoid" = "Avoid · <5";
+"onboarding.personalize.title" = "Become a foodscout yourself.";
+"onboarding.personalize.subtitle" = "Rate your spots, build your wishlist, see your stats.\nThat's how you keep track and shape MAMPF.";
+"onboarding.rating.title" = "Three ratings.";
+"onboarding.rating.subtitle" = "We provide curated, independent ratings.\nThe community adds their own perspective.";
 "onboarding.rating.legend.great" = "Great · 9+";
 "onboarding.rating.legend.good" = "Good · 8";
 "onboarding.rating.legend.ok" = "OK · 7";
 "onboarding.rating.legend.meh" = "Meh · ≤6";
-"onboarding.location.title" = "Find spots near you";
-"onboarding.location.subtitle" = "Enable location so MAMPF can show distances and what's around you on the map.";
-"onboarding.location.allow" = "Enable location";
-"onboarding.location.skip" = "Not now";
+"location.primer.title" = "Spots near you.";
+"location.primer.subtitle" = "Enable location to see distances and what's around you.";
+"location.primer.allow" = "Enable location";
+"location.primer.skip" = "Not now";
 "onboarding.next" = "Next";
-"onboarding.getStarted" = "Let's eat";
+"onboarding.getStarted" = "Explore food spots";
 
 /* Empty States */
 "empty.noResults.title" = "No food spots";
@@ -166,16 +171,22 @@
 "profile.signedOutSubtitle" = "Save what you love. Plan what's next.";
 "profile.continue" = "Continue";
 "profile.previewTitle" = "What you'll unlock";
-"profile.syncBanner.title" = "Your MAMPF profile";
-"profile.syncBanner.subtitle" = "Sign in — get a username, stats, and history.";
+"profile.syncBanner.title" = "Join the MAMPF community";
+"profile.syncBanner.subtitle" = "Sign in to unlock exclusive benefits!";
+"profile.stats.locked" = "Sign in for personalized stats";
 "login.emailPlaceholder" = "your@email.com";
 "profile.signIn" = "Sign in";
 "profile.signOut" = "Sign out";
 "profile.signedIn" = "Signed in";
-"profile.yourRatings" = "Your Ratings";
-"profile.wantToTry" = "Want to Try";
+"profile.editProfile" = "Edit profile";
+"profile.yourRatings" = "Your ratings";
+"profile.wantToTry" = "Want to try";
 "profile.stats.rated" = "Rated";
 "profile.stats.avg" = "Average";
+"profile.stats.explored" = "Spots explored";
+"profile.stats.mampfs" = "MAMPFs explored";
+"profile.stats.topSpot" = "Your top spot";
+"profile.stats.stammviertel" = "Home turf";
 "profile.stats.favorite" = "Favorite cuisine";
 "profile.empty.ratings" = "You haven't rated any spots yet.";
 "profile.empty.wantToTry" = "Tap the heart on spots you want to try.";

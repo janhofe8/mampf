@@ -1,27 +1,37 @@
 import SwiftUI
 
+enum AppTab: Hashable { case map, restaurants, profile }
+
+@Observable
+final class TabRouter {
+    var selected: AppTab = .map
+}
+
 struct ContentView: View {
     @AppStorage("appearanceMode") private var appearanceMode: AppearanceMode = .system
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
     @Environment(RestaurantStore.self) private var store
     @Environment(AuthService.self) private var auth
+    @Environment(TabRouter.self) private var router
     @State private var visibleError: String?
 
     var body: some View {
-        TabView {
-            Tab("tab.map", systemImage: "map") {
+        @Bindable var router = router
+
+        TabView(selection: $router.selected) {
+            Tab("tab.map", systemImage: "map", value: AppTab.map) {
                 NavigationStack {
                     MapTabView()
                 }
             }
 
-            Tab("tab.restaurants", systemImage: "fork.knife") {
+            Tab("tab.restaurants", systemImage: "fork.knife", value: AppTab.restaurants) {
                 NavigationStack {
                     RestaurantListView()
                 }
             }
 
-            Tab("tab.profile", systemImage: "person.crop.circle") {
+            Tab("tab.profile", systemImage: "person.crop.circle", value: AppTab.profile) {
                 NavigationStack {
                     ProfileTabView()
                 }
@@ -86,4 +96,5 @@ private struct ErrorToast: View {
         .environment(RestaurantStore())
         .environment(FilterViewModel())
         .environment(LocationManager())
+        .environment(TabRouter())
 }

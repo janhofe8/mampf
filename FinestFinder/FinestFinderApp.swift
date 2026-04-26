@@ -6,9 +6,13 @@ struct MAMPFApp: App {
     @State private var filterVM = FilterViewModel()
     @State private var locationManager = LocationManager()
     @State private var authService = AuthService()
+    @State private var tabRouter = TabRouter()
 
     init() {
         applyBrandedNavBarAppearance()
+        #if DEBUG
+        UserDefaults.standard.removeObject(forKey: "hasCompletedOnboarding")
+        #endif
     }
 
     var body: some Scene {
@@ -18,6 +22,7 @@ struct MAMPFApp: App {
                 .environment(filterVM)
                 .environment(locationManager)
                 .environment(authService)
+                .environment(tabRouter)
                 .task {
                     await store.load()
                 }

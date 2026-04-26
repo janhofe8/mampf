@@ -23,38 +23,40 @@ struct SettingsView: View {
                 }
 
                 Section {
-                    Text("settings.dataCollectionInfo")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
                     Link(destination: URL(string: "https://mampf-nine.vercel.app/privacy")!) {
-                        HStack {
-                            Text("settings.privacyPolicy")
-                                .foregroundStyle(.primary)
-                            Spacer()
-                            Image(systemName: "arrow.up.right.square")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                } header: {
-                    Text("settings.dataCollection")
-                }
-
-                Section {
-                    Text(auth.isSignedIn ? "settings.deleteAccountInfo" : "settings.deleteDataInfo")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-
-                    Button {
-                        showDeleteConfirm = true
-                    } label: {
-                        Text(auth.isSignedIn ? "settings.deleteAccount" : "settings.deleteData")
-                            .font(.subheadline)
-                            .foregroundStyle(.red)
-                            .frame(maxWidth: .infinity, alignment: .center)
+                        settingsRow(
+                            icon: "hand.raised",
+                            label: "settings.privacyPolicy",
+                            trailing: "arrow.up.right.square"
+                        )
                     }
                 } header: {
                     Text("settings.privacy")
+                } footer: {
+                    Text("settings.dataCollectionInfo")
+                }
+
+                Section {
+                    if auth.isSignedIn {
+                        Button {
+                            Task { try? await auth.signOut() }
+                        } label: {
+                            settingsRow(icon: "rectangle.portrait.and.arrow.right", label: "profile.signOut")
+                        }
+                    }
+                    Button(role: .destructive) {
+                        showDeleteConfirm = true
+                    } label: {
+                        settingsRow(
+                            icon: "trash",
+                            label: auth.isSignedIn ? "settings.deleteAccount" : "settings.deleteData",
+                            destructive: true
+                        )
+                    }
+                } header: {
+                    Text("settings.account")
+                } footer: {
+                    Text(auth.isSignedIn ? "settings.deleteAccountInfo" : "settings.deleteDataInfo")
                 }
             }
             .navigationTitle("settings.title")
@@ -102,6 +104,24 @@ struct SettingsView: View {
                 }
             }
             .animation(.easeInOut, value: showDeletedBanner)
+        }
+    }
+
+    @ViewBuilder
+    private func settingsRow(icon: String, label: LocalizedStringKey, trailing: String? = nil, destructive: Bool = false) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 16, weight: .semibold))
+                .frame(width: 24)
+                .foregroundStyle(destructive ? .red : .ffPrimary)
+            Text(label)
+                .foregroundStyle(destructive ? .red : .primary)
+            Spacer()
+            if let trailing {
+                Image(systemName: trailing)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
         }
     }
 }

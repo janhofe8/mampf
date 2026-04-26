@@ -14,15 +14,10 @@ struct MapTabView: View {
     @State private var showRatingFilter = false
     @State private var showingFilters = false
     @FocusState private var searchFocused: Bool
+    @AppStorage("hasSeenLocationPrimer") private var hasSeenLocationPrimer = false
+    @State private var showLocationPrimer = false
     // Cached results — updated only when inputs change
     @State private var cachedFiltered: [Restaurant] = []
-    @State private var placeholder = RotatingPlaceholder(examples: [
-        String(localized: "search.placeholder.pasta"),
-        String(localized: "search.placeholder.ottensen"),
-        String(localized: "search.placeholder.nine"),
-        String(localized: "search.placeholder.ramen"),
-        String(localized: "search.placeholder.pizza")
-    ])
     @State private var visiblePins: [Restaurant] = []
     @State private var zoomTier: ZoomTier = .medium
     @State private var suggestions: [Restaurant] = []
@@ -101,6 +96,15 @@ struct MapTabView: View {
         .task {
             refreshAnnotations()
             refreshCategories()
+            if !hasSeenLocationPrimer && locationManager.authorizationStatus == .notDetermined {
+                try? await Task.sleep(for: .milliseconds(800))
+                showLocationPrimer = true
+            }
+        }
+        .sheet(isPresented: $showLocationPrimer) {
+            locationPrimerSheet
+                .presentationDetents([.medium])
+                .presentationDragIndicator(.visible)
         }
         .onChange(of: filterInputsToken) { refreshAnnotations() }
         .onChange(of: store.restaurants.count) {
@@ -128,6 +132,8 @@ struct MapTabView: View {
         h.combine(filterVM.selectedPriceRanges)
         h.combine(filterVM.minimumRating)
         h.combine(filterVM.showOpenOnly)
+        h.combine(filterVM.showMyRatedOnly)
+        h.combine(store.myRatings.count)
         return h.finalize()
     }
 
@@ -152,6 +158,52 @@ struct MapTabView: View {
         let center = CLLocation(latitude: region.center.latitude, longitude: region.center.longitude)
         let user = CLLocation(latitude: userLoc.latitude, longitude: userLoc.longitude)
         return center.distance(from: user) < 50
+    }
+
+    private var locationPrimerSheet: some View {
+        VStack(spacing: 24) {
+            Spacer()
+            Text("🗺️")
+                .font(.system(size: 90))
+            VStack(spacing: 12) {
+                Text("location.primer.title")
+                    .font(.system(size: 30, weight: .black, design: .rounded))
+                    .multilineTextAlignment(.center)
+                Text("location.primer.subtitle")
+                    .font(.system(.body, design: .rounded).weight(.medium))
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 24)
+            }
+            Spacer()
+            VStack(spacing: 8) {
+                Button {
+                    hasSeenLocationPrimer = true
+                    locationManager.requestPermission()
+                    showLocationPrimer = false
+                } label: {
+                    Text("location.primer.allow")
+                        .font(.system(.headline, design: .rounded).weight(.bold))
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(Color.ffPrimary, in: RoundedRectangle(cornerRadius: 16))
+                }
+                Button {
+                    hasSeenLocationPrimer = true
+                    showLocationPrimer = false
+                } label: {
+                    Text("location.primer.skip")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                }
+            }
+            .padding(.horizontal, 24)
+            .padding(.bottom, 24)
+        }
+        .padding(.top, 32)
     }
 
     private var locationButton: some View {
@@ -197,7 +249,7 @@ struct MapTabView: View {
                     Text("empty.noResults.cta")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.white)
-                        .padding(.horizontal, 14)
+                        .padding(.horizontal, 16)
                         .padding(.vertical, 7)
                         .background(Color.ffPrimary, in: Capsule())
                 }
@@ -205,7 +257,7 @@ struct MapTabView: View {
             }
         }
         .padding(.horizontal, 20)
-        .padding(.vertical, 18)
+        .padding(.vertical, 20)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
         .shadow(color: .black.opacity(0.1), radius: 8, y: 3)
         .padding(.horizontal, 40)
@@ -266,7 +318,7 @@ struct MapTabView: View {
             }
             ZStack(alignment: .leading) {
                 if searchText.isEmpty {
-                    Text(placeholder.current)
+                    Text(String(format: String(localized: "search.restaurants"), store.restaurants.count))
                         .font(.system(size: 17))
                         .foregroundStyle(Color(.systemGray2))
                         .allowsHitTesting(false)
@@ -280,19 +332,10 @@ struct MapTabView: View {
                             selectSearchResult(first)
                         }
                     }
-                    .onAppear {
-                        if searchText.isEmpty && !searchFocused { placeholder.start() }
-                    }
-                    .onChange(of: searchFocused) {
-                        searchFocused ? placeholder.stop() : placeholder.start()
-                    }
-                    .onChange(of: searchText) {
-                        searchText.isEmpty ? placeholder.start() : placeholder.stop()
-                    }
             }
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 14)
+        .padding(.vertical, 16)
     }
 
     @ViewBuilder
@@ -383,6 +426,7 @@ struct MapTabView: View {
                 filtersChip
                 openNowChip
                 ratingChip
+                if !store.myRatings.isEmpty { myRatingsChip }
                 cuisineChip
                 priceChip
             }
@@ -390,6 +434,20 @@ struct MapTabView: View {
         .sensoryFeedback(.selection, trigger: filterVM.selectedCuisines)
         .sensoryFeedback(.selection, trigger: filterVM.selectedNeighborhoods)
         .sensoryFeedback(.selection, trigger: filterVM.selectedPriceRanges)
+    }
+
+    private var myRatingsChip: some View {
+        Button {
+            withAnimation { filterVM.showMyRatedOnly.toggle() }
+        } label: {
+            FilterBarChip(
+                icon: "star.fill",
+                text: String(localized: "filter.myRatings"),
+                isActive: filterVM.showMyRatedOnly,
+                showChevron: false
+            )
+        }
+        .sensoryFeedback(.selection, trigger: filterVM.showMyRatedOnly)
     }
 
     // MARK: - Filter Chips
@@ -568,7 +626,12 @@ struct MapTabView: View {
     }
 
     private func refreshAnnotations() {
-        cachedFiltered = filterVM.apply(to: store.restaurants, userLocation: locationManager.lastLocation, communityRatings: store.communityRatings)
+        cachedFiltered = filterVM.apply(
+            to: store.restaurants,
+            userLocation: locationManager.lastLocation,
+            communityRatings: store.communityRatings,
+            myRatedIds: Set(store.myRatings.keys)
+        )
         refreshVisiblePins()
     }
 

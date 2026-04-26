@@ -69,6 +69,7 @@ final class FilterViewModel {
     var selectedPriceRanges: Set<PriceRange> = []
     var minimumRating: Double = 0
     var showOpenOnly: Bool = false
+    var showMyRatedOnly: Bool = false
     var sortField: SortField = .mampfRating
     var sortAscending: Bool = false
     /// Stable seed for random sort — only changes when user re-selects random
@@ -93,6 +94,7 @@ final class FilterViewModel {
             || !selectedPriceRanges.isEmpty
             || minimumRating > 0
             || showOpenOnly
+            || showMyRatedOnly
     }
 
     /// Count of currently-applied filter dimensions — shown as a badge on the "Filters" chip.
@@ -103,20 +105,22 @@ final class FilterViewModel {
         if !selectedPriceRanges.isEmpty { count += 1 }
         if minimumRating > 0 { count += 1 }
         if showOpenOnly { count += 1 }
+        if showMyRatedOnly { count += 1 }
         return count
     }
 
     func apply(
         to restaurants: [Restaurant],
         userLocation: CLLocationCoordinate2D? = nil,
-        communityRatings: [UUID: (average: Double, count: Int)] = [:]
+        communityRatings: [UUID: (average: Double, count: Int)] = [:],
+        myRatedIds: Set<UUID> = []
     ) -> [Restaurant] {
-        var result = filter(restaurants)
+        var result = filter(restaurants, myRatedIds: myRatedIds)
         sort(&result, userLocation: userLocation, communityRatings: communityRatings)
         return result
     }
 
-    private func filter(_ restaurants: [Restaurant]) -> [Restaurant] {
+    private func filter(_ restaurants: [Restaurant], myRatedIds: Set<UUID>) -> [Restaurant] {
         var result = restaurants
 
         if !activeSearchText.isEmpty {
@@ -148,6 +152,10 @@ final class FilterViewModel {
 
         if showOpenOnly {
             result = result.filter { $0.openingStatus == .open }
+        }
+
+        if showMyRatedOnly {
+            result = result.filter { myRatedIds.contains($0.id) }
         }
 
         return result
@@ -196,5 +204,6 @@ final class FilterViewModel {
         selectedPriceRanges = []
         minimumRating = 0
         showOpenOnly = false
+        showMyRatedOnly = false
     }
 }

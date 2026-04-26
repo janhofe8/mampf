@@ -125,6 +125,13 @@ struct MapKitMapView: UIViewRepresentable {
                 view.image = PinImageCache.image(for: r.rating)
                 view.canShowCallout = false
                 view.centerOffset = .zero
+                view.clusteringIdentifier = nil
+                view.collisionMode = .none
+                view.displayPriority = .required
+                attachNameLabel(to: view, name: r.restaurant.name)
+                if let label = view.viewWithTag(Self.nameLabelTag) {
+                    label.isHidden = mv.region.span.latitudeDelta >= Self.nameLabelMaxLatDelta
+                }
                 return view
             }
             if annotation === userAnnotation {
@@ -149,9 +156,55 @@ struct MapKitMapView: UIViewRepresentable {
             let userInitiated = isUserInteracting
             let newRegion = mv.region
             isUserInteracting = false
+            updateNameLabelVisibility(in: mv)
             DispatchQueue.main.async { [parent] in
                 parent.region = newRegion
                 parent.onRegionChange(newRegion, userInitiated)
+            }
+        }
+
+        private static let nameLabelTag = 9871
+        private static let nameLabelMaxLatDelta: Double = 0.012
+
+        private func attachNameLabel(to view: MKAnnotationView, name: String) {
+            let label: UILabel
+            if let existing = view.viewWithTag(Self.nameLabelTag) as? UILabel {
+                label = existing
+            } else {
+                label = UILabel()
+                label.tag = Self.nameLabelTag
+                label.font = UIFont.systemFont(ofSize: 11, weight: .medium)
+                label.textColor = UIColor.label.withAlphaComponent(0.8)
+                label.textAlignment = .center
+                label.numberOfLines = 1
+                label.lineBreakMode = .byClipping
+                label.adjustsFontSizeToFitWidth = false
+                label.layer.shadowColor = UIColor.systemBackground.cgColor
+                label.layer.shadowOpacity = 1
+                label.layer.shadowRadius = 2
+                label.layer.shadowOffset = .zero
+                label.layer.masksToBounds = false
+                view.addSubview(label)
+            }
+            label.text = name
+            label.sizeToFit()
+            // Position label a uniform gap below the *visible* pin (not the image bounds —
+            // image height varies due to shadow padding, especially for elite ≥9 pins).
+            let isRated = (view.annotation as? RestaurantAnnotation)?.rating != nil
+            let visibleRadius: CGFloat = isRated ? 14 : 7
+            // Position label TOP at visible-pin-bottom + 4pt gap (need to add half-height so center sits right).
+            label.center = CGPoint(
+                x: view.bounds.midX,
+                y: view.bounds.midY + visibleRadius + 4 + label.bounds.height / 2
+            )
+        }
+
+        fileprivate func updateNameLabelVisibility(in mv: MKMapView) {
+            let visible = mv.region.span.latitudeDelta < Self.nameLabelMaxLatDelta
+            for annotation in mv.annotations {
+                guard let v = mv.view(for: annotation),
+                      let label = v.viewWithTag(Self.nameLabelTag) else { continue }
+                label.isHidden = !visible
             }
         }
     }

@@ -15,6 +15,8 @@ struct FilterSheetView: View {
         h.combine(filterVM.selectedPriceRanges)
         h.combine(filterVM.minimumRating)
         h.combine(filterVM.showOpenOnly)
+        h.combine(filterVM.showMyRatedOnly)
+        h.combine(store.myRatings.count)
         return h.finalize()
     }
 
@@ -22,7 +24,8 @@ struct FilterSheetView: View {
         filteredCount = filterVM.apply(
             to: store.restaurants,
             userLocation: locationManager.lastLocation,
-            communityRatings: store.communityRatings
+            communityRatings: store.communityRatings,
+            myRatedIds: Set(store.myRatings.keys)
         ).count
     }
 
