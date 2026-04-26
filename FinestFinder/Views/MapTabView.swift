@@ -146,8 +146,16 @@ struct MapTabView: View {
 
     // MARK: - Location Button
 
+    /// Apple-Maps-style: filled when the map is centered on the user (~50 m), outline otherwise.
+    private var isCenteredOnUser: Bool {
+        guard let userLoc = locationManager.lastLocation else { return false }
+        let center = CLLocation(latitude: region.center.latitude, longitude: region.center.longitude)
+        let user = CLLocation(latitude: userLoc.latitude, longitude: userLoc.longitude)
+        return center.distance(from: user) < 50
+    }
+
     private var locationButton: some View {
-        MapControlButton(icon: "location.fill") {
+        MapControlButton(icon: isCenteredOnUser ? "location.fill" : "location") {
             if locationManager.authorizationStatus == .notDetermined {
                 locationManager.requestPermission()
             } else {

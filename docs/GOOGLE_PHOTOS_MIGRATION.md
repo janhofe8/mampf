@@ -1,79 +1,37 @@
-# Google Photos Migration Plan
+# Google Photos Migration — RESOLVED 2026-04-26
 
-**Problem:** Google Places Photos API Terms of Service prohibit caching/storing images. MAMPF currently downloads Google photos into Supabase Storage (`restaurant-images/` root), which is a ToS violation. Must be resolved before public release.
+**Status:** ✅ Done. All restaurants now use own photos in `restaurant-images/own/`. Storage root is empty. Public-release blocker removed.
 
-**Current state (as of 2026-04-24):**
-- ~155 restaurants with `image_url` pointing to cached Google Places photos in Supabase Storage root
-- Handful of own photos in `restaurant-images/own/`
-- App reads `image_url` directly via `AsyncRestaurantImage`
+## Final state
 
-## Options (ranked)
+- 158 / 158 restaurants point to `restaurant-images/own/<slug>.jpg`
+- 0 Google-sourced photos in Supabase Storage
+- 0 orphan files in `own/` (storage and DB are 1:1 synchronized)
+- Local mirror in `~/Food Bilder/` matches DB content (Stand 2026-04-26)
+- `ImageCache` applies the Foodie-Preset (CIGammaAdjust + CIHighlightShadowAdjust + temperature/saturation tweaks) to anything served from `/own/` — see `Services/ImageCache.swift:77`
 
-### A — Replace with own photos (recommended)
-Jan shoots photos himself for the ~30 most-visited / top-rated spots, uses cuisine icons for the rest. Realistic, ToS-safe, gives the app a distinctive visual voice.
+## How it was resolved
 
-- Effort: 2–3 weekends of shooting + upload
-- Quality: controlled, cohesive
-- Scale: manual, but fine for 155 spots
+Took the recommended path (Option A — own photos for all). Migration was executed across this conversation in three batches:
 
-### B — Fetch Google photos at runtime (no caching)
-App calls Google Places Photo API on each load, server-side proxies if needed. Pros: no ToS issue, no manual work. **Cons: API budget blows instantly.** Place Photo free tier: 1.000/month. Every user browsing 10 restaurants = 10 calls. Doesn't scale past a handful of users.
+1. **Initial 19** (filename-matched against `~/Food Bilder/`): Ai Bánh Mì, An An Streetfood, An Vegan House, Bistro Cà Phê Viet, Breakfastdream, Café Näscherei, Das Peace, Diggi Smalls, Falafel Haus, Falafelstern, Good One Café, Green Papaya, Il Siciliano, Jill, L'Osteria, MUTTERLAND, The Pasta Club, SVAAdish, The Window
+2. **Singles**: Spaccaforno (Rathaus/Altstadt), Josefs, Takumi (corrected from mistakenly-Ottensen-data to Schanze)
+3. **Final 25** after the user added remaining named photos to the folder: Bolle, Kardelen, Karo Fisch, Kebaba, Kimchi Guys, Kimo, kini, Kleine Haie GF, Kohldampf, Köz-Antep, Little Tiana, Luigi's, memán, Monsieur Alfons, Neustädter Grill Meier, New City Smash, Pancake Panda, Pizzanatics, Poke Bar, Puro, Qrito, Qrito Grindel, Ruff's Burger, Saray Köz, Vu Food
 
-### C — Cuisine-icon placeholders for all
-Drop photos entirely, use the cuisine emoji + a colored gradient per category. Visual consistency, zero effort, zero photo problem. **Downside:** app looks less appealing without photos.
+After each migration: orphan Google files deleted from Storage root. 136 historical orphan files (from earlier renames/migrations) cleaned up in one bulk delete.
 
-### D — User-submitted photos
-Community photo uploads with moderation. Requires build + ongoing moderation. Future feature, not v1.
+## Conventions for new restaurants going forward
 
-## Recommended plan (combining A + C)
+- Always upload directly to `restaurant-images/own/<slug>.jpg`. Never to the storage root.
+- Slug convention: lowercase, dashes for spaces, transliterated diacritics (ä→ae, ö→oe, ü→ue, ß→ss).
+- Keep a local copy in `~/Food Bilder/` as a backup mirror.
+- If a restaurant has multiple branches and the DB row name carries no suffix (because it's the original/main location), the local file may carry a location suffix for clarity (e.g., `Dulfs Burger Karoviertel.HEIC` for DB row `Dulf's Burger`).
 
-**Phase 1 — Unblock App Store submission (1–2 hours)**
-1. Delete all Google-sourced images from Supabase Storage root (`restaurant-images/` except `own/`)
-2. Set `image_url = NULL` on all restaurants whose current photo came from Google
-3. `AsyncRestaurantImage` already falls back to the cuisine-emoji placeholder when image_url is nil — verify and polish the fallback visual
-4. Release
+## Historical reference (kept for posterity)
 
-**Phase 2 — Own photos (ongoing)**
-5. Jan shoots photos for top 30 spots (highest MAMPF rating first)
-6. Upload to `restaurant-images/own/<slug>.jpg`, update `image_url`
-7. Continue incrementally
+Original problem statement: Google Places Photos API Terms of Service prohibit caching/storing images. MAMPF historically downloaded Google photos into Supabase Storage root, which was a ToS violation.
 
-**Phase 3 — Community photos (optional, v2)**
-8. Add "Add photo" button on restaurant detail for signed-in users
-9. Supabase Storage bucket `user-photos/<restaurant_id>/<user_id>.jpg`
-10. Moderation queue (Jan approves before public display)
-
-## Concrete cleanup SQL (Phase 1)
-
-```sql
--- Identify Google-sourced photo URLs (in Supabase Storage root, not 'own/')
-SELECT id, name, image_url
-FROM restaurants
-WHERE image_url LIKE '%/storage/v1/object/public/restaurant-images/%'
-  AND image_url NOT LIKE '%/restaurant-images/own/%';
-
--- Null them out
-UPDATE restaurants
-SET image_url = NULL
-WHERE image_url LIKE '%/storage/v1/object/public/restaurant-images/%'
-  AND image_url NOT LIKE '%/restaurant-images/own/%';
-```
-
-Then in Supabase Dashboard → Storage → `restaurant-images` bucket → delete all files NOT inside the `own/` folder.
-
-## Fallback UI checks needed
-
-Before Phase 1 ship, verify cuisine-emoji fallback looks good in:
-- `RestaurantCardView` (cards mode)
-- `RestaurantCardView` (grid mode, `compact: true`)
-- `listRow` (list mode)
-- `RestaurantDetailView` hero image
-- `searchSuggestionRow` (list + map dropdown)
-- `ratingRow` / `wishlistRow` in ProfileTabView
-
-`AsyncRestaurantImage` should already handle nil URL → render cuisine emoji on a muted background.
-
-## Decision needed from Jan
-- [ ] Confirm photo strategy: A+C combined as above, or different approach?
-- [ ] Timeline for Phase 1 execution (ideally before Google API audit or public launch)
-- [ ] Budget for Phase 2 photo sessions
+Considered but rejected:
+- **Runtime fetch** — would blow Place Photo API budget (1.000/month) instantly.
+- **Cuisine-icon placeholders for all** — visually weaker than real photos.
+- **Community photos** — possible v2 feature; deferred.

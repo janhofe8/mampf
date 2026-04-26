@@ -1,6 +1,6 @@
 # MAMPF — Kuratierte Foodspots
 
-Restaurant-Rating-App für Hamburg (~155 Restaurants). MAMPF-Rating (Jans persönliche Bewertung 1-10) neben Google- und Community-Bewertungen.
+Restaurant-Rating-App für Hamburg (~158 Restaurants). MAMPF-Rating (Jans persönliche Bewertung 1-10) neben Google- und Community-Bewertungen.
 
 ## Plattformen & Build
 
@@ -140,7 +140,7 @@ Schema-Änderungen (ALTER TABLE) müssen im Supabase SQL Editor ausgeführt werd
 
 ### Tabellen
 
-**restaurants** (~155 Einträge): id, name, cuisine_type, neighborhood, price_range, address, latitude, longitude, opening_hours, is_closed, notes, image_url, personal_rating, google_rating, google_review_count, google_place_id, google_maps_url, created_at, updated_at
+**restaurants** (~158 Einträge): id, name, cuisine_type, neighborhood, price_range, address, latitude, longitude, opening_hours, is_closed, notes, image_url, personal_rating, google_rating, google_review_count, google_place_id, google_maps_url, created_at, updated_at
 
 **user_ratings**: id, restaurant_id, device_id, user_id (nullable — signed-in Nutzer haben user_id, anon Device-ID-only), rating (1-10), created_at, updated_at — UNIQUE(restaurant_id, device_id), UNIQUE(restaurant_id, user_id).
 - **RLS-Policies:**
@@ -176,12 +176,11 @@ Schema-Änderungen (ALTER TABLE) müssen im Supabase SQL Editor ausgeführt werd
 
 - **Privacy Manifest** (`FinestFinder/PrivacyInfo.xcprivacy`): bei neuen Auth-Feldern oder Datentypen aktualisieren.
 - **Privacy Policy:** Source `docs/PRIVACY_POLICY.md` + Web-Render in `web/app/privacy/page.tsx` → live auf `mampf-nine.vercel.app/privacy`, in-App verlinkt in Settings. Beide synchron halten.
-- **Google Photos Caching** = offener Blocker für Public Release. Plan in `docs/GOOGLE_PHOTOS_MIGRATION.md`.
+- **Google Photos Caching: RESOLVED 2026-04-26** — alle 158 Restaurants haben jetzt eigene Fotos in `own/`, keine Google-Fotos mehr in der DB oder im Storage. Public-Release-Blocker erledigt. Historie und Plan-Doku in `docs/GOOGLE_PHOTOS_MIGRATION.md`.
 
 ## Bekannte Themen
 
-- Google-Fotos in Supabase Storage verstoßen gegen Google ToS (Caching). Vor Public Release durch eigene Fotos ersetzen.
-- **Storage-Struktur:** `restaurant-images/` Root = Google Places Fotos, `own/` = eigene Fotos. **Niemals Google Places Fotos in `own/` speichern.** Eigene Fotos werden beim Decode automatisch angepasst (siehe ImageCache Foodie-Preset).
+- **Storage-Struktur:** `restaurant-images/own/` = eigene Fotos (Foodie-Preset wird beim Decode angewendet). Storage-Root soll **leer** bleiben — neue Restaurants direkt in `own/` hochladen. Wenn doch mal eine Datei im Root landet, kriegt sie kein Foodie-Preset (Pfad-basierte Logik in `ImageCache:77`). Lokaler Mirror der `own/`-Bibliothek liegt in `~/Food Bilder/` (1:1 mit DB synchronisiert, Stand 2026-04-26).
 - `user_ratings` hat vorbereitete `user_id`-Spalte für zukünftigen Email-Login (Supabase Auth aktiviert, aktuell Device-ID)
 - Custom DragGesture-Slider auf Map funktioniert nicht — nativen SwiftUI Slider verwenden (der custom `RatingSlider` in der Detail-Card ist OK — Map-Context ist anders)
 - `.toolbarTitleMenu` zeigt keinen sichtbaren Chevron im Large-Title-Modus — für City-Selector stattdessen inline Title mit Custom Menu + explizitem chevron.down verwenden

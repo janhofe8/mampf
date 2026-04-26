@@ -53,9 +53,16 @@
 | Place Details | 157 | Bulk-Refresh aller Restaurants: rating, review_count, opening_hours, business_status. 155 erfolgreich, 2 fehlgeschlagen (ungültige Place IDs). |
 | Text Search | 2 | Place-ID-Fix für „New York Bagel Bar Gänsemarkt" + „Nord Coast Coffee Roastery". |
 
+### 2026-04-26
+| SKU | Calls | Kontext |
+|-----|-------|---------|
+| Text Search | 1 | Takumi Schanze (Schulterblatt 114) — Korrektur: bestehender „Takumi"-Eintrag hatte Ottensen-Adresse, ist eigentlich der Schanze-Standort. |
+| Place Photo | 1 | Schanze-Foto für Takumi (ersetzt Ottensen-Foto, alte Datei aus Storage gelöscht). |
+| Text Search | 1 | Hanoi Deli Rathaus (neuer Spot, Schauenburgerstraße 49, Altstadt, MAMPF 7.5). Eigenes Foto aus Folder verwendet, kein Place-Photo-Call. |
+
 ### Monats-Summe April
 | SKU | Verbraucht | Gratis-Limit | Rest |
 |-----|-----------|--------------|------|
-| Text Search | 4 | 5.000 | 4.996 |
+| Text Search | 6 | 5.000 | 4.994 |
 | Place Details | 157 | 5.000 | 4.843 |
-| Place Photo | 0 | 1.000 | 1.000 |
+| Place Photo | 1 | 1.000 | 999 |
