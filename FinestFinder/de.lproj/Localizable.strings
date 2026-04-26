@@ -45,6 +45,7 @@
 "filter.neighborhood" = "Stadtteil";
 "filter.priceRange" = "Preisklasse";
 "filter.showResults" = "%d Foodspots anzeigen";
+"filter.myRatings" = "Bereits bewertet";
 
 /* Rating Filter */
 "ratingFilter.minRating" = "Mind. Rating";
@@ -87,8 +88,6 @@
 "settings.title" = "Einstellungen";
 "settings.privacy" = "Datenschutz";
 "settings.account" = "Account";
-
-"filter.myRatings" = "Meine Bewertungen";
 "settings.privacyPolicy" = "Datenschutzerklärung";
 "settings.dataCollection" = "Datenerhebung";
 "settings.dataCollectionInfo" = "MAMPF nutzt eine anonyme Geräte-ID, um deine Community-Bewertungen zu speichern. Dein Standort wird nur zur Anzeige nahegelegener Foodspots auf der Karte verwendet und nie gespeichert.";
@@ -131,19 +130,10 @@
 "onboarding.welcome.subtitle" = "Finde die echten besten Foodspots in Hamburg.";
 "onboarding.expertise.title" = "Genug von Fake-Reviews?\nWir auch.";
 "onboarding.expertise.subtitle" = "Deshalb testen wir jeden Spot selbst.\nUnabhängig und ehrlich.";
-"onboarding.rating.legend.mampf" = "MAMPF · 9+";
-"onboarding.rating.legend.recommended" = "Empfehlung · 8-8,5";
-"onboarding.rating.legend.good" = "Gut · 7-7,5";
-"onboarding.rating.legend.okay" = "Okay · 5-6,5";
-"onboarding.rating.legend.avoid" = "Meiden · <5";
 "onboarding.personalize.title" = "Werde selbst zum Foodscout.";
 "onboarding.personalize.subtitle" = "Bewerte deine Spots, baue deine Wishlist, sieh deine Stats.\nSo behältst du den Überblick und gestaltest MAMPF mit.";
 "onboarding.rating.title" = "Drei Ratings.";
 "onboarding.rating.subtitle" = "Wir liefern kuratierte und unabhängige Bewertungen.\nDie Community ergänzt mit eigener Sicht.";
-"onboarding.rating.legend.great" = "Top · 9+";
-"onboarding.rating.legend.good" = "Gut · 8";
-"onboarding.rating.legend.ok" = "OK · 7";
-"onboarding.rating.legend.meh" = "Meh · ≤6";
 "location.primer.title" = "Spots in deiner Nähe.";
 "location.primer.subtitle" = "Mit Standort siehst du Distanzen und was gerade um dich herum ist.";
 "location.primer.allow" = "Standort aktivieren";

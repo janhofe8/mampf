@@ -98,7 +98,11 @@ struct MapTabView: View {
             refreshCategories()
             if !hasSeenLocationPrimer && locationManager.authorizationStatus == .notDetermined {
                 try? await Task.sleep(for: .milliseconds(800))
-                showLocationPrimer = true
+                // User may have tapped the location button during the delay, which
+                // already calls requestPermission() — re-check before showing.
+                if !hasSeenLocationPrimer && locationManager.authorizationStatus == .notDetermined {
+                    showLocationPrimer = true
+                }
             }
         }
         .sheet(isPresented: $showLocationPrimer) {

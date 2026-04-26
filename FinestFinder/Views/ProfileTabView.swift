@@ -215,7 +215,7 @@ struct ProfileTabView: View {
                 columns: [GridItem(.flexible(), spacing: 6), GridItem(.flexible(), spacing: 6)],
                 spacing: 6
             ) {
-                Button { openMap() } label: {
+                Button { openMyRatingsOnMap() } label: {
                     statTile(
                         icon: "map",
                         value: auth.isSignedIn ? exploredPercentText : "8 %",
@@ -223,6 +223,7 @@ struct ProfileTabView: View {
                     )
                 }
                 .buttonStyle(StatTileButtonStyle())
+                .disabled(store.myRatings.isEmpty)
                 Button { openJansMampfsOnMap() } label: {
                     statTile(
                         icon: "star.fill",
@@ -344,11 +345,6 @@ struct ProfileTabView: View {
         guard !store.myRatings.isEmpty else { return }
         filterVM.clearFilters()
         filterVM.showMyRatedOnly = true
-        tabRouter.selected = .map
-    }
-
-    private func openMap() {
-        filterVM.clearFilters()
         tabRouter.selected = .map
     }
 

@@ -10,9 +10,6 @@ struct MAMPFApp: App {
 
     init() {
         applyBrandedNavBarAppearance()
-        #if DEBUG
-        UserDefaults.standard.removeObject(forKey: "hasCompletedOnboarding")
-        #endif
     }
 
     var body: some Scene {
