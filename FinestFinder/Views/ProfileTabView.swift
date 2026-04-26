@@ -9,6 +9,7 @@ struct ProfileTabView: View {
     @State private var showingLogin = false
     @State private var showingSettings = false
     @State private var showingEditProfile = false
+    @State private var showingSuggestSpot = false
     @State private var signupEmail: String = ""
     @State private var prefilledEmailForSheet: String?
     @State private var navigatedRestaurant: Restaurant?
@@ -43,6 +44,7 @@ struct ProfileTabView: View {
         }
         .sheet(isPresented: $showingSettings) { SettingsView() }
         .sheet(isPresented: $showingEditProfile) { EditProfileView() }
+        .sheet(isPresented: $showingSuggestSpot) { SuggestSpotSheet() }
         .navigationDestination(item: $navigatedRestaurant) { restaurant in
             RestaurantDetailView(restaurant: restaurant)
         }
@@ -71,9 +73,11 @@ struct ProfileTabView: View {
                 statsCard
                 ratingsSection
                 wantToTrySection
+                suggestSpotSection
             }
             .padding(.horizontal, 16)
             .padding(.top, 8)
+            .padding(.bottom, 8)
         }
         .refreshable {
             await store.loadAllMyRatings()
@@ -381,18 +385,48 @@ struct ProfileTabView: View {
             prefilledEmailForSheet = trimmed.contains("@") ? trimmed : nil
             showingLogin = true
         } label: {
-            HStack(spacing: 5) {
+            HStack(spacing: 4) {
                 Image(systemName: "lock.fill")
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: 10, weight: .semibold))
                 Text("profile.stats.locked")
-                    .font(.footnote.weight(.semibold))
+                    .font(.caption.weight(.semibold))
             }
             .foregroundStyle(.white)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
             .background(Color.ffPrimary, in: Capsule())
         }
         .buttonStyle(.plain)
+    }
+
+    private var suggestSpotSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            sectionHeader("profile.suggestSpot.section", count: 0)
+            Button {
+                showingSuggestSpot = true
+            } label: {
+                HStack(spacing: 14) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 18, weight: .heavy))
+                        .foregroundStyle(.white)
+                        .frame(width: 44, height: 44)
+                        .background(Color.ffPrimary, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    Text("profile.suggestSpot.title")
+                        .font(.system(.headline, design: .rounded).weight(.bold))
+                        .foregroundStyle(.primary)
+                    Spacer(minLength: 4)
+                    Image(systemName: "chevron.right")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.tertiary)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 14))
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(StatTileButtonStyle())
+        }
     }
 
     /// Recomputes derived stats once when source data changes, instead of per render.

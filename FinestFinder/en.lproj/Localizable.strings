@@ -162,7 +162,7 @@
 "profile.continue" = "Continue";
 "profile.previewTitle" = "What you'll unlock";
 "profile.syncBanner.title" = "Join the MAMPF community";
-"profile.syncBanner.subtitle" = "Sign in to unlock exclusive benefits!";
+"profile.syncBanner.subtitle" = "Sign in to unlock exclusive benefits.";
 "profile.stats.locked" = "Sign in for personalized stats";
 "login.emailPlaceholder" = "your@email.com";
 "profile.signIn" = "Sign in";
@@ -219,3 +219,28 @@
 "settings.deleteAccountConfirmTitle" = "Delete Your Account?";
 "settings.deleteAccountConfirmMessage" = "Your account, ratings, and favorites will be permanently deleted. This cannot be undone.";
 "settings.deleteAccountConfirmButton" = "Delete Account";
+
+/* Suggest Spot */
+"profile.suggestSpot.section" = "Missing a spot?";
+"profile.suggestSpot.title" = "Suggest a spot";
+"profile.suggestSpot.subtitle" = "Missing your favorite place? Send it our way.";
+"suggest.fallbackHint" = "Optional — only if you don't have a link.";
+"suggest.title" = "Suggest a spot";
+"suggest.submit" = "Send";
+"suggest.intro.title" = "Which spot is missing?";
+"suggest.intro.subtitle" = "We check every suggestion — promise.";
+"suggest.urlSection" = "Google Maps link";
+"suggest.urlPlaceholder" = "https://maps.app.goo.gl/…";
+"suggest.urlHint" = "Easiest way: tap “Share” in Google Maps and paste the link here.";
+"suggest.noLink" = "No link? Enter manually";
+"suggest.fallbackSection" = "Manual entry";
+"suggest.namePlaceholder" = "Restaurant name";
+"suggest.locationPlaceholder" = "Neighborhood";
+"suggest.rating.section" = "Your rating (optional)";
+"suggest.rating.hint" = "Helps us prioritize the best suggestions first.";
+"suggest.rating.unrated" = "Not rated yet";
+"suggest.reasonSection" = "Why is this spot good? (optional)";
+"suggest.reasonPlaceholder" = "What makes it special…";
+"suggest.success.title" = "Thanks!";
+"suggest.success.subtitle" = "We'll check the spot and add it if it fits.";
+"suggest.success.done" = "Done";

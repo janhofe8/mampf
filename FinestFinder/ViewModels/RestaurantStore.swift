@@ -200,7 +200,12 @@ final class RestaurantStore {
     /// aren't fighting prefetch traffic for bandwidth/CPU. Background priority — it's truly
     /// optional warmup, not anything the user is waiting for.
     private func prefetchListImages() {
-        let urls = restaurants.compactMap { $0.imageUrl.flatMap(URL.init) }
+        // Top 30 by personal rating only — prefetching all 158 burns CDN egress for spots
+        // most users never scroll to. Lazy on-demand load handles the rest just fine.
+        let urls = restaurants
+            .sorted { ($0.personalRating ?? 0) > ($1.personalRating ?? 0) }
+            .prefix(30)
+            .compactMap { $0.imageUrl.flatMap(URL.init) }
         guard !urls.isEmpty else { return }
         Task.detached(priority: .background) {
             try? await Task.sleep(for: .seconds(1.5))

@@ -162,7 +162,7 @@
 "profile.continue" = "Weiter";
 "profile.previewTitle" = "Das bekommst du";
 "profile.syncBanner.title" = "Werde ein Teil der MAMPF-Community";
-"profile.syncBanner.subtitle" = "Anmelden und exklusive Vorteile sichern!";
+"profile.syncBanner.subtitle" = "Anmelden und exklusive Vorteile sichern.";
 "profile.stats.locked" = "Anmelden für personalisierte Stats";
 "login.emailPlaceholder" = "deine@email.de";
 "profile.signIn" = "Anmelden";
@@ -219,3 +219,28 @@
 "settings.deleteAccountConfirmTitle" = "Konto wirklich löschen?";
 "settings.deleteAccountConfirmMessage" = "Konto, Bewertungen und Favoriten werden unwiderruflich gelöscht.";
 "settings.deleteAccountConfirmButton" = "Konto löschen";
+
+/* Suggest Spot */
+"profile.suggestSpot.section" = "Spot fehlt?";
+"profile.suggestSpot.title" = "Spot vorschlagen";
+"profile.suggestSpot.subtitle" = "Dein Lieblings-Laden fehlt? Schick ihn uns.";
+"suggest.fallbackHint" = "Optional — falls du keinen Link hast.";
+"suggest.title" = "Spot vorschlagen";
+"suggest.submit" = "Senden";
+"suggest.intro.title" = "Welcher Spot fehlt?";
+"suggest.intro.subtitle" = "Wir checken jeden Vorschlag — versprochen.";
+"suggest.urlSection" = "Google-Maps-Link";
+"suggest.urlPlaceholder" = "https://maps.app.goo.gl/…";
+"suggest.urlHint" = "Am einfachsten: in Google Maps auf 'Teilen' tippen, Link hier einfügen.";
+"suggest.noLink" = "Keinen Link? Manuell eingeben";
+"suggest.fallbackSection" = "Manuelle Eingabe";
+"suggest.namePlaceholder" = "Name des Restaurants";
+"suggest.locationPlaceholder" = "Stadtteil";
+"suggest.rating.section" = "Deine Bewertung (optional)";
+"suggest.rating.hint" = "Hilft uns, gute Vorschläge zuerst zu prüfen.";
+"suggest.rating.unrated" = "Noch nicht bewertet";
+"suggest.reasonSection" = "Warum ist der Spot gut? (optional)";
+"suggest.reasonPlaceholder" = "Was macht den Laden besonders…";
+"suggest.success.title" = "Danke!";
+"suggest.success.subtitle" = "Wir checken den Spot und nehmen ihn auf, wenn er passt.";
+"suggest.success.done" = "Fertig";
