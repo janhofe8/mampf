@@ -8,11 +8,10 @@ Restaurant-Rating-App für Hamburg (~158 Restaurants). MAMPF-Rating (Jans persö
   - Build: `xcodebuild -project MAMPF.xcodeproj -scheme MAMPF -destination 'platform=iOS Simulator,name=iPhone 17 Pro'`
   - **Simulator-Deploy** (wenn User „deploy" oder „simulator" sagt ohne „iphone"): verwende booteten Simulator via `xcrun simctl`. UDID vorher mit `xcrun simctl list devices booted` prüfen (kann sich ändern). Drei-Schritte: build → `simctl install` → `simctl launch janhoferichter.FinestFinder`.
   - **iPhone-Deploy** (Default für „deploy"): `mampf-device` Alias. UDID `00008150-00095D410E93401C`. Aus der Claude-Session die 3 Commands direkt (xcodebuild → `devicectl install` → `devicectl launch`).
-- **Web:** Next.js + Tailwind + TypeScript, Vercel
-  - Build: `cd web && npm run build`
-  - Deploy: `cd /Users/janhoferichter/test/FinestFinder && vercel --prod --yes` (Root Directory = `web`)
-- **Backend:** Supabase (PostgreSQL + Storage), Project ID: `nuriruulwjjpycdszdrn`
-- **GitHub:** github.com/janhofe8/mampf | **Web:** https://mampf-nine.vercel.app
+- **Web:** Next.js + Tailwind + TypeScript — **aktuell offline** (Vercel-Projekt am 2026-04-27 gelöscht). Code unverändert in `web/`. Vor Re-Deploy: `web/next.config.ts` muss `minimumCacheTTL: 31536000` + restriktive `deviceSizes`/`imageSizes` haben, sonst frisst Vercel Image-Optimization mit Default-60s-TTL die Supabase-Egress-Quota auf (dokumentiert weiter unten unter „Bekannte Themen → Egress").
+  - Re-Deploy: `cd /Users/janhoferichter/test/FinestFinder && vercel --prod --yes` (Root Directory = `web`)
+- **Backend:** Supabase (PostgreSQL + Storage), Project ID: `nuriruulwjjpycdszdrn`, **Free-Plan** (5 GB Egress/Monat, kein Smart CDN)
+- **GitHub:** github.com/janhofe8/mampf | **Web:** offline
 - Interner Projektname ist noch "FinestFinder" (Ordner), Display-Name ist "MAMPF"
 
 ## Architektur
@@ -44,6 +43,7 @@ docs/                      PRIVACY_POLICY.md, GOOGLE_PHOTOS_MIGRATION.md
 - Secrets liegen in `~/.zshenv` (SUPABASE_SECRET_KEY, GOOGLE_PLACES_API_KEY), nie im Code oder Chat
 - Publishable Anon Key in Secrets.swift / lib/supabase.ts ist okay (read-only, RLS aktiv)
 - **Google API Free Tier nie überschreiten** (Text Search: 5.000/Mo, Place Details: 5.000/Mo, Photo: 1.000/Mo). Vor jedem Call aktuellen Stand in `google-api-usage.md` prüfen. Wenn ein Call das Limit überschreiten würde → **IMMER** User fragen, nicht ausführen. Diese Regel gilt in jedem Modus (auch Bypass/autonom) und darf nie übersprungen werden.
+- **Supabase Storage Egress sparen** (5 GB/Mo Free-Limit, kein Smart CDN). Jeder `curl`/Image-Fetch auf `nuriruulwjjpycdszdrn.supabase.co/storage/v1/object/...` zählt als Egress. Für Bild-Vergleiche/Migration aus dem **lokalen Mirror `~/Food Bilder/`** lesen (1:1 mit `own/`-Bucket synchronisiert), NICHT Public-URLs fetchen. Bei Operations >50 MB Egress (~250+ Bilder Bulk) **vorher User fragen**. Verifikations-Fetches nach Upload nur **einmal pro File**, keine Loops. Hook in `.claude/settings.json` erzwingt Permission-Prompt — diese Regel gilt aber auch ohne Hook in jedem Modus.
 - **Neue Restaurants:** Immer recherchieren (Cuisine, Preis). Namen folgen Google Places Schreibweise. Niemals Koordinaten/Metadaten ausdenken — exakte Google Places API Werte. Stadtteile aus PLZ ableiten.
 - Projekt nutzt `PBXFileSystemSynchronizedRootGroup` — neue Dateien im FinestFinder/-Ordner werden automatisch erkannt
 - **Quick Device Deploy:** Shell-Alias `mampf-device` in `~/.zshrc` baut + installiert + startet auf Jans iPhone (UDID `00008150-00095D410E93401C`). Funktioniert nur in interaktiven Shells — aus dem Claude-Session die 3 Commands direkt (xcodebuild → devicectl install → devicectl launch) ausführen.
@@ -191,12 +191,13 @@ Schema-Änderungen (ALTER TABLE) müssen im Supabase SQL Editor ausgeführt werd
 ## Compliance / Release
 
 - **Privacy Manifest** (`FinestFinder/PrivacyInfo.xcprivacy`): bei neuen Auth-Feldern oder Datentypen aktualisieren.
-- **Privacy Policy:** Source `docs/PRIVACY_POLICY.md` + Web-Render in `web/app/privacy/page.tsx` → live auf `mampf-nine.vercel.app/privacy`, in-App verlinkt in Settings. Beide synchron halten.
+- **Privacy Policy:** Source `docs/PRIVACY_POLICY.md` + Web-Render in `web/app/privacy/page.tsx`. Web ist seit 2026-04-27 offline → vor App-Store-Release Web-App wieder hochfahren (mit Egress-Schutz, siehe oben) UND in-App-Link in Settings checken/aktualisieren.
 - **Google Photos Caching: RESOLVED 2026-04-26** — alle 158 Restaurants haben jetzt eigene Fotos in `own/`, keine Google-Fotos mehr in der DB oder im Storage. Public-Release-Blocker erledigt. Historie und Plan-Doku in `docs/GOOGLE_PHOTOS_MIGRATION.md`.
 
 ## Bekannte Themen
 
 - **Storage-Struktur:** `restaurant-images/own/` = eigene Fotos (Foodie-Preset wird beim Decode angewendet). Storage-Root soll **leer** bleiben — neue Restaurants direkt in `own/` hochladen. Wenn doch mal eine Datei im Root landet, kriegt sie kein Foodie-Preset (Pfad-basierte Logik in `ImageCache:77`). Lokaler Mirror der `own/`-Bibliothek liegt in `~/Food Bilder/` (1:1 mit DB synchronisiert, Stand 2026-04-26).
+- **Egress-Vorfall 2026-04-26:** Migration der letzten 46 Google-Photo-Restaurants auf `own/` hat in einer Session ~19 GB „Cached Egress" produziert (Free-Limit ist 5 GB/Mo) — Hauptursache: wiederholte Public-URL-Fetches durch Claude für visuelle Vergleiche, Verifikation und Bulk-Audits. Cached Egress zählt auf Free **sehr wohl** gegen das Limit, entgegen erstem Eindruck. Nächster Reset: 2026-05-19. Bis dahin **keine zusätzlichen Bulk-Storage-Operationen**. Vercel-Web-App war zusätzlicher Multiplikator (Next.js Image-Optimization mit Default-60s-TTL fetcht Original bei jedem Cache-Miss neu) und wurde am 27.04. komplett gelöscht. Dauerhafte Schutzmaßnahmen: Memory `feedback_supabase_egress.md`, Hook in `.claude/settings.json` der jeden `nuriruulwjjpycdszdrn.supabase.co/storage/v1/object`-Aufruf zur Permission-Prompt zwingt, und die Dev-Regel weiter oben.
 - `user_ratings` hat vorbereitete `user_id`-Spalte für zukünftigen Email-Login (Supabase Auth aktiviert, aktuell Device-ID)
 - Custom DragGesture-Slider auf Map funktioniert nicht — nativen SwiftUI Slider verwenden (der custom `RatingSlider` in der Detail-Card ist OK — Map-Context ist anders)
 - `.toolbarTitleMenu` zeigt keinen sichtbaren Chevron im Large-Title-Modus — für City-Selector stattdessen inline Title mit Custom Menu + explizitem chevron.down verwenden
